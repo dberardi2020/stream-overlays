@@ -24,4 +24,4 @@ With hosting settled as static files ([ADR 0002](0002-static-first-hosting.md)) 
 
 - No backend to run or secure at this stage; the ops surface is "publish static files."
 - Any proposal that needs a server (accounts, saved presets beyond the URL, server-side anything) must clear the bar of a real, demonstrated need — and gets its own ADR.
-- Business/monetisation choices are deliberately **out of this repo** — they are not technical decisions and do not belong in a public repo.
+- Product-strategy choices are deliberately **out of this repo** — they are not technical decisions and do not belong in a public repo.

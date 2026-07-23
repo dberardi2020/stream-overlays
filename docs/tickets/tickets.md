@@ -20,7 +20,7 @@ The product work between this pilot and "a site streamers find, set up, and use.
 | **SO-0015** | Admin / backend manager (the catalogue as an Admin view) | Turn the prototype's `catalogue.html` into a repo **Admin view** over `catalogue.json`: the same data source of truth, rendered for *management* (stage assignments, hidden flags, family/set curation, export) rather than the public gallery's *browse* view. `catalogue.json` stays the single source both views read; the public gallery (SO-0002) is the read view, this is the write/curate view. Was previously slated for deletion (see PKB migration tracker) — this preserves its function instead of dropping it. |
 | **SO-0008** | Hosting + deploy pipeline | Pick a static host (GitHub Pages / Netlify / Cloudflare Pages — all give the HTTPS the Gamepad API requires), wire a deploy from `main`, decide on a domain. See [ADR 0002](../decisions/0002-static-first-hosting.md). |
 | **SO-0009** | Discovery / landing front door | The streamer-facing entry: what this is, the overlay gallery, and the path into configure. The "find it" half of "find, set up, use." |
-| **SO-0010** | Wishlist / feedback form | Cheapest demand signal — no auth, an email field. Product only; any monetization sequencing is tracked privately, never in the repo. |
+| **SO-0010** | Wishlist / feedback form | A lightweight feedback channel (no auth, an email field). **Not needed before launch, and the shape needs more thought** — parked until the site is live and there's something to react to. |
 
 ## Open — engine & overlays
 
