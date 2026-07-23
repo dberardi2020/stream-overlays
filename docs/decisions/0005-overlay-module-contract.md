@@ -19,6 +19,14 @@ export function draw(ctx, w, h, state, mem) {}   // the drawing, byte-for-byte f
 - The shared sub-visuals a draw body uses (`glass`, `mono`, palette, history) are imported from `engine/draw-kit.js` as **named callables**, so the future builder can compose overlays from them.
 - `mem` is a per-overlay scratch object for stateful overlays (peak-hold decay, etc.), replacing the prototype's `this.mem`.
 
+### Calling conventions (as-built, derived from the prototype)
+
+The one signature `draw(ctx, w, h, s, mem)` has to absorb three shapes the prototype's draw bodies were written in, because bodies are ported **byte-for-byte**:
+
+- **State is a single object `s`.** Every channel a body reads lives on it: `thr`/`brk`/`clu` (0..1), `str` (−1..+1), and for combos/telemetry `gear`/`lever`/`rpm`/`spd`/`shiftAge`/`shiftDir`/`shiftCount`/`shiftProg`. The prototype nominally passed a second `tel` argument, but **no draw body reads it** — so the contract omits it.
+- **Two ctx conventions coexist.** 20 bodies pass `ctx` explicitly to `glass`/`mono`; 52 rely on a **module-global `ctx`** for helpers (`txt`, `wheel`, `drawGate`, `pedalBars`, …). The engine therefore holds a settable global `ctx` the loop sets before each `draw`, and `glass`/`mono` are reconciled to accept either form. Because the `draw` parameter is also named `ctx` and the loop sets the global to the same context, bare `ctx.*` calls, explicit-`ctx` helpers, and global-`ctx` helpers all resolve to one context. This settable global is a deliberate, contained bit of engine state — the price of byte-for-byte fidelity (the alternative, rewriting every body to pass `ctx`, was rejected as transcription risk).
+- **The three body signatures** `(ctx,w,h,s)`, `(w,h,s)`, `(w,h,s,t)` all bind correctly under `draw(ctx,w,h,s,mem)`: `w`/`h`/`s` land by position, `ctx` is present for those that use it, and the unused 4th/5th slot is harmless.
+
 ## Rationale
 
 - **One file per overlay** makes each overlay independently readable, reviewable, and diffable, and kills the line-number slicing.

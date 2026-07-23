@@ -2,27 +2,45 @@
 
 The backlog. Board-first: a lightweight tracker until a real one is warranted. IDs are `SO-NNNN`, uppercase, never reused.
 
+**What is *not* here:** the steps to *take the repo public* — secrets scan, private-content sweep, the flip. Those are a **pre-flight checklist run once when the project is ready**, kept as a separate release runbook, not backlog. This board tracks *building the product*.
+
 ## In progress
-
-*(none)*
-
-## Open
 
 | ID | Title | Notes |
 | --- | --- | --- |
-| **SO-0001** | Migrate the remaining catalogue overlays to modules | 3 of 72 overlays are migrated (Bowtie, Dot ladder, Comet). Migrate the rest: copy each draw body byte-for-byte into `overlays/sim-racing/overlays/<id>.js` exporting `id` + `draw`, per [ADR 0005](../decisions/0005-overlay-module-contract.md). Only permitted change: `this.mem` → the `mem` parameter. Guarded by the manifest-sync + blank-tile tests. When complete, flip `REQUIRE_FULL_COVERAGE` in `tests/test_overlay_modules.py`. |
-| **SO-0002** | Gallery page over demo data | Browse all overlays rendered against `engine/demo-lap.js`, for choosing a style. |
-| **SO-0003** | Configure page → URL generator | Bind inputs, pick style/scale/colours, emit the `?style=…` URL to paste into OBS. Realises [ADR 0001](../decisions/0001-config-in-the-url.md). |
+| **SO-0001** | Migrate the catalogue overlays to modules | **Tier 1 (pedal-only) done — 19 / 72 migrated**, all guarded by the blank-tile + manifest tests. Remaining: **Tier 2** (42 wheel/shifter/combo — needs the full engine helper port: `gearName`, `drawGate`, `drawKnob`, `gateXY`, `knobXY`, `wheel`, `DEG`, `pedalBars`, …); **Tier 3** (7 telemetry — also blocked on SO-0007). Draw bodies copied byte-for-byte; only `this.mem` → the `mem` param. When all non-excluded entries have a module, flip `REQUIRE_FULL_COVERAGE` in `tests/test_overlay_modules.py`. The 4 `excluded` overlays stay in the manifest, not migrated. |
+
+## Open — road to a real hosted website
+
+The product work between this pilot and "a site streamers find, set up, and use."
+
+| ID | Title | Notes |
+| --- | --- | --- |
+| **SO-0002** | Gallery page over demo data | Browse every overlay rendered against `engine/demo-lap.js`, for choosing a style. Built on the module architecture. |
+| **SO-0003** | Configure page → URL generator | Bind inputs, pick style/scale/colours, emit the `?style=…` URL to paste into OBS. Realises [ADR 0001](../decisions/0001-config-in-the-url.md); no storage. |
 | **SO-0004** | OBS gamepad fallback flow | The guided ladder from [ADR 0003](../decisions/0003-obs-gamepad-fallback.md): device-presence timeout, Interact prompt, Window-Capture path, optional local bridge. |
-| **SO-0005** | Collapse near-duplicate overlay families | Curation: the 3 `Wheel` variants and the `bars`/`history` clusters. Family metadata exists to support this. |
+| **SO-0008** | Hosting + deploy pipeline | Pick a static host (GitHub Pages / Netlify / Cloudflare Pages — all give the HTTPS the Gamepad API requires), wire a deploy from `main`, decide on a domain. See [ADR 0002](../decisions/0002-static-first-hosting.md). |
+| **SO-0009** | Discovery / landing front door | The streamer-facing entry: what this is, the overlay gallery, and the path into configure. The "find it" half of "find, set up, use." |
+| **SO-0010** | Wishlist / feedback form | Cheapest demand signal — no auth, an email field. Product only; any monetization sequencing is tracked privately, never in the repo. |
+
+## Open — engine & overlays
+
+| ID | Title | Notes |
+| --- | --- | --- |
+| **SO-0005** | Collapse near-duplicate overlay families | The 3 `Wheel` variants and the `bars`/`history` clusters. Family metadata exists to support this. |
+| **SO-0006** | Shifter / gear live calibration + input | The engine calibrates pedals + steering only; it does **not** capture the H-shifter (gear/lever). Tier 2 shifter overlays can render from demo/test state but can't run **live** without this. Extend `calibration.js` + `gamepad.js` to bind gear/lever. |
+| **SO-0007** | Telemetry data source (rpm / spd / gear-from-sim) | A G923 exposes no RPM/speed — those are **sim telemetry**, not wheel input. Tier 3 (7 overlays) and any telemetry channel need a source (a sim telemetry feed / local bridge). Until then telemetry overlays are demo-only. Design the source before promoting them past `experimental`. |
+| **SO-0011** | The builder — compose overlays from sub-visuals | Longer-term: assemble combos from swappable named sub-visuals + channel reordering. The module contract and named `draw-kit` callables are the groundwork; not scheduled. |
+| **SO-0012** | Bring the design-principles doc + parked prototype into the repo | Add `overlays/sim-racing/design-principles.md` (the overlay design rationale, as a prose pair) and the parked correlation-demo prototype into a prototypes area. |
+
+## Decisions to revisit (not tickets)
+
+- **`excluded` → `archived` naming** — `excluded` means archived-not-deleted, but the word reads as *discard*. Rename the stage value?
+- **Telemetry live behaviour** — how telemetry overlays behave with no sim feed (hide? placeholder? demo-only badge?). Tied to SO-0007.
 
 ## Done
 
 | ID | Title |
 | --- | --- |
-| **SO-0000** | Scaffold the repo: layered engine extracted from the prototype, 3 pilot overlays, manifest quality-gate, pytest + node test suites, ADRs. |
-
-## Notes
-
-- `excluded` overlays stay in the manifest (archived, not deleted); they are not migration targets.
-- The **builder** (compose overlays from swappable sub-visuals) is a longer-term direction, not a ticket yet — the module contract and named draw-kit callables are the groundwork for it.
+| **SO-0000** | Scaffold the repo: layered engine extracted from the prototype, manifest quality-gate, pytest + `node --test` suites, ADRs. |
+| **SO-0001 · Tier 1** | 16 pedal-only overlays migrated to modules (19/72 total), blank-tile guard green on all. |

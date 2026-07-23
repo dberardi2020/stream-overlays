@@ -9,7 +9,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -19,7 +19,11 @@ import { pushHistory } from "../overlays/sim-racing/engine/draw-kit.js";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SIM = join(HERE, "..", "overlays", "sim-racing");
 const MANIFEST = JSON.parse(readFileSync(join(SIM, "catalogue.json"), "utf8"));
-const PILOTS = ["bowtie", "dot-ladder", "comet"];
+// Every migrated overlay module — discovered, so new migrations are covered automatically.
+const MIGRATED = readdirSync(join(SIM, "overlays"))
+  .filter(f => f.endsWith(".js"))
+  .map(f => f.replace(/\.js$/, ""))
+  .sort();
 
 /* ---------- pure calibration maths ---------- */
 test("clamp bounds a value", () => {
@@ -69,7 +73,7 @@ function mockCtx() {
 }
 
 /* ---------- overlay module contract + blank-tile guard ---------- */
-for (const id of PILOTS) {
+for (const id of MIGRATED) {
   test(`overlay ${id}: exports id + draw, and paints something`, async () => {
     const entry = MANIFEST.find(e => e.id === id);
     assert.ok(entry, `${id} is in the manifest`);
