@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>0006 — Setup is a dedicated surface; the overlay is a pure renderer</title><style>
+:root{--bg:#fbfbfa;--fg:#22201d;--muted:#6b6862;--line:#e6e3dd;--code-bg:#f0eee9;--accent:#b5651d;--link:#a1571a}
+@media(prefers-color-scheme:dark){:root{--bg:#1a1917;--fg:#e6e3dd;--muted:#9a968e;--line:#332f2a;--code-bg:#26241f;--accent:#d99a5b;--link:#e0a866}}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;margin:0}
+.wrap{max-width:760px;margin:0 auto;padding:64px 28px 120px}
+h1{font-size:2rem;line-height:1.2;margin:0 0 .3em;letter-spacing:-.02em}
+h2{font-size:1.35rem;margin:2.2em 0 .5em;padding-bottom:.25em;border-bottom:1px solid var(--line)}
+h3{font-size:1.08rem;margin:1.8em 0 .4em}
+p{margin:.7em 0}
+a{color:var(--link);text-decoration:none;border-bottom:1px solid transparent}
+a:hover{border-bottom-color:var(--link)}
+code{background:var(--code-bg);padding:.12em .4em;border-radius:4px;font:.86em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre{background:var(--code-bg);padding:16px 18px;border-radius:8px;overflow-x:auto;border:1px solid var(--line)}
+pre code{background:none;padding:0;font-size:.85em}
+ul,ol{padding-left:1.4em;margin:.7em 0}
+li{margin:.3em 0}
+blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:var(--code-bg);border-radius:0 6px 6px 0;color:var(--muted)}
+blockquote strong{color:var(--fg)}
+table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.92em;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5em .7em;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+hr{border:none;border-top:1px solid var(--line);margin:2em 0}
+strong{font-weight:650}
+</style></head><body><main class="wrap">
+<h1>0006 — Setup is a dedicated surface; the overlay is a pure renderer</h1>
+<p><strong>Status:</strong> Accepted · <strong>Date:</strong> 2026-07-23 · <strong>Refines:</strong> <a href="0003-obs-gamepad-fallback.md">0003</a></p>
+<h2>Context</h2>
+<p>The overlay page is the thing OBS captures and puts on stream. Today it <em>also</em> hosts the setup UI — the calibration panel and connect flow — and hides it (<code>body.live</code>) once a wheel is connected. Two problems fall out of that conflation:</p>
+<ul><li><strong>It can corrupt a live scene.</strong> A mid-stream device drop, a cache clear, or a lost calibration can flip the page back out of the live state and pop the setup chrome onto the broadcast. The "thing on stream" should never be able to show configuration UI.</li><li><strong>The control surface is wrong.</strong> You can only set up (and only see live input on) <em>one</em> overlay at a time, and only by loading that overlay. Choosing and tuning a whole catalogue against real input is the job of a browsing surface, not the OBS source.</li></ul>
+<p>We want the safer, more predictable split, and we want to reach it <strong>without a local install</strong> — the zero-install, static-first property (ADR 0002) is worth keeping. (The alternative — a local input bridge that every surface subscribes to — is captured as the road-not-taken below.)</p>
+<h2>Decision</h2>
+<p><strong>The overlay page becomes a pure renderer with no setup UI, ever.</strong> It reads calibration from <code>localStorage</code> and live gamepad input, and draws; with no calibration it rests at zero and shows nothing else. Setup moves to two places:</p>
+<ul><li>A <strong>dedicated setup page</strong> (<code>setup.html</code>) owns connect + calibrate and the OBS missing-gamepad <strong>fallback ladder</strong> from ADR 0003. It is where a browser context gets calibrated.</li><li>The <strong>gallery gains a live-input mode</strong> (Demo ⇄ Live) built on the same calibration engine, so you bind once and drive the <em>whole</em> catalogue at once — the control surface, separate from the OBS render surface.</li></ul>
+<p>Calibration is <strong>per-origin, per-browser-context</strong> (it's <code>localStorage</code>, intrinsic to the physical wheel on that machine). So each context that renders overlays calibrates once: your desktop browser for the gallery preview, and OBS's own browser once — by loading <code>setup.html</code> in it (a temporary Browser Source → <strong>Interact</strong> → calibrate → remove it), after which every <code>overlay.html</code> in that same OBS browser reads the stored calibration. <strong>This is Path A: zero-install.</strong></p>
+<h2>Rationale</h2>
+<ul><li><strong>A pure-render overlay cannot corrupt a live scene</strong> — the mid-stream-chrome failure mode is removed structurally, not patched. This is the root fix for the concern SO-0013 was tracking.</li><li><strong>Separating render from control</strong> makes each surface do one thing: the overlay renders, the setup page calibrates, the gallery browses/tunes against live or demo input. More visible, more predictable UX.</li><li><strong>Reuses what exists</strong> — the calibration engine (<code>calibration.js</code> + <code>calibration-math.js</code>) already works; this is a relocation, not a rewrite.</li><li><strong>Keeps static-first (ADR 0002)</strong> — no server, no companion process. Configuration that <em>should</em> travel still travels in the URL (ADR 0001); calibration, which is device- and context-intrinsic, deliberately does not.</li></ul>
+<h2>Consequences</h2>
+<ul><li><strong><code>overlay.html</code> loses all setup chrome.</strong> It reads calibration from <code>localStorage</code>, reads live input, draws, and rests at zero when uncalibrated — no panel, no "press c", no error UI on the broadcast.</li><li><strong>New <code>setup.html</code></strong> owns connect/calibrate and the ADR 0003 fallback ladder — so that ladder now lives here, not on the overlay (this refines ADR 0003's "the overlay page needs a fallback UI").</li><li><strong>The gallery gains a Demo/Live toggle.</strong> Live drives every tile from the real wheel via the calibration engine.</li><li><strong>Per-context calibration is the price of zero-install.</strong> OBS calibrates once in its own browser via <code>setup.html</code>; the <a href="../product/user-guide.md">user guide</a> documents the one-time flow. Calibration does not transfer between machines or browser contexts — by design.</li><li><strong>Full input coverage plugs into the setup page</strong> when built: the H-shifter/gear binding (SO-0006) and any telemetry source (SO-0007) extend <code>setup.html</code>, not the overlay.</li><li><strong>Road not taken — the local bridge (Path B).</strong> A small local process reading the wheel and broadcasting to every surface would let a single calibration serve the gallery <em>and</em> all OBS overlays, making overlays pure subscribers. It's the cleanest UX but breaks zero-install, so it stays the documented fallback (ADR 0003, step 3): revisit if per-context calibration proves too clunky in real use.</li></ul>
+</main></body></html>
