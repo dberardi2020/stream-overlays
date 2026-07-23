@@ -8,6 +8,7 @@ body{background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacS
 h1{font-size:2rem;line-height:1.2;margin:0 0 .3em;letter-spacing:-.02em}
 h2{font-size:1.35rem;margin:2.2em 0 .5em;padding-bottom:.25em;border-bottom:1px solid var(--line)}
 h3{font-size:1.08rem;margin:1.8em 0 .4em}
+h1,h2,h3,h4,h5,h6{scroll-margin-top:1.2em}
 p{margin:.7em 0}
 a{color:var(--link);text-decoration:none;border-bottom:1px solid transparent}
 a:hover{border-bottom-color:var(--link)}
@@ -18,15 +19,17 @@ ul,ol{padding-left:1.4em;margin:.7em 0}
 li{margin:.3em 0}
 blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:var(--code-bg);border-radius:0 6px 6px 0;color:var(--muted)}
 blockquote strong{color:var(--fg)}
-table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.92em;display:block;overflow-x:auto}
+.tablewrap{overflow-x:auto;margin:1.1em 0}
+table{border-collapse:collapse;width:100%;font-size:.92em}
 th,td{border:1px solid var(--line);padding:.5em .7em;text-align:left;vertical-align:top}
+td:first-child{white-space:nowrap}
 th{background:var(--code-bg);font-weight:600}
 hr{border:none;border-top:1px solid var(--line);margin:2em 0}
 strong{font-weight:650}
 </style></head><body><main class="wrap">
-<h1>Catalogue archive</h1>
+<h1 id="catalogue-archive">Catalogue archive</h1>
 <p>Where the overlay set was worked out. These are the <strong>superseded early drafts</strong> of the catalogue — the exploratory pages that preceded the current source of truth (<code>../catalogue.json</code>) and the <a href="../pages/gallery.html">gallery</a>. Kept for provenance: they show how the designs and the direct-vs-telemetry split were arrived at. They are <strong>not</strong> live and nothing depends on them.</p>
 <p>Each is a self-contained HTML page (single-format — data-embedded, no Markdown form):</p>
-<table><thead><tr><th>Draft</th><th>What it explored</th></tr></thead><tbody><tr><td><code>v1-shifter-steering-combined.html</code></td><td>First pass at combining shifter + steering visuals.</td></tr><tr><td><code>v2-direct-vs-telemetry.html</code></td><td>The split that became <a href="../design-principles.md">principle 1</a> — direct rig data vs game telemetry.</td></tr><tr><td><code>v3-shifter-steering-combined.html</code></td><td>A later combined-layout iteration.</td></tr></tbody></table>
+<div class="tablewrap"><table><thead><tr><th>Draft</th><th>What it explored</th></tr></thead><tbody><tr><td><code>v1-shifter-steering-combined.html</code></td><td>First pass at combining shifter + steering visuals.</td></tr><tr><td><code>v2-direct-vs-telemetry.html</code></td><td>The split that became <a href="../design-principles.md">principle 1</a> — direct rig data vs game telemetry.</td></tr><tr><td><code>v3-shifter-steering-combined.html</code></td><td>A later combined-layout iteration.</td></tr></tbody></table></div>
 <p>For the current designs, read <a href="../design-principles.md"><code>../design-principles.md</code></a> and browse the <a href="../pages/gallery.html">gallery</a>.</p>
 </main></body></html>

@@ -8,6 +8,7 @@ body{background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacS
 h1{font-size:2rem;line-height:1.2;margin:0 0 .3em;letter-spacing:-.02em}
 h2{font-size:1.35rem;margin:2.2em 0 .5em;padding-bottom:.25em;border-bottom:1px solid var(--line)}
 h3{font-size:1.08rem;margin:1.8em 0 .4em}
+h1,h2,h3,h4,h5,h6{scroll-margin-top:1.2em}
 p{margin:.7em 0}
 a{color:var(--link);text-decoration:none;border-bottom:1px solid transparent}
 a:hover{border-bottom-color:var(--link)}
@@ -18,21 +19,23 @@ ul,ol{padding-left:1.4em;margin:.7em 0}
 li{margin:.3em 0}
 blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:var(--code-bg);border-radius:0 6px 6px 0;color:var(--muted)}
 blockquote strong{color:var(--fg)}
-table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.92em;display:block;overflow-x:auto}
+.tablewrap{overflow-x:auto;margin:1.1em 0}
+table{border-collapse:collapse;width:100%;font-size:.92em}
 th,td{border:1px solid var(--line);padding:.5em .7em;text-align:left;vertical-align:top}
+td:first-child{white-space:nowrap}
 th{background:var(--code-bg);font-weight:600}
 hr{border:none;border-top:1px solid var(--line);margin:2em 0}
 strong{font-weight:650}
 </style></head><body><main class="wrap">
-<h1>0003 — The OBS missing-gamepad case is a guided fallback, not a bug</h1>
+<h1 id="0003-the-obs-missing-gamepad-case-is-a-guided-fallback-not-a-bug">0003 — The OBS missing-gamepad case is a guided fallback, not a bug</h1>
 <p><strong>Status:</strong> Accepted · <strong>Date:</strong> 2026-07-23</p>
-<h2>Context</h2>
+<h2 id="context">Context</h2>
 <p>There is one real obstacle to the whole approach: <strong>OBS's embedded browser often will not expose a gamepad</strong>, because the Browser Source never receives real window focus, and the Gamepad API only reports devices to a focused document. Hosting neither causes this nor fixes it — it is a property of how OBS runs the page.</p>
-<h2>Decision</h2>
+<h2 id="decision">Decision</h2>
 <p><strong>Detect "no device after N seconds" and present a fallback ladder</strong> rather than failing silently. In order of effort:</p>
 <ol><li>Right-click the source → <strong>Interact</strong>, and press a pedal in that window (this gives the page focus and usually wakes the API).</li><li>Failing that, run the overlay in a real Chrome window and use OBS <strong>Window Capture</strong> with a colour key.</li><li>Eventually, an optional <strong>local bridge</strong> for people who want it bulletproof — reads the device over HID and pushes values to the page.</li></ol>
-<h2>Rationale</h2>
+<h2 id="rationale">Rationale</h2>
 <ul><li>The failure is unavoidable and environmental, so the honest response is to guide the user through it, not to pretend it won't happen.</li><li>Turning a confusing dead end ("my overlay is blank") into a labelled, ordered recovery flow is a <strong>product feature</strong> — it is often the difference between a user succeeding and giving up.</li><li>The ladder degrades gracefully: most users are fixed at step 1; the heavier options exist only for those who need them.</li></ul>
-<h2>Consequences</h2>
+<h2 id="consequences">Consequences</h2>
 <ul><li>The overlay page needs a <strong>device-presence timeout and a fallback UI</strong> (the current pilot page shows calibration state but not yet the full ladder — tracked with the configure/gallery work).</li><li>The <strong>local bridge</strong> is an optional future component, not a dependency — the static site must remain fully usable without it.</li><li>How common the focus problem is across real setups is still open (see the README roadmap); the answer decides whether the bridge stays optional or becomes recommended.</li></ul>
 </main></body></html>

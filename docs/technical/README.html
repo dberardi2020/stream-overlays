@@ -8,6 +8,7 @@ body{background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacS
 h1{font-size:2rem;line-height:1.2;margin:0 0 .3em;letter-spacing:-.02em}
 h2{font-size:1.35rem;margin:2.2em 0 .5em;padding-bottom:.25em;border-bottom:1px solid var(--line)}
 h3{font-size:1.08rem;margin:1.8em 0 .4em}
+h1,h2,h3,h4,h5,h6{scroll-margin-top:1.2em}
 p{margin:.7em 0}
 a{color:var(--link);text-decoration:none;border-bottom:1px solid transparent}
 a:hover{border-bottom-color:var(--link)}
@@ -18,19 +19,21 @@ ul,ol{padding-left:1.4em;margin:.7em 0}
 li{margin:.3em 0}
 blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:var(--code-bg);border-radius:0 6px 6px 0;color:var(--muted)}
 blockquote strong{color:var(--fg)}
-table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.92em;display:block;overflow-x:auto}
+.tablewrap{overflow-x:auto;margin:1.1em 0}
+table{border-collapse:collapse;width:100%;font-size:.92em}
 th,td{border:1px solid var(--line);padding:.5em .7em;text-align:left;vertical-align:top}
+td:first-child{white-space:nowrap}
 th{background:var(--code-bg);font-weight:600}
 hr{border:none;border-top:1px solid var(--line);margin:2em 0}
 strong{font-weight:650}
 </style></head><body><main class="wrap">
-<h1>Technical</h1>
+<h1 id="technical">Technical</h1>
 <p>How the code is built.</p>
-<table><thead><tr><th>Doc</th><th>Read it for</th></tr></thead><tbody><tr><td><a href="architecture.md">architecture.md</a></td><td>The three layers, the one-way dependency rule, and how the manifest stays honest.</td></tr><tr><td><a href="testing.md">testing.md</a></td><td>The three test layers, the golden pixel-diff, coverage, and gaps.</td></tr><tr><td><a href="../../overlays/sim-racing/design-principles.md">design-principles.md</a></td><td>The overlay design system — the rules that produced the current visuals; read before adding one. Lives with the sim-racing vertical.</td></tr></tbody></table>
+<div class="tablewrap"><table><thead><tr><th>Doc</th><th>Read it for</th></tr></thead><tbody><tr><td><a href="architecture.md">architecture.md</a></td><td>The three layers, the one-way dependency rule, and how the manifest stays honest.</td></tr><tr><td><a href="testing.md">testing.md</a></td><td>The three test layers, the golden pixel-diff, coverage, and gaps.</td></tr><tr><td><a href="../../overlays/sim-racing/design-principles.md">design-principles.md</a></td><td>The overlay design system — the rules that produced the current visuals; read before adding one. Lives with the sim-racing vertical.</td></tr></tbody></table></div>
 <p>The overlay module contract has its own decision record: <a href="../decisions/0005-overlay-module-contract.md">ADR 0005</a>. Why the whole thing is static files is <a href="../decisions/0002-static-first-hosting.md">ADR 0002</a>.</p>
-<h2>Doc pairing in this repo</h2>
+<h2 id="doc-pairing-in-this-repo">Doc pairing in this repo</h2>
 <p>Prose docs are Markdown + HTML pairs, generated with <code>docs/render.py</code> (stdlib only). The <code>.md</code> is the source of truth. Interactive or data pages (the overlay pages themselves, <code>catalogue.json</code>) are single-format — they have no meaningful Markdown form.</p>
-<h2>Tests</h2>
+<h2 id="tests">Tests</h2>
 <p>Two runners, both required in CI:</p>
 <ul><li><code>node --test tests/*.test.mjs</code> — the pure calibration maths, and the <strong>blank-tile guard</strong>: every migrated overlay is drawn against a mock canvas and must paint.</li><li><code>pytest tests/</code> — manifest schema and invariants, including that each overlay's <code>set</code> agrees with the channels its <code>uses</code> implies, and that every overlay module maps to a real manifest entry.</li></ul>
 </main></body></html>

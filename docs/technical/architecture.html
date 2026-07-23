@@ -8,6 +8,7 @@ body{background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacS
 h1{font-size:2rem;line-height:1.2;margin:0 0 .3em;letter-spacing:-.02em}
 h2{font-size:1.35rem;margin:2.2em 0 .5em;padding-bottom:.25em;border-bottom:1px solid var(--line)}
 h3{font-size:1.08rem;margin:1.8em 0 .4em}
+h1,h2,h3,h4,h5,h6{scroll-margin-top:1.2em}
 p{margin:.7em 0}
 a{color:var(--link);text-decoration:none;border-bottom:1px solid transparent}
 a:hover{border-bottom-color:var(--link)}
@@ -18,15 +19,17 @@ ul,ol{padding-left:1.4em;margin:.7em 0}
 li{margin:.3em 0}
 blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:var(--code-bg);border-radius:0 6px 6px 0;color:var(--muted)}
 blockquote strong{color:var(--fg)}
-table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.92em;display:block;overflow-x:auto}
+.tablewrap{overflow-x:auto;margin:1.1em 0}
+table{border-collapse:collapse;width:100%;font-size:.92em}
 th,td{border:1px solid var(--line);padding:.5em .7em;text-align:left;vertical-align:top}
+td:first-child{white-space:nowrap}
 th{background:var(--code-bg);font-weight:600}
 hr{border:none;border-top:1px solid var(--line);margin:2em 0}
 strong{font-weight:650}
 </style></head><body><main class="wrap">
-<h1>Architecture</h1>
+<h1 id="architecture">Architecture</h1>
 <p>How the code is layered, and the rules that keep it maintainable as the catalogue grows. The overlays began as single-file prototypes; this is the shape they were extracted into so the logic is testable, reusable, and safe to build a platform on.</p>
-<h2>Repository layout — a vertical per domain</h2>
+<h2 id="repository-layout-a-vertical-per-domain">Repository layout — a vertical per domain</h2>
 <p>The product is an overlay <em>platform</em>, and sim racing is its first <strong>vertical</strong> — "read a device in the browser, draw it, composite in OBS" generalises beyond wheels. So the overlays live under a per-vertical folder rather than at the root:</p>
 <pre><code>overlays/
   sim-racing/          ← the first (and, today, only) vertical — Logitech G923
@@ -37,7 +40,7 @@ strong{font-weight:650}
     build/channels.py    the manifest quality-gate
 docs/ · qa/ · tests/   ← repo-wide, span every vertical</code></pre>
 <p>A second vertical would be a <strong>sibling</strong> — <code>overlays/&lt;other&gt;/</code> with the same internal shape — while <code>docs/</code>, <code>qa/</code>, and <code>tests/</code> stay repo-wide. Nothing outside <code>overlays/sim-racing/</code> is sim-specific; the engine, manifest convention, module contract, and QA harness are the reusable spine. Everything below describes one vertical's internals, which every vertical shares.</p>
-<h2>Three layers, dependencies flow one way</h2>
+<h2 id="three-layers-dependencies-flow-one-way">Three layers, dependencies flow one way</h2>
 <pre><code>Layer 1 — pure logic          calibration-math.js · demo-lap.js
    (no DOM, no canvas)            ↑ imported by
 Layer 2 — browser runtime     gamepad.js · state.js · calibration.js · draw-kit.js · demo-driver.js · url-config.js
@@ -46,21 +49,21 @@ Layer 3 — overlays            overlays/&lt;id&gt;.js  — one module each, dra
    (draw to a canvas)             ↑ imported by
 Layer 4 — pages               pages/overlay.html · pages/gallery.html — thin: wire it together</code></pre>
 <p>The rule: <strong>dependencies only ever point up this list.</strong> An overlay never touches the Gamepad API or the DOM; the pure maths never imports the runtime. This is what makes Layer 1 runnable under <code>node --test</code> with no browser, and what lets an overlay be reasoned about as just <code>draw(channels) → pixels</code>.</p>
-<h3>Layer 1 — pure logic</h3>
+<h3 id="layer-1-pure-logic">Layer 1 — pure logic</h3>
 <ul><li><strong><code>calibration-math.js</code></strong> — <code>mapPedal(a, rest, full)</code> and <code>mapWheel(a, rest, min, max)</code>: raw axis value + captured calibration → normalised channel. Pure functions, unit-tested directly. This is the logic that used to be trapped inside a closure in the prototype.</li><li><strong><code>demo-lap.js</code></strong> — the synthetic lap that backs the gallery preview: pedals + steering shaped like a real lap, a scripted gear-change schedule, and derived rpm/speed telemetry, so shifter and telemetry overlays animate too. Pure array generation, no browser deps (<code>demo-driver.js</code> and its tests import it under node).</li></ul>
-<h3>Layer 2 — browser runtime</h3>
+<h3 id="layer-2-browser-runtime">Layer 2 — browser runtime</h3>
 <ul><li><strong><code>gamepad.js</code></strong> — the single hardware seam: <code>getPad()</code> is the only reader of <code>navigator.getGamepads()</code>. Everything downstream takes a plain <code>{ axes: [...] }</code>, so it is mockable.</li><li><strong><code>calibration.js</code></strong> — the calibration state machine and status panel. Writes the shared <code>state</code>. Imports its maths from Layer 1 and its wheel read from <code>gamepad.js</code>.</li><li><strong><code>draw-kit.js</code></strong> — the shared sub-visuals every overlay draws with: palette (<code>C</code>), channel table (<code>CH</code>), <code>glass</code>/<code>mono</code>/<code>pct</code>, and the rolling input <code>hist</code>. These are named callables on purpose — the future builder composes overlays from them. It also owns the render-state singletons (<code>tel</code>, <code>hist</code>, <code>shiftLog</code>, <code>shiftTimes</code>, <code>gateUse</code>, <code>clock</code>, <code>MODES</code>) that both the live page and the demo driver feed.</li><li><strong><code>demo-driver.js</code></strong> — turns the pure lap into the animated whole-engine state the gallery reads: it advances a clock and, each <code>tick(dt)</code>, writes the input channels, telemetry, history, and shifter accumulators onto the <code>draw-kit</code> singletons. This is the piece that used to live inline in the prototype's <code>catalogue.html</code>; ported faithfully (it reproduces the QA fixture exactly). The live overlay page does <strong>not</strong> use it — real calibrated input drives that.</li><li><strong><code>state.js</code></strong> — the channel state object shape.</li><li><strong><code>url-config.js</code></strong> — parse <code>?style=/scale=/bg=</code> and resolve a <code>?style=&lt;id&gt;</code> to a manifest entry.</li></ul>
-<h3>Layer 3 — overlays</h3>
+<h3 id="layer-3-overlays">Layer 3 — overlays</h3>
 <p>One module per overlay. The contract is deliberately tiny — see <a href="../decisions/0005-overlay-module-contract.md">ADR 0005</a>:</p>
 <pre><code>export const id = "bowtie";
 export function draw(ctx, w, h, state, mem) { /* byte-for-byte from the prototype */ }</code></pre>
 <p>The module owns only its id and its drawing. Everything else (name, size, set, stage, note) lives in the manifest.</p>
-<h3>Layer 4 — pages</h3>
+<h3 id="layer-4-pages">Layer 4 — pages</h3>
 <p><code>pages/overlay.html</code> is a thin orchestrator: read the URL, fetch the manifest, resolve the entry, <code>import()</code> the overlay module, size the canvas from the manifest, wire calibration, and run the draw loop. Because it uses native ES modules and dynamic <code>import()</code>, there is <strong>no build step</strong> — the page runs as static files (<a href="../decisions/0002-static-first-hosting.md">ADR 0002</a>).</p>
 <p><code>pages/gallery.html</code> is the same shape at N-up: it fetches the manifest, builds a card per non-excluded overlay, and runs <strong>one</strong> <code>requestAnimationFrame</code> loop with <strong>one</strong> <code>demo-driver</code> — each frame ticks the driver once, then every on-screen tile lazily <code>import()</code>s its module and draws over the shared state. An <code>IntersectionObserver</code> keeps only visible tiles painting, so 68 live canvases stay cheap. It supersedes the prototype's <code>catalogue.html</code> + <code>Live/gallery.html</code>.</p>
-<h2>The manifest stays honest</h2>
+<h2 id="the-manifest-stays-honest">The manifest stays honest</h2>
 <p><code>catalogue.json</code> is the source of truth, so its integrity is enforced rather than trusted:</p>
 <ul><li><strong><code>set</code>/<code>uses</code> are derived, not authored.</strong> <code>build/channels.py</code> reads what an overlay's draw body actually references and derives its channels; the tests assert the manifest agrees. This is the check that originally caught overlays labelled with the wrong set.</li><li><strong>Module ↔ manifest coherence.</strong> Every overlay module maps to a real manifest entry, and its exported <code>id</code> matches its filename. Full coverage (every entry has a module) flips on when the <a href="../tickets/tickets.md">SO-0001</a> migration completes.</li><li><strong>The blank-tile guard.</strong> Each overlay is drawn against a recording mock canvas and must paint — the dynamic successor to the prototype's static identifier check, which is what caught four would-be-blank tiles.</li></ul>
-<h2>What is not here yet</h2>
+<h2 id="what-is-not-here-yet">What is not here yet</h2>
 <p>The configure page (bind inputs → emit the <code>?style=…</code> URL, <a href="../tickets/tickets.md">SO-0003</a>) and the landing front door (<a href="../tickets/tickets.md">SO-0009</a>). The overlay migration (<a href="../tickets/tickets.md">SO-0001</a>) and the gallery (<a href="../tickets/tickets.md">SO-0002</a>) are done — all 68 non-excluded overlays are modules, each draw body copied byte-for-byte and verified by the manifest-sync + blank-tile tests and the golden pixel-diff.</p>
 </main></body></html>

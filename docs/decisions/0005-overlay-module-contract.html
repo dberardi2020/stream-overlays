@@ -8,6 +8,7 @@ body{background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacS
 h1{font-size:2rem;line-height:1.2;margin:0 0 .3em;letter-spacing:-.02em}
 h2{font-size:1.35rem;margin:2.2em 0 .5em;padding-bottom:.25em;border-bottom:1px solid var(--line)}
 h3{font-size:1.08rem;margin:1.8em 0 .4em}
+h1,h2,h3,h4,h5,h6{scroll-margin-top:1.2em}
 p{margin:.7em 0}
 a{color:var(--link);text-decoration:none;border-bottom:1px solid transparent}
 a:hover{border-bottom-color:var(--link)}
@@ -18,26 +19,28 @@ ul,ol{padding-left:1.4em;margin:.7em 0}
 li{margin:.3em 0}
 blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:var(--code-bg);border-radius:0 6px 6px 0;color:var(--muted)}
 blockquote strong{color:var(--fg)}
-table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.92em;display:block;overflow-x:auto}
+.tablewrap{overflow-x:auto;margin:1.1em 0}
+table{border-collapse:collapse;width:100%;font-size:.92em}
 th,td{border:1px solid var(--line);padding:.5em .7em;text-align:left;vertical-align:top}
+td:first-child{white-space:nowrap}
 th{background:var(--code-bg);font-weight:600}
 hr{border:none;border-top:1px solid var(--line);margin:2em 0}
 strong{font-weight:650}
 </style></head><body><main class="wrap">
-<h1>0005 — One module per overlay: <code>export id</code> + <code>export draw</code>, metadata in the manifest</h1>
+<h1 id="0005-one-module-per-overlay-export-id-export-draw-metadata-in-the-manifest">0005 — One module per overlay: <code>export id</code> + <code>export draw</code>, metadata in the manifest</h1>
 <p><strong>Status:</strong> Accepted · <strong>Date:</strong> 2026-07-23</p>
-<h2>Context</h2>
+<h2 id="context">Context</h2>
 <p>The overlays were prototyped as <code>add(name, note, w, h, drawFn)</code> calls concatenated into one HTML file by a build script that sliced code out of the prototype by <strong>line number</strong> and reconciled helpers by string replacement. That was fragile — a comment moving one line could silently produce a blank tile — and it entangled each overlay's drawing with its metadata and with every other overlay. To go from prototype to a maintainable catalogue (and to enable a future builder that composes overlays from parts), the overlays need a real contract.</p>
-<h2>Decision</h2>
+<h2 id="decision">Decision</h2>
 <p><strong>Each overlay is one ES module</strong> exporting exactly two things:</p>
 <pre><code>export const id = "bowtie";                      // immutable, kebab-case, = filename
 export function draw(ctx, w, h, state, mem) {}   // the drawing, byte-for-byte from the prototype</code></pre>
 <ul><li>All other metadata — <code>name</code>, <code>size</code>, <code>set</code>, <code>stage</code>, <code>uses</code>, <code>note</code> — lives in <strong><code>catalogue.json</code></strong>, the single source of truth. The module does not duplicate it.</li><li>The shared sub-visuals a draw body uses (<code>glass</code>, <code>mono</code>, palette, history) are imported from <code>engine/draw-kit.js</code> as <strong>named callables</strong>, so the future builder can compose overlays from them.</li><li><code>mem</code> is a per-overlay scratch object for stateful overlays (peak-hold decay, etc.), replacing the prototype's <code>this.mem</code>.</li></ul>
-<h3>Calling conventions (as-built, derived from the prototype)</h3>
+<h3 id="calling-conventions-as-built-derived-from-the-prototype">Calling conventions (as-built, derived from the prototype)</h3>
 <p>The one signature <code>draw(ctx, w, h, s, mem)</code> has to absorb three shapes the prototype's draw bodies were written in, because bodies are ported <strong>byte-for-byte</strong>:</p>
 <ul><li><strong>State is a single object <code>s</code>.</strong> Every channel a body reads lives on it: <code>thr</code>/<code>brk</code>/<code>clu</code> (0..1), <code>str</code> (−1..+1), and for combos/telemetry <code>gear</code>/<code>lever</code>/<code>rpm</code>/<code>spd</code>/<code>shiftAge</code>/<code>shiftDir</code>/<code>shiftCount</code>/<code>shiftProg</code>. The prototype nominally passed a second <code>tel</code> argument, but <strong>no draw body reads it</strong> — so the contract omits it.</li><li><strong>Two ctx conventions coexist.</strong> 20 bodies pass <code>ctx</code> explicitly to <code>glass</code>/<code>mono</code>; 52 rely on a <strong>module-global <code>ctx</code></strong> for helpers (<code>txt</code>, <code>wheel</code>, <code>drawGate</code>, <code>pedalBars</code>, …). The engine therefore holds a settable global <code>ctx</code> the loop sets before each <code>draw</code>, and <code>glass</code>/<code>mono</code> are reconciled to accept either form. Because the <code>draw</code> parameter is also named <code>ctx</code> and the loop sets the global to the same context, bare <code>ctx.*</code> calls, explicit-<code>ctx</code> helpers, and global-<code>ctx</code> helpers all resolve to one context. This settable global is a deliberate, contained bit of engine state — the price of byte-for-byte fidelity (the alternative, rewriting every body to pass <code>ctx</code>, was rejected as transcription risk).</li><li><strong>The three body signatures</strong> <code>(ctx,w,h,s)</code>, <code>(w,h,s)</code>, <code>(w,h,s,t)</code> all bind correctly under <code>draw(ctx,w,h,s,mem)</code>: <code>w</code>/<code>h</code>/<code>s</code> land by position, <code>ctx</code> is present for those that use it, and the unused 4th/5th slot is harmless.</li></ul>
-<h2>Rationale</h2>
+<h2 id="rationale">Rationale</h2>
 <ul><li><strong>One file per overlay</strong> makes each overlay independently readable, reviewable, and diffable, and kills the line-number slicing.</li><li><strong>Metadata in the manifest, not the module</strong> avoids two sources of truth. The set of module ids and manifest ids are kept in lock-step by a test instead of by duplication.</li><li><strong><code>id</code> = filename = URL contract</strong> ties the three together with no room to drift, and honours the immutability rule (<a href="0001-config-in-the-url.md">ADR 0001</a>, <a href="../product/concepts.md">concepts</a>).</li><li><strong>Named sub-visual imports</strong> are the seam the builder needs; making them the normal way overlays are written means the builder doesn't require a later refactor.</li></ul>
-<h2>Consequences</h2>
+<h2 id="consequences">Consequences</h2>
 <ul><li>Adding an overlay is: write <code>overlays/&lt;id&gt;.js</code>, add the <code>catalogue.json</code> entry — then <code>pytest</code> (manifest ↔ module coherence, <code>set</code> vs <code>uses</code>) and <code>node --test</code> (the blank-tile guard) must pass.</li><li>Migrating the remaining prototype overlays is mechanical (copy each draw body into a module) and guarded by those same tests — tracked as <a href="../tickets/tickets.md">SO-0001</a>.</li><li>Draw bodies are copied <strong>byte-for-byte</strong>; the only permitted change during migration is <code>this.mem</code> → the <code>mem</code> parameter, which does not alter what is drawn.</li><li>The full-coverage assertion (every non-excluded manifest entry has a module) is switched off during the pilot and flips on when migration completes.</li></ul>
 </main></body></html>

@@ -8,6 +8,7 @@ body{background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacS
 h1{font-size:2rem;line-height:1.2;margin:0 0 .3em;letter-spacing:-.02em}
 h2{font-size:1.35rem;margin:2.2em 0 .5em;padding-bottom:.25em;border-bottom:1px solid var(--line)}
 h3{font-size:1.08rem;margin:1.8em 0 .4em}
+h1,h2,h3,h4,h5,h6{scroll-margin-top:1.2em}
 p{margin:.7em 0}
 a{color:var(--link);text-decoration:none;border-bottom:1px solid transparent}
 a:hover{border-bottom-color:var(--link)}
@@ -18,28 +19,30 @@ ul,ol{padding-left:1.4em;margin:.7em 0}
 li{margin:.3em 0}
 blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:var(--code-bg);border-radius:0 6px 6px 0;color:var(--muted)}
 blockquote strong{color:var(--fg)}
-table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.92em;display:block;overflow-x:auto}
+.tablewrap{overflow-x:auto;margin:1.1em 0}
+table{border-collapse:collapse;width:100%;font-size:.92em}
 th,td{border:1px solid var(--line);padding:.5em .7em;text-align:left;vertical-align:top}
+td:first-child{white-space:nowrap}
 th{background:var(--code-bg);font-weight:600}
 hr{border:none;border-top:1px solid var(--line);margin:2em 0}
 strong{font-weight:650}
 </style></head><body><main class="wrap">
-<h1>Testing</h1>
+<h1 id="testing">Testing</h1>
 <p>How the project is tested, what each layer covers, and where the gaps are. The short version and the run commands are in the README's <a href="../../README.md#testing">Testing</a> section; this is the full approach.</p>
-<h2>Three layers</h2>
-<h3>1 · Unit — <code>tests/</code> (the CI gate)</h3>
+<h2 id="three-layers">Three layers</h2>
+<h3 id="1-unit-tests-the-ci-gate">1 · Unit — <code>tests/</code> (the CI gate)</h3>
 <p>Fast, in-process, no browser. Two runners:</p>
 <ul><li><strong><code>node --test tests/*.test.mjs</code></strong> — the pure calibration maths (<code>mapPedal</code>/<code>mapWheel</code>, exercised directly) and the <strong>blank-tile guard</strong>: every overlay module is imported and drawn against a recording mock canvas, and must paint something. Catches a throw, a missing import, or an overlay that silently renders nothing.</li><li><strong><code>pytest tests/</code></strong> — the manifest is the source of truth, so its integrity is asserted on the JSON alone: unique kebab ids, valid <code>stage</code>/<code>set</code> enums, <code>size</code> sanity, and the load-bearing check that each overlay's <code>set</code> agrees with the channels its <code>uses</code> implies. Plus module↔manifest coherence: every overlay module maps to a real entry, its exported <code>id</code> matches its filename, and (now that migration is complete) <strong>every non-excluded entry has a module</strong>.</li></ul>
-<h3>2 · Acceptance — <code>qa/acceptance.mjs</code> (the un-mockable surface)</h3>
+<h3 id="2-acceptance-qa-acceptance-mjs-the-un-mockable-surface">2 · Acceptance — <code>qa/acceptance.mjs</code> (the un-mockable surface)</h3>
 <p>Overlays are canvas pixels, so the acceptance layer renders them for real: headless Chromium, real fonts, real ES-module imports, at a fixed deterministic state (<code>qa/fixture.json</code>). It checks two things per overlay:</p>
 <ol><li><strong>Non-blank</strong> — the real-pixel successor to the unit blank-tile guard (a real canvas surfaces failures a mock can't).</li><li><strong>Faithfulness</strong> — a <strong>pixel-diff against a golden</strong> (<code>qa/golden/&lt;id&gt;.png</code>). The goldens were captured from the reference implementation through <em>its own</em> renderer at the same state (<code>qa/capture-golden.mjs</code>). Because every overlay's draw body is a byte-for-byte copy of the reference's, a diff can only come from a mis-ported shared <em>helper</em> — so the diff pinpoints exactly that.</li></ol>
 <p>Tolerance is 0.6% of pixels with an AA-aware threshold: canvas <strong>text</strong> has subpixel rendering variance between page contexts (a glyph-dense overlay differs ~0.5% while looking identical), whereas a real regression is a wrong shape at many percent. One command, non-zero exit on failure, skips cleanly when Playwright/chromium is absent (<code>npm i &amp;&amp; npx playwright install chromium</code> to enable).</p>
-<h3>3 · Agentic browser pass (dev-only)</h3>
+<h3 id="3-agentic-browser-pass-dev-only">3 · Agentic browser pass (dev-only)</h3>
 <p>For what a harness can't assert — interactions, and whether it <em>looks right</em> live. Driven by a coding agent against the running app per <code>qa/product-map.md</code>. Not every change needs it; reserve the expensive fresh-eyes persona for milestones.</p>
-<h2>Coverage</h2>
+<h2 id="coverage">Coverage</h2>
 <ul><li><strong>68 / 68</strong> non-excluded overlays: unit blank-tile guard ✔, manifest coherence ✔, acceptance non-blank ✔, <strong>pixel-faithful to golden ✔</strong>. The 4 <code>excluded</code> overlays are archived-in-manifest and intentionally module-less.</li><li>Pure calibration maths: unit-tested across rest/full/clamp and off-centre-rest cases.</li><li>Manifest: every invariant above, on all 72 entries.</li></ul>
-<h2>Gaps (tracked)</h2>
+<h2 id="gaps-tracked">Gaps (tracked)</h2>
 <ul><li><strong>Live behaviour isn't rendered by the acceptance layer</strong> — it renders from a frozen fixture, not a live wheel. Shifter and telemetry inputs have no live source yet (<a href="../tickets/tickets.md">SO-0006</a>, <a href="../tickets/tickets.md">SO-0007</a>); the overlays render faithfully from demo state but can't be driven live.</li><li><strong>A latent reference bug is faithfully preserved:</strong> <code>split-panel</code> reads <code>s.rpm</code>, but rpm rides on the separate telemetry object, not the input state — so its rev arc renders empty (as it did in the reference). Migration replicated it byte-for-byte; the fix (read telemetry, not input) belongs with the telemetry work (<a href="../tickets/tickets.md">SO-0007</a>).</li><li><strong>No live-page acceptance</strong> for <code>pages/overlay.html</code> end-to-end in OBS — that needs a real device and is manual QA.</li></ul>
-<h2>CI</h2>
+<h2 id="ci">CI</h2>
 <p><code>.github/workflows/tests.yml</code> runs the two deterministic layers on every push/PR: <code>node --test</code> then <code>pytest</code>. The acceptance layer is runnable in CI once a chromium install step is added; until then it is a local/pre-flight gate (and part of the go-public checklist).</p>
 </main></body></html>

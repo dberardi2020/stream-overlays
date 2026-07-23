@@ -8,6 +8,7 @@ body{background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacS
 h1{font-size:2rem;line-height:1.2;margin:0 0 .3em;letter-spacing:-.02em}
 h2{font-size:1.35rem;margin:2.2em 0 .5em;padding-bottom:.25em;border-bottom:1px solid var(--line)}
 h3{font-size:1.08rem;margin:1.8em 0 .4em}
+h1,h2,h3,h4,h5,h6{scroll-margin-top:1.2em}
 p{margin:.7em 0}
 a{color:var(--link);text-decoration:none;border-bottom:1px solid transparent}
 a:hover{border-bottom-color:var(--link)}
@@ -18,20 +19,22 @@ ul,ol{padding-left:1.4em;margin:.7em 0}
 li{margin:.3em 0}
 blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:var(--code-bg);border-radius:0 6px 6px 0;color:var(--muted)}
 blockquote strong{color:var(--fg)}
-table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.92em;display:block;overflow-x:auto}
+.tablewrap{overflow-x:auto;margin:1.1em 0}
+table{border-collapse:collapse;width:100%;font-size:.92em}
 th,td{border:1px solid var(--line);padding:.5em .7em;text-align:left;vertical-align:top}
+td:first-child{white-space:nowrap}
 th{background:var(--code-bg);font-weight:600}
 hr{border:none;border-top:1px solid var(--line);margin:2em 0}
 strong{font-weight:650}
 </style></head><body><main class="wrap">
-<h1>0001 — Configuration lives in the URL, not in storage</h1>
+<h1 id="0001-configuration-lives-in-the-url-not-in-storage">0001 — Configuration lives in the URL, not in storage</h1>
 <p><strong>Status:</strong> Accepted · <strong>Date:</strong> 2026-07-23</p>
-<h2>Context</h2>
+<h2 id="context">Context</h2>
 <p>A streamer configures an overlay in one place (a normal browser, or a future configure page) and runs it in another: OBS's embedded Browser Source. The two do not share state. <code>localStorage</code> is scoped per-origin <em>and</em> per-browser-profile, so anything saved there in Chrome is invisible to OBS's browser — which quietly breaks the one workflow that matters.</p>
-<h2>Decision</h2>
+<h2 id="decision">Decision</h2>
 <p><strong>All overlay configuration lives in URL query parameters</strong> — <code>?style=&lt;id&gt;&amp;scale=&lt;n&gt;&amp;bg=&lt;hex&gt;&amp;…</code>. The page reads its entire configuration from the URL and stores nothing about <em>which overlay, how big, what colours</em>. The only thing kept in browser storage is the per-wheel <strong>calibration</strong>, which is intrinsic to the physical device on that machine and never needs to travel.</p>
-<h2>Rationale</h2>
+<h2 id="rationale">Rationale</h2>
 <ul><li>A configured overlay becomes a <strong>link you paste into OBS</strong> — portable, shareable, bookmarkable, diffable.</li><li>It sidesteps storage entirely for the thing that must cross browser boundaries, which is exactly where per-origin storage fails.</li><li>It matches how established overlay tools already work, so it meets user expectations.</li><li>Storing nothing user-specific also means there is nothing to sync, migrate, or protect.</li></ul>
-<h2>Consequences</h2>
+<h2 id="consequences">Consequences</h2>
 <ul><li>The <strong>id is a permanent contract</strong>: it appears in URLs streamers have saved, so it can never change (see <a href="0005-overlay-module-contract.md">ADR 0005</a> and <a href="../product/concepts.md">concepts</a>).</li><li>A future <strong>configure page</strong> is a URL generator, not a settings store — it binds inputs and emits the link.</li><li>Any setting that must persist across the configure→OBS boundary has to be expressible in the URL. Calibration is the deliberate exception, because it is tied to the device, not the overlay.</li></ul>
 </main></body></html>

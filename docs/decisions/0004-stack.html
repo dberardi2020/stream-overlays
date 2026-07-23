@@ -8,6 +8,7 @@ body{background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacS
 h1{font-size:2rem;line-height:1.2;margin:0 0 .3em;letter-spacing:-.02em}
 h2{font-size:1.35rem;margin:2.2em 0 .5em;padding-bottom:.25em;border-bottom:1px solid var(--line)}
 h3{font-size:1.08rem;margin:1.8em 0 .4em}
+h1,h2,h3,h4,h5,h6{scroll-margin-top:1.2em}
 p{margin:.7em 0}
 a{color:var(--link);text-decoration:none;border-bottom:1px solid transparent}
 a:hover{border-bottom-color:var(--link)}
@@ -18,21 +19,23 @@ ul,ol{padding-left:1.4em;margin:.7em 0}
 li{margin:.3em 0}
 blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:var(--code-bg);border-radius:0 6px 6px 0;color:var(--muted)}
 blockquote strong{color:var(--fg)}
-table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.92em;display:block;overflow-x:auto}
+.tablewrap{overflow-x:auto;margin:1.1em 0}
+table{border-collapse:collapse;width:100%;font-size:.92em}
 th,td{border:1px solid var(--line);padding:.5em .7em;text-align:left;vertical-align:top}
+td:first-child{white-space:nowrap}
 th{background:var(--code-bg);font-weight:600}
 hr{border:none;border-top:1px solid var(--line);margin:2em 0}
 strong{font-weight:650}
 </style></head><body><main class="wrap">
-<h1>0004 — A boring, static-first stack; services only on real need</h1>
+<h1 id="0004-a-boring-static-first-stack-services-only-on-real-need">0004 — A boring, static-first stack; services only on real need</h1>
 <p><strong>Status:</strong> Accepted · <strong>Date:</strong> 2026-07-23</p>
-<h2>Context</h2>
+<h2 id="context">Context</h2>
 <p>With hosting settled as static files (<a href="0002-static-first-hosting.md">ADR 0002</a>) and configuration in the URL (<a href="0001-config-in-the-url.md">ADR 0001</a>), most of a conventional web stack is optional. The question is what to actually commit to now versus defer until a concrete need appears.</p>
-<h2>Decision</h2>
+<h2 id="decision">Decision</h2>
 <p><strong>Start with the smallest thing that works and add nothing speculatively:</strong></p>
 <ul><li><strong>Today</strong> — plain HTML/CSS/JS as native ES modules, served static. No framework, no bundler, no backend. Python (stdlib only) for the manifest quality-gate and doc rendering.</li><li><strong>If/when a site shell is warranted</strong> — a static-export framework (e.g. Next.js on Vercel: static today, server routes later without a migration) is the intended path, chosen so it does not force a rewrite if dynamic needs ever appear.</li><li><strong>Accounts/persistence</strong> — deferred, possibly forever. Only introduced if a feature genuinely requires server-side state; the URL-config model is designed so most features don't.</li></ul>
-<h2>Rationale</h2>
+<h2 id="rationale">Rationale</h2>
 <ul><li>The client-side, static-file nature means the expensive parts of a stack (server, database, auth) buy nothing yet, so committing to them now is pure cost.</li><li>Choosing a static-export-capable framework for the eventual shell avoids a one-way door: it can grow server routes without abandoning the static deployment.</li><li>Boring, widely-recognised tools keep the project legible and low-maintenance for a side project.</li></ul>
-<h2>Consequences</h2>
+<h2 id="consequences">Consequences</h2>
 <ul><li>No backend to run or secure at this stage; the ops surface is "publish static files."</li><li>Any proposal that needs a server (accounts, saved presets beyond the URL, server-side anything) must clear the bar of a real, demonstrated need — and gets its own ADR.</li><li>Product-strategy choices are deliberately <strong>out of this repo</strong> — they are not technical decisions and do not belong in a public repo.</li></ul>
 </main></body></html>
