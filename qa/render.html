@@ -16,16 +16,23 @@
   state object `s`, matching the contract (see qa/product-map.md).
 -->
 <script type="module">
-import { pushHistory, hist } from "../overlays/sim-racing/engine/draw-kit.js";
+import { hist } from "../overlays/sim-racing/engine/draw-kit.js";
 
 function fail(msg) { document.documentElement.dataset.error = msg; throw new Error(msg); }
 
 const params = new URLSearchParams(location.search);
 const id = params.get("style");
-const SCALE = 2;                          // fixed; dpr forced to 1 for determinism
+const SCALE = 2;                          // must match qa/capture-golden.mjs
 
 const manifest = await fetch("../overlays/sim-racing/catalogue.json").then(r => r.json()).catch(() => fail("no manifest"));
 const entry = manifest.find(e => e.id === id) || fail("no manifest entry for " + id);
+
+// The SAME frozen state the goldens were captured at (qa/fixture.json), so a pixel
+// diff isolates to the draw code, not to different inputs.
+const fixture = await fetch("./fixture.json").then(r => r.json()).catch(() => fail("no fixture.json — run capture-golden first"));
+const state = { ...fixture.input, real: true };
+for (const k of Object.keys(hist)) delete hist[k];
+for (const [k, arr] of Object.entries(fixture.hist)) hist[k] = arr.slice();
 
 let mod;
 try { mod = await import(`../overlays/sim-racing/overlays/${id}.js`); }
@@ -40,28 +47,7 @@ cv.style.width = entry.size.w * SCALE + "px";
 cv.style.height = entry.size.h * SCALE + "px";
 ctx.scale(SCALE, SCALE);
 
-// Fixed representative state — every channel a migrated overlay might read.
-const state = {
-  thr: 0.62, brk: 0.41, clu: 0.18, str: 0.34,
-  gear: 3, lever: 3, rpm: 0.73, spd: 0.55,
-  shiftAge: 0.2, shiftDir: 1, shiftCount: 5, shiftProg: 0.5,
-  real: true, lapTime: 8
-};
-
-// Seed a deterministic history so trace/comet/history overlays have samples.
-for (const k of Object.keys(hist)) hist[k].length = 0;
-for (let i = 0; i < 140; i++) {
-  const ph = i / 140;
-  pushHistory({
-    thr: 0.5 + 0.45 * Math.sin(ph * 6.283),
-    brk: 0.5 + 0.45 * Math.cos(ph * 6.283),
-    clu: 0.35 * Math.abs(Math.sin(ph * 9)),
-    str: 0.6 * Math.sin(ph * 3),
-    gear: 1 + (i % 6)
-  });
-}
-
-await document.fonts.ready;               // so text renders with the real font, not a fallback
+await document.fonts.ready;               // render with the real font, not a fallback
 ctx.clearRect(0, 0, entry.size.w, entry.size.h);
 mod.draw(ctx, entry.size.w, entry.size.h, state, {});
 document.documentElement.dataset.rendered = "1";

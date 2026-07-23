@@ -18,3 +18,4 @@ qa/renders/
 overlays/**/build/engine.js
 overlays/**/build/picked.json
 overlays/**/build/blocks.json
+qa/_prototype.html
