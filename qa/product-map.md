@@ -52,7 +52,8 @@ Run the layers a change touches; these must stay true.
 - [ ] Overlay page background stays **transparent** (OBS composites over it).
 - [ ] A bad `?style=` shows an honest "unknown overlay", not a silent default.
 - [ ] Adding an overlay = module + manifest entry, and both test layers still pass.
-- [ ] `pages/gallery.html` (over http) — all 68 non-excluded tiles paint and animate; set/stage filters, search, and pause/speed/shift controls work; `excluded` overlays are absent; each "Open in OBS →" points at `overlay.html?style=<id>`.
+- [ ] `pages/gallery.html` (over http) — all 68 non-excluded tiles paint and animate; set/stage filters, search, and pause/speed/shift/**backdrop** controls work; `excluded` overlays are absent; each "Open in OBS →" points at `overlay.html?style=<id>`.
+- [ ] **Gallery visual pass (a real browser, human or agentic eye — not just "did it paint")** — the deterministic layers prove pixels exist; they do **not** judge layout or chrome. Screenshot the gallery at a **narrow** width (~760px) and a **wide** one, and check: the grid is multi-column (cards aren't full-width with a small overlay marooned in them); control buttons are cohesive with a clear active state; **capitalization is consistent** (Title-Case filter labels, capitalized placeholder); the **Backdrop** toggle cycles dark → light → checker behind every preview. Skipping this is how button/caps/layout regressions ship green — it's a required layer for any UI page, not optional polish.
 
 ## Gotchas (QA-side)
 

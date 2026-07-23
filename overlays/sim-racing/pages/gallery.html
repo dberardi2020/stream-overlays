@@ -35,11 +35,14 @@ a:hover{text-decoration:underline}
 .grp.grow{flex:1 1 190px;min-width:150px}
 .lbl{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);
   opacity:.7;user-select:none;white-space:nowrap}
-.btn{font-family:inherit;font-size:11.5px;letter-spacing:.04em;color:var(--mute);
-  background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:6px 10px;
+.btn{font-family:inherit;font-size:12px;font-weight:500;letter-spacing:.02em;color:var(--mute);
+  background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:6px 12px;
   cursor:pointer;transition:.13s;white-space:nowrap}
-.btn:hover{color:var(--ink);border-color:var(--line-2)}
-.btn.on{color:var(--ink);border-color:var(--ink);background:rgba(255,255,255,.07)}
+.btn:hover{color:var(--ink);border-color:var(--line-2);background:#2a2e37}
+.btn.on{color:var(--str);border-color:var(--str);background:rgba(100,181,255,.13)}
+.btn.on:hover{background:rgba(100,181,255,.18)}
+/* the Set/Stage filters read as one segmented control */
+.segmented{display:inline-flex;gap:5px}
 input.search{font-family:inherit;font-size:12px;color:var(--ink);background:var(--panel-2);
   border:1px solid var(--line);border-radius:6px;padding:6px 10px;width:100%;outline:none}
 input.search:focus{border-color:var(--str)}
@@ -52,7 +55,7 @@ h2{font-family:Oxanium,monospace;font-weight:800;font-size:17px;margin:26px 0 11
   padding-top:14px;border-top:1px solid var(--line);display:flex;gap:9px;align-items:baseline;
   text-transform:capitalize}
 h2 .c{color:var(--mute);font-size:12px;font-weight:400;font-family:"IBM Plex Mono",monospace}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:14px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
   padding:12px;display:flex;flex-direction:column;gap:9px;transition:.13s}
 .card.hide{display:none}
@@ -74,9 +77,20 @@ h2 .c{color:var(--mute);font-size:12px;font-weight:400;font-family:"IBM Plex Mon
   background:rgba(255,255,255,.05)}
 .ch-thr{color:var(--thr)} .ch-brk{color:var(--brk)} .ch-clu{color:var(--clu)}
 .ch-str{color:var(--str)} .ch-gear,.ch-rpm,.ch-spd{color:var(--gear)}
-.stage-plate{background:linear-gradient(160deg,#0f1013,#1a1c22);border:1px solid var(--line);
-  border-radius:8px;display:flex;align-items:center;justify-content:center;padding:10px;min-height:96px;overflow:hidden}
-canvas{display:block}
+/* Contrast-test backdrop behind each preview — a neutral scene, not scenery.
+   The Backdrop control cycles it (dark → light → checker) so you can see how an
+   overlay reads against different OBS scene colours. Toggled via a body class. */
+.stage-plate{background:#3c4048;border:1px solid var(--line);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;padding:10px;min-height:112px;overflow:hidden;
+  transition:background .15s}
+body.bg-light .stage-plate{background:#c3c7cd}
+body.bg-check .stage-plate{
+  background-color:#2a2d33;
+  background-image:
+    linear-gradient(45deg,#3a3e46 25%,transparent 25%,transparent 75%,#3a3e46 75%),
+    linear-gradient(45deg,#3a3e46 25%,transparent 25%,transparent 75%,#3a3e46 75%);
+  background-size:20px 20px;background-position:0 0,10px 10px}
+canvas{display:block;max-width:100%;height:auto}
 .note{color:var(--mute);font-size:12px;margin:0;line-height:1.5}
 .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto}
 .foot .use{font-size:11.5px;letter-spacing:.03em}
@@ -119,14 +133,15 @@ canvas{display:block}
 
   <div class="bar">
     <div class="row">
-      <div class="grp"><span class="lbl">Set</span><span id="setBtns"></span></div>
-      <div class="grp"><span class="lbl">Stage</span><span id="stageBtns"></span></div>
-      <div class="grp grow"><input id="q" class="search" type="search" placeholder="search name or description…"></div>
+      <div class="grp"><span class="lbl">Set</span><span id="setBtns" class="segmented"></span></div>
+      <div class="grp"><span class="lbl">Stage</span><span id="stageBtns" class="segmented"></span></div>
+      <div class="grp grow"><input id="q" class="search" type="search" placeholder="Search name or description…"></div>
     </div>
     <div class="row">
       <div class="grp"><button id="play" class="btn on">Pause</button></div>
       <div class="grp"><span class="lbl">Speed</span><input id="speed" type="range" min="0.25" max="2" step="0.25" value="1"><span id="speedV" class="lbl">1×</span></div>
       <div class="grp"><span class="lbl">Shift</span><button id="mode" class="btn">Mode: H</button></div>
+      <div class="grp"><span class="lbl">Backdrop</span><button id="backdrop" class="btn">Dark</button></div>
       <div class="tally"><b id="visN">0</b> shown</div>
     </div>
   </div>
@@ -208,7 +223,9 @@ for (const set of SET_ORDER) {
       "</div>";
 
     const cv = document.createElement("canvas");
-    cv.style.width = e.size.w + "px"; cv.style.height = e.size.h + "px";
+    // Native size, but cap at the plate width and scale height proportionally
+    // (height:auto + the intrinsic ratio) so a 350px overlay never clips.
+    cv.style.width = e.size.w + "px";
     cv.width = e.size.w * dpr; cv.height = e.size.h * dpr;
     const ctx = cv.getContext("2d");
     ctx.scale(dpr, dpr);
@@ -275,11 +292,12 @@ function makeToggle(host, values, get, set) {
     host.appendChild(b);
   });
 }
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 makeToggle(document.getElementById("setBtns"),
-  [{ val: "all", label: "All" }, ...SET_ORDER.map(s => ({ val: s, label: s }))],
+  [{ val: "all", label: "All" }, ...SET_ORDER.map(s => ({ val: s, label: cap(s) }))],
   () => filterSet, v => filterSet = v);
 makeToggle(document.getElementById("stageBtns"),
-  [{ val: "all", label: "All" }, { val: "live", label: "Live" }, { val: "draft", label: "Draft" }, { val: "experimental", label: "Exp" }],
+  [{ val: "all", label: "All" }, { val: "live", label: "Live" }, { val: "draft", label: "Draft" }, { val: "experimental", label: "Experimental" }],
   () => filterStage, v => filterStage = v);
 
 const empty = document.getElementById("empty");
@@ -314,6 +332,17 @@ let modeIdx = 0;
 const modeBtn = document.getElementById("mode");
 modeBtn.onclick = () => { modeIdx = (modeIdx + 1) % MODES.length; setMode(modeIdx); modeBtn.textContent = "Mode: " + MODES[modeIdx].id; };
 document.getElementById("q").oninput = e => { query = e.target.value; refresh(); };
+
+/* Backdrop: cycle the contrast-test scene behind every preview (dark → light → checker) */
+const BACKDROPS = [{ cls: "", label: "Dark" }, { cls: "bg-light", label: "Light" }, { cls: "bg-check", label: "Checker" }];
+let bdIdx = 0;
+const backdropBtn = document.getElementById("backdrop");
+backdropBtn.onclick = () => {
+  bdIdx = (bdIdx + 1) % BACKDROPS.length;
+  document.body.classList.remove("bg-light", "bg-check");
+  if (BACKDROPS[bdIdx].cls) document.body.classList.add(BACKDROPS[bdIdx].cls);
+  backdropBtn.textContent = BACKDROPS[bdIdx].label;
+};
 
 refresh();
 </script>
