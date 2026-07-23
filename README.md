@@ -24,7 +24,7 @@ Browser **overlays for streamers** that read your hardware in the browser and co
 </svg>
 </p>
 
-> **Status: pilot.** The design catalogue holds **72 overlays** (`overlays/sim-racing/catalogue.json`), the manifest that is the source of truth. Three are migrated to the live one-file-per-overlay module architecture (**Bowtie**, **Dot ladder**, **Comet**); the rest are tracked for migration in [SO-0001](docs/tickets/tickets.md). This is not yet a streamer-facing site — it is the architecture and engine the site will be built on.
+> **Status: early.** The catalogue holds **72 overlays** (`overlays/sim-racing/catalogue.json`, the source of truth); all **68** non-excluded ones are migrated to the one-file-per-overlay module architecture and **pixel-verified against the reference render** (see [Testing](#testing)). This is not yet a streamer-facing site — it is the engine and overlay library the site will be built on (gallery, configure page, hosting: [Roadmap](#roadmap)).
 
 ## Install
 
@@ -53,21 +53,32 @@ run `node --test tests/*.test.mjs` and pytest so the blank-tile and manifest gua
 
 Every overlay is a small canvas renderer selected by its immutable id: `?style=<id>`. The manifest (`catalogue.json`) owns the metadata; a module owns the drawing.
 
-| id | Reads | Migrated | What it shows |
-| --- | --- | --- | --- |
-| `bowtie` | brake · throttle · clutch | ✅ | Brake left, throttle right, from a shared centre line — overlap is obvious. |
-| `dot-ladder` | brake · throttle · clutch | ✅ | Ten dots per channel; reads at tiny sizes and survives stream compression. |
-| `comet` | brake · throttle · clutch | ✅ | Input history as fading dots — ambient, less precise, far less busy. |
-| *…69 more* | — | ⏳ SO-0001 | The rest of the catalogue, pending migration to modules. |
+| id | Reads | What it shows |
+| --- | --- | --- |
+| `bowtie` | brake · throttle · clutch | Brake left, throttle right, from a shared centre line — overlap is obvious. |
+| `dot-ladder` | brake · throttle · clutch | Ten dots per channel; reads at tiny sizes and survives stream compression. |
+| `wheel` | steering | A flat-bottomed GT rim with real spokes and a top-dead-centre marker. |
+| `dash-cluster` | all five channels | The classic: rev arc + gear centre, pedals and wheel around it. |
+| *…64 more* | pedals · wheel · shifter · combos | The full catalogue — a gallery to browse them all is coming (SO-0002). |
 
-`set` and `uses` in the manifest are **derived from what each overlay's draw body actually reads**, then verified against it — see [`docs/technical`](docs/technical/README.md).
+Overlays are grouped by **set** — `pedals`, `wheel`, `shifter`, or `combo`. Both `set` and the exact channels an overlay reads are **derived from its draw code** and verified against the manifest — see [`docs/technical`](docs/technical/README.md).
+
+## Testing
+
+Three layers — the two deterministic ones gate every change:
+
+- **Unit** — `node --test tests/*.test.mjs` (calibration maths + a blank-tile guard that runs every overlay against a mock canvas) and `pytest tests/` (manifest schema, `set`-vs-`uses`, and module↔manifest coherence).
+- **Acceptance** — `node qa/acceptance.mjs` renders every overlay in real headless Chromium and **pixel-diffs it against a golden**, so a rendering regression fails the build, not the stream. Needs `npm i && npx playwright install chromium`; skips cleanly when a browser is absent.
+- **Agentic browser pass** — dev-only, driven live per [`qa/product-map.md`](qa/product-map.md).
+
+Full approach, coverage, and gaps: [`docs/technical/testing.md`](docs/technical/testing.md).
 
 ## Roadmap
 
-Near-term is finishing what the pilot started, not new surface:
+The overlay library and engine are done and verified; next is the site around them:
 
-- **SO-0001** — migrate the remaining catalogue overlays to the module contract.
 - A **gallery** page (browse all overlays over demo data) and a **configure** page that emits the URL.
+- **Hosting + deploy** and a **discovery/landing** front door (SO-0008/0009).
 - The **OBS gamepad fallback** flow ([ADR 0003](docs/decisions/0003-obs-gamepad-fallback.md)) as a guided UI.
 - Longer-term, a **builder** that composes overlays from named sub-visuals — which the module architecture is shaped to enable.
 
@@ -78,7 +89,7 @@ Full docs live in [`docs/`](docs/README.md).
 - **[Product](docs/product/README.md)** — what it is, who it's for, and the vocabulary (overlay, channel, set, stage, the manifest).
 - **[Technical](docs/technical/README.md)** — the layered architecture, the overlay module contract, and how the manifest stays honest.
 - **[Decisions](docs/decisions/README.md)** — the ADRs: config-in-the-URL, static-first hosting, the OBS fallback, the stack, and the module contract.
-- **[Tickets](docs/tickets/tickets.md)** — the backlog, led by the SO-0001 migration.
+- **[Tickets](docs/tickets/tickets.md)** — the backlog: the gallery, configure page, hosting, and the road to a hosted site.
 
 ## License
 

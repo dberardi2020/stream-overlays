@@ -26,7 +26,7 @@ MODULE_DIR = SIM / "overlays"
 sys.path.insert(0, str(SIM / "build"))
 import channels  # noqa: E402
 
-REQUIRE_FULL_COVERAGE = False  # flip when SO-0001 (full migration) lands
+REQUIRE_FULL_COVERAGE = True  # SO-0001 complete: every non-excluded overlay has a module
 
 MANIFEST_BY_ID = {e["id"]: e for e in json.loads(MANIFEST.read_text())}
 MODULE_FILES = sorted(MODULE_DIR.glob("*.js"))

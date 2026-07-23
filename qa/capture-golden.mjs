@@ -74,7 +74,15 @@ const fixture = await page.evaluate(({ DT, STEPS }) => {
   Object.assign(q.input, { thr: 0, brk: 0, clu: 0, str: 0, gear: 4, lever: 4, prevGear: 4, shiftAge: 99, shiftDir: 0, shiftProg: 1, shiftCount: 0 });
   for (let i = 0; i < STEPS; i++) { q.tick(DT); q.clock.t += DT; }
   q.clock.playing = false;
-  return { input: { ...q.input, rpm: q.tel.rpm, spd: q.tel.spd }, tel: { ...q.tel }, hist: JSON.parse(JSON.stringify(q.hist)) };
+  return {
+    input: { ...q.input },
+    tel: { ...q.tel },
+    hist: JSON.parse(JSON.stringify(q.hist)),
+    shiftLog: JSON.parse(JSON.stringify(q.shiftLog)),
+    shiftTimes: JSON.parse(JSON.stringify(q.shiftTimes)),
+    gateUse: { ...q.gateUse },
+    clock: { t: q.clock.t, lapTime: q.clock.lapTime }
+  };
 }, { DT, STEPS });
 writeFileSync(join(HERE, "fixture.json"), JSON.stringify(fixture, null, 1));
 

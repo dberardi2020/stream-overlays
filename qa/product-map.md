@@ -58,14 +58,14 @@ Run the layers a change touches; these must stay true.
 - **Telemetry/shifter overlays render but can't run *live*** yet (no rpm/gear source — SO-0006/0007). Not a bug.
 - The 4 `excluded` overlays are archived-in-manifest, intentionally module-less — expect no module for them.
 - **Canvas text has subpixel rendering variance** across page contexts, so glyph-dense overlays (e.g. `terminal`) diff ~0.5% while looking identical. Tolerance is 0.6% with an AA-aware pixelmatch threshold; a real mis-port is a wrong shape at many percent. Don't tighten to chase glyph noise; do investigate any diff whose `.diff.png` shows a *structural* change (missing element, wrong position/colour), not edge scatter.
-- **Golden faithfulness needs the fixture + goldens to agree.** `qa/render.html` and the goldens both read `qa/fixture.json`; if you re-capture goldens, the fixture is rewritten in lockstep. Telemetry overlays (Tier 3) will need the `s.rpm`/`tel` reconciliation before their goldens diff clean.
+- **Golden faithfulness needs the fixture + goldens to agree.** `qa/render.html` and the goldens both read `qa/fixture.json`; if you re-capture goldens, the fixture is rewritten in lockstep.
+- **State is two objects, like the reference:** `s` (input — pedals/steering/gear/shift) and a separate `tel` (rpm/spd). `s` has **no** rpm/spd. Telemetry bodies (signature `(w,h,s,t)`) get `t = tel` via the module wrapper. An overlay that reads `s.rpm` gets `undefined` — that's a real reference bug (`split-panel`), faithfully preserved; fixing it is SO-0007. If a golden-diff shows a *structural* change on a telemetry overlay, suspect the s/tel split first.
 
 ## QA roadmap (this system is self-improving)
 
-- **Done: faithfulness golden-diff.** All 72 goldens captured from the prototype and committed
-  (`qa/golden/`), `qa/fixture.json` is the frozen state, `qa/acceptance.mjs` pixel-diffs each migrated
-  overlay against its golden. 19/19 Tier-1 faithful. **The baseline is frozen — the prototype can be
-  deleted without losing it.** Re-capture only if intentionally re-baselining (`qa/capture-golden.mjs`).
-- **As Tier 2/3 migrate:** each new overlay is auto-checked against its already-captured golden. A
-  mis-ported helper fails the diff. Tier 3 first needs the telemetry state reconciliation (above).
+- **Done: faithfulness golden-diff, full coverage.** All 72 goldens captured from the prototype and
+  committed (`qa/golden/`), `qa/fixture.json` is the frozen state, `qa/acceptance.mjs` pixel-diffs each
+  overlay against its golden. **68/68 non-excluded overlays pixel-faithful.** The baseline is frozen —
+  the prototype can be deleted without losing it. Re-capture only to intentionally re-baseline
+  (`qa/capture-golden.mjs <prototype-path>`).
 - Layer 3 fresh-eyes persona pass at the first hosted-site milestone (expensive; milestones only).

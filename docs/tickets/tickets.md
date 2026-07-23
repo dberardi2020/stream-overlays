@@ -6,9 +6,7 @@ The backlog. Board-first: a lightweight tracker until a real one is warranted. I
 
 ## In progress
 
-| ID | Title | Notes |
-| --- | --- | --- |
-| **SO-0001** | Migrate the catalogue overlays to modules | **Tier 1 (pedal-only) done — 19 / 72 migrated**, all guarded by the blank-tile + manifest tests. Remaining: **Tier 2** (42 wheel/shifter/combo — needs the full engine helper port: `gearName`, `drawGate`, `drawKnob`, `gateXY`, `knobXY`, `wheel`, `DEG`, `pedalBars`, …); **Tier 3** (7 telemetry — also blocked on SO-0007). Draw bodies copied byte-for-byte; only `this.mem` → the `mem` param. When all non-excluded entries have a module, flip `REQUIRE_FULL_COVERAGE` in `tests/test_overlay_modules.py`. The 4 `excluded` overlays stay in the manifest, not migrated. |
+*(none — SO-0001 complete; next up is the site work, SO-0002/0003/0008/0009.)*
 
 ## Open — road to a real hosted website
 
@@ -29,7 +27,7 @@ The product work between this pilot and "a site streamers find, set up, and use.
 | --- | --- | --- |
 | **SO-0005** | Collapse near-duplicate overlay families | The 3 `Wheel` variants and the `bars`/`history` clusters. Family metadata exists to support this. |
 | **SO-0006** | Shifter / gear live calibration + input | The engine calibrates pedals + steering only; it does **not** capture the H-shifter (gear/lever). Tier 2 shifter overlays can render from demo/test state but can't run **live** without this. Extend `calibration.js` + `gamepad.js` to bind gear/lever. |
-| **SO-0007** | Telemetry data source (rpm / spd / gear-from-sim) | A G923 exposes no RPM/speed — those are **sim telemetry**, not wheel input. Tier 3 (7 overlays) and any telemetry channel need a source (a sim telemetry feed / local bridge). Until then telemetry overlays are demo-only. Design the source before promoting them past `experimental`. |
+| **SO-0007** | Telemetry data source (rpm / spd / gear-from-sim) | A G923 exposes no RPM/speed — those are **sim telemetry**, not wheel input. Tier 3 (7 overlays) and any telemetry channel need a source (a sim telemetry feed / local bridge). Until then telemetry overlays are demo-only. Design the source before promoting them past `experimental`. **Bug to fix here:** `split-panel` reads `s.rpm`, but rpm rides on the telemetry object, not the input state — so its rev arc renders empty (faithfully preserved from the reference). Fix it to read telemetry when this lands. |
 | **SO-0011** | The builder — compose overlays from sub-visuals | Longer-term: assemble combos from swappable named sub-visuals + channel reordering. The module contract and named `draw-kit` callables are the groundwork; not scheduled. |
 | **SO-0012** | Bring the design-principles doc + parked prototype into the repo | Add `overlays/sim-racing/design-principles.md` (the overlay design rationale, as a prose pair) and the parked correlation-demo prototype into a prototypes area. |
 
@@ -43,4 +41,4 @@ The product work between this pilot and "a site streamers find, set up, and use.
 | ID | Title |
 | --- | --- |
 | **SO-0000** | Scaffold the repo: layered engine extracted from the prototype, manifest quality-gate, pytest + `node --test` suites, ADRs. |
-| **SO-0001 · Tier 1** | 16 pedal-only overlays migrated to modules (19/72 total), blank-tile guard green on all. |
+| **SO-0001** | **Migrate all 68 non-excluded overlays to modules** — full engine port (helpers + shifter/telemetry state + settable-global-ctx), draw bodies byte-for-byte. Verified: unit blank-tile guard, manifest coherence (`REQUIRE_FULL_COVERAGE` on), and **68/68 pixel-faithful to the reference render** (qa golden-diff). The golden faithfulness harness (`qa/`) was built alongside. |

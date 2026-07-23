@@ -81,7 +81,7 @@ for (const id of ids) {
 
   if (status !== "1") {
     const err = await page.evaluate(() => document.documentElement.dataset.error || "");
-    failures.push(`${id}: did not render (${err || status})`);
+    failures.push(`${id}: did not render (${err || errors[0] || status})`);
     continue;
   }
   // Assert the canvas actually painted. Poll rather than read once: the very first

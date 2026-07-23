@@ -5,6 +5,7 @@ How the code is built.
 | Doc | Read it for |
 | --- | --- |
 | [architecture.md](architecture.md) | The three layers, the one-way dependency rule, and how the manifest stays honest. |
+| [testing.md](testing.md) | The three test layers, the golden pixel-diff, coverage, and gaps. |
 
 The overlay module contract has its own decision record: [ADR 0005](../decisions/0005-overlay-module-contract.md). Why the whole thing is static files is [ADR 0002](../decisions/0002-static-first-hosting.md).
 

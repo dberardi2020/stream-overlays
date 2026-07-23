@@ -16,7 +16,7 @@
   state object `s`, matching the contract (see qa/product-map.md).
 -->
 <script type="module">
-import { hist } from "../overlays/sim-racing/engine/draw-kit.js";
+import { hist, shiftLog, shiftTimes, gateUse, clock, tel } from "../overlays/sim-racing/engine/draw-kit.js";
 
 function fail(msg) { document.documentElement.dataset.error = msg; throw new Error(msg); }
 
@@ -28,11 +28,18 @@ const manifest = await fetch("../overlays/sim-racing/catalogue.json").then(r => 
 const entry = manifest.find(e => e.id === id) || fail("no manifest entry for " + id);
 
 // The SAME frozen state the goldens were captured at (qa/fixture.json), so a pixel
-// diff isolates to the draw code, not to different inputs.
+// diff isolates to the draw code, not to different inputs. Populate every shared
+// engine accumulator the shifter/combo overlays read.
 const fixture = await fetch("./fixture.json").then(r => r.json()).catch(() => fail("no fixture.json — run capture-golden first"));
 const state = { ...fixture.input, real: true };
 for (const k of Object.keys(hist)) delete hist[k];
 for (const [k, arr] of Object.entries(fixture.hist)) hist[k] = arr.slice();
+shiftLog.length = 0; shiftLog.push(...fixture.shiftLog);
+shiftTimes.length = 0; shiftTimes.push(...fixture.shiftTimes);
+for (const k of Object.keys(gateUse)) delete gateUse[k];
+Object.assign(gateUse, fixture.gateUse);
+clock.t = fixture.clock.t; clock.lapTime = fixture.clock.lapTime;
+Object.assign(tel, fixture.tel);
 
 let mod;
 try { mod = await import(`../overlays/sim-racing/overlays/${id}.js`); }
