@@ -8,90 +8,78 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* Transparent everywhere - OBS composites the page over your scene. Never paint
-   an opaque background on html/body or the overlay stops being see-through. */
+/* Transparent everywhere — OBS composites the page over your scene. Never paint
+   an opaque background on html/body or the overlay stops being see-through.
+   Per ADR 0006 this page is a PURE RENDERER: no setup UI, no calibration panel,
+   nothing but the canvas. Calibrate on setup.html; this only draws. So there is
+   no chrome that could ever appear on a live scene. */
 html,body{margin:0;padding:0;background:transparent;overflow:hidden}
 body{font-family:"IBM Plex Mono",ui-monospace,monospace;color:#eceae5;-webkit-font-smoothing:antialiased}
+#stage{position:fixed;top:0;left:0}
 canvas.ov{display:block}
-
-/* Two layouts, so the setup UI never sits on top of the overlay:
-   - Setup (default): caption + calibration panel stack at the top and the overlay
-     sits BELOW them in normal flow.
-   - Live (body.live): the setup UI is hidden and the overlay is pinned to the
-     top-left of a transparent page - exactly what OBS should capture. */
-#setup{display:flex;flex-direction:column;gap:8px;align-items:flex-start;padding:12px}
-#stage{margin:12px}
-#cap{
-  font-size:11px;color:#878d9a;background:rgba(10,11,14,0.86);
-  border:1px solid #2e323c;border-radius:8px;padding:6px 9px;max-width:340px;line-height:1.45;
-}
-#cap b{color:#eceae5;font-weight:600}
-#cap.err{color:#f2a5a0;border-color:#5a2b28}
-body.live #setup{display:none}
-body.live #stage{position:fixed;top:0;left:0;margin:0}
+/* Config-time only: a genuinely broken URL (bad ?style=, file://). This is a
+   setup mistake you catch before going live — never a mid-stream state. */
+#msg{position:fixed;top:10px;left:10px;max-width:360px;font-size:11px;line-height:1.5;
+  color:#f2a5a0;background:rgba(10,11,14,0.9);border:1px solid #5a2b28;border-radius:8px;
+  padding:8px 11px;display:none}
+#msg.show{display:block}
+#msg b{color:#eceae5;font-weight:600}
+#msg code{background:rgba(255,255,255,.06);border:1px solid #2e323c;border-radius:4px;padding:1px 4px}
+#msg a{color:#64b5ff;text-decoration:none}
 </style>
 </head>
 <body>
-<div id="setup">
-  <div id="cap"></div>
-  <div id="calmount"></div>
-</div>
-
 <div id="stage"><canvas id="cv" class="ov"></canvas></div>
+<div id="msg"></div>
 
 <script>
 /* Classic (non-module) script — runs even under file://, where the module script
-   below is blocked and never executes. Under file:// ES modules + fetch are dead,
-   so the overlay silently can't load; say so in #cap instead of a blank page. */
+   below is blocked and never executes. Config-time guidance only. */
 if (location.protocol === "file:") {
-  var cap = document.getElementById("cap");
-  cap.className = "err";
-  cap.innerHTML = "<b>Serve this over http.</b> Opened from <code>file://</code>, the browser blocks " +
-    "ES modules and <code>fetch</code>, so nothing loads. Run <b>npm run serve</b> from the repo root, " +
-    "then open <b>http://localhost:8000/pages/overlay.html?style=bowtie</b>. (The Gamepad API needs http too.)";
+  var m = document.getElementById("msg");
+  m.className = "show";
+  m.innerHTML = "<b>Serve this over http.</b> Opened from <code>file://</code>, the browser blocks " +
+    "ES modules and <code>fetch</code>, so nothing loads. Run <b>npm run serve</b>, then open " +
+    "<code>http://localhost:8000/pages/overlay.html?style=bowtie</code>. (The Gamepad API needs http too.)";
 }
 </script>
 
 <script type="module">
 import { createState } from "../engine/state.js";
 import { pushHistory } from "../engine/draw-kit.js";
-import { createCalibration } from "../engine/calibration.js";
+import { createInputReader } from "../engine/live-input.js";
 import { readParams, resolveEntry, hexToRgba } from "../engine/url-config.js";
 
-const capEl = document.getElementById("cap");
-const fail = msg => { capEl.className = "err"; capEl.innerHTML = msg; };
+const msgEl = document.getElementById("msg");
+const fail = html => { msgEl.className = "show"; msgEl.innerHTML = html; };
 
-/* ---- resolve the chosen overlay from the URL against the manifest ---- */
 const params = readParams();
 
 let manifest;
 try {
   manifest = await fetch("../catalogue.json").then(r => r.json());
 } catch (e) {
-  fail("Could not load <b>catalogue.json</b>. Serve this over http (e.g. " +
-       "<b>python&nbsp;-m&nbsp;http.server</b>) — file:// blocks fetch and ES modules.");
+  fail("Could not load <b>catalogue.json</b>. Serve over http — <code>file://</code> blocks fetch + modules.");
   throw e;
 }
 
 const entry = resolveEntry(manifest, params.style);
 if (!entry) {
-  fail("Unknown overlay <b>?style=" + (params.style || "(none)") + "</b>. " +
-       "Pass a valid id, e.g. <b>?style=bowtie</b>.");
+  fail("Unknown overlay <b>?style=" + (params.style || "(none)") + "</b>. Pass a valid id " +
+       "(browse <a href=\"gallery.html\">the gallery</a> to find one), e.g. <b>?style=bowtie</b>.");
   throw new Error("no manifest entry for " + params.style);
 }
 
-/* ---- load the overlay module (dynamic import keeps the page static) ---- */
 let mod;
 try {
   mod = await import(`../overlays/${entry.id}.js`);
   if (typeof mod.draw !== "function") throw new Error("module exports no draw()");
 } catch (e) {
-  fail("<b>" + entry.name + "</b> is in the catalogue but not yet migrated to a " +
-       "module (this is a pilot — only a few overlays are live). See ticket SO-0001.");
+  fail("<b>" + entry.name + "</b> has no overlay module (it's an archived/excluded style). Pick another.");
   throw e;
 }
 
-/* ---- canvas sizing (from the manifest, the source of truth for size) ---- */
+/* ---- canvas sizing (manifest is the source of truth for native size) ---- */
 const stage  = document.getElementById("stage");
 const canvas = document.getElementById("cv");
 const ctx = canvas.getContext("2d");
@@ -103,49 +91,29 @@ canvas.width  = Math.round(W * scale * dpr);
 canvas.height = Math.round(H * scale * dpr);
 ctx.scale(scale * dpr, scale * dpr);
 
+// Optional contrast plate baked from the URL (?bg=&bga=&radius=). Off by default,
+// so the page stays fully transparent unless asked.
 if (params.bgA > 0) {
   stage.style.background = hexToRgba(params.bgHex, params.bgA);
   stage.style.borderRadius = params.radius + "px";
   canvas.style.borderRadius = params.radius + "px";
 }
 
-/* ---- state + calibration ---- */
+/* ---- live input only, no fake data ---- */
+// The reader loads whatever calibration setup.html saved in THIS browser and maps
+// the live wheel each frame; with no calibration or no wheel it rests at zero.
+// Nothing here can draw setup chrome — that lives on setup.html (ADR 0006).
 const state = createState();
-
-capEl.innerHTML =
-  "<b>" + entry.name + "</b><br>" +
-  "OBS source size: <b>" + Math.round(W * scale) + "×" + Math.round(H * scale) + "px</b>" +
-  (params.bgA > 0 ? " · plate #" + String(params.bgHex).replace("#", "") + " @ " + params.bgA : " · no plate") + "<br>" +
-  "In OBS: right-click this source → <b>Interact</b>, press a wheel button, then calibrate. " +
-  "Press <b>c</b> to re-calibrate.";
-
-const cal = createCalibration({
-  state,
-  mount: document.getElementById("calmount"),
-  storeKey: "g923.calibration.v2"
-});
-
-// Press "c" in the OBS Interact window to (re)calibrate at any time.
-window.addEventListener("keydown", e => { if (e.key === "c" || e.key === "C") cal.calibrateAll(); });
-
-/* ---- render loop: one overlay, live data only ---- */
+const input = createInputReader({ state });
 const mem = {};
+
 function frame() {
-  cal.poll();
-
-  // This is the LIVE overlay: never show fake data here. Until the wheel is
-  // connected in OBS (Interact → press a wheel button → calibrate) it rests at
-  // zero. The demo lap lives in the gallery, for choosing a style.
-  if (!cal.isLive()) { state.thr = 0; state.brk = 0; state.clu = 0; state.str = 0; }
-
-  document.body.classList.toggle("live", cal.isLive() && !cal.isCalibrating());
+  input.poll();          // applies live wheel, or rests every channel at zero
   pushHistory(state);
-
   ctx.clearRect(0, 0, W, H);
   ctx.save();
   mod.draw(ctx, W, H, state, mem);
   ctx.restore();
-
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

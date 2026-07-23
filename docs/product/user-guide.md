@@ -19,9 +19,9 @@ The overlay page paints no background, so OBS renders it transparent automatical
 1. In OBS: **Sources → + → Browser**. Untick **Local file**.
 2. Set **URL** to the overlay page with your chosen id:
    `…/pages/overlay.html?style=<id>` — e.g. `…/pages/overlay.html?style=dot-ladder`. Add options below as needed.
-3. Set the Browser Source **Width / Height** to the size shown in the overlay's setup caption (its native size × your `scale`). **Don't** scale the source in OBS itself — it resamples and goes soft; use the `scale` param so it redraws sharp.
-4. Connect your wheel: right-click the source → **Interact**, then **press any wheel button** — browsers only expose gamepads after a real input on a focused page — and calibrate (below).
-5. Close Interact. The setup panel hides itself once you're live, leaving only the overlay.
+3. Set the Browser Source **Width / Height** to the overlay's native size × your `scale`. **Don't** scale the source in OBS itself — it resamples and goes soft; use the `scale` param so it redraws sharp.
+
+The overlay is a **pure renderer** — it has no setup UI, so it can never put a panel on your live scene ([ADR 0006](../decisions/0006-setup-surface-pure-overlay.md)). It just reads whatever calibration exists in that browser and draws; until you calibrate, it rests at zero. Calibration happens once on the **setup page** (next).
 
 > A **configure page** that builds this URL for you (pick style, scale, colours → copy link) is planned — [SO-0003](../tickets/tickets.md). Until then you write the URL by hand.
 
@@ -41,15 +41,17 @@ Example: `overlay.html?style=rolling-trace&scale=2.5&bg=ffffff&bga=0.15`
 
 An unknown `style` shows an honest "unknown overlay" message rather than silently picking a default.
 
-## Calibration
+## Calibration (the setup page)
 
-Calibration maps your wheel's raw axis values to true channel values (each pedal's rest→full travel, the wheel's centre and extremes), so bars hit 100% only at a real full press. It's saved in the browser (`localStorage`) and auto-connects on later launches. It lives on the machine and never travels — it's intrinsic to that physical wheel.
+Calibration lives on **`pages/setup.html`**, not the overlay. It maps your wheel's raw axis values to true channel values (each pedal's rest→full travel, the wheel's centre and extremes), so bars hit 100% only at a real full press. It's saved in the browser (`localStorage`) and auto-connects on later launches — it lives on the machine and never travels, because it's intrinsic to that physical wheel.
+
+**Because calibration is per-browser-context, calibrate once in each context that renders overlays:** your desktop browser (so the gallery's Live mode works), and **OBS's own browser once** — add `setup.html` as a temporary Browser Source, right-click → **Interact**, press a wheel button, calibrate, then remove that source. Every `overlay.html` in that OBS browser then reads the saved calibration. (Browsers only expose gamepads to a *focused* page, which is what Interact gives you.)
 
 - **Neutral** — release all pedals and centre the wheel, then Confirm. Captures a clean rest baseline so nothing false-triggers.
 - **Pedals** (throttle / brake / clutch) — press fully, then release. Records rest + the real full-press extreme.
 - **Steering** (optional) — sweep fully left, fully right, then re-centre. Maps to −100 %…+100 %. Only a couple of styles use it, so it's skippable.
 
-Each channel confirms on its own (with **Redo**), and already-assigned axes are excluded so releasing one control can't be mistaken for the next. Use **Calibrate all** for the full sequence, a per-row **Redo/Set** to fix one channel, or **Clear** to wipe it. Press **`c`** in the OBS Interact window to reopen calibration any time.
+Each channel confirms on its own (with **Redo**), and already-assigned axes are excluded so releasing one control can't be mistaken for the next. Use **Calibrate all** for the full sequence, a per-row **Redo/Set** to fix one channel, or **Clear** to wipe it. Re-run it any time by reopening the setup page.
 
 ## Notes & limitations
 

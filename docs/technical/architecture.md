@@ -24,11 +24,11 @@ A second vertical would be a **sibling** — `overlays/<other>/` with the same i
 ```
 Layer 1 — pure logic          calibration-math.js · demo-lap.js
    (no DOM, no canvas)            ↑ imported by
-Layer 2 — browser runtime     gamepad.js · state.js · calibration.js · draw-kit.js · demo-driver.js · url-config.js
+Layer 2 — browser runtime     gamepad.js · state.js · calibration.js · live-input.js · draw-kit.js · demo-driver.js · url-config.js
    (Gamepad API, canvas)          ↑ imported by
 Layer 3 — overlays            overlays/<id>.js  — one module each, draw only
    (draw to a canvas)             ↑ imported by
-Layer 4 — pages               pages/overlay.html · pages/gallery.html — thin: wire it together
+Layer 4 — pages               pages/overlay.html · pages/setup.html · pages/gallery.html · pages/admin.html
 ```
 
 The rule: **dependencies only ever point up this list.** An overlay never touches the Gamepad API or the DOM; the pure maths never imports the runtime. This is what makes Layer 1 runnable under `node --test` with no browser, and what lets an overlay be reasoned about as just `draw(channels) → pixels`.
@@ -41,7 +41,8 @@ The rule: **dependencies only ever point up this list.** An overlay never touche
 ### Layer 2 — browser runtime
 
 - **`gamepad.js`** — the single hardware seam: `getPad()` is the only reader of `navigator.getGamepads()`. Everything downstream takes a plain `{ axes: [...] }`, so it is mockable.
-- **`calibration.js`** — the calibration state machine and status panel. Writes the shared `state`. Imports its maths from Layer 1 and its wheel read from `gamepad.js`.
+- **`calibration.js`** — the calibration state machine and status **panel** (DOM). Captures each channel's rest/full and writes the map to `localStorage`. Used by the setup page. Imports its maths from Layer 1 and its wheel read from `gamepad.js`.
+- **`live-input.js`** — the **DOM-free** read side of that same `localStorage` contract: loads the saved calibration and, each `poll()`, maps the live pad onto `state` (or rests it at zero). This is what the pure overlay uses so it needs no calibration UI ([ADR 0006](../decisions/0006-setup-surface-pure-overlay.md)).
 - **`draw-kit.js`** — the shared sub-visuals every overlay draws with: palette (`C`), channel table (`CH`), `glass`/`mono`/`pct`, and the rolling input `hist`. These are named callables on purpose — the future builder composes overlays from them. It also owns the render-state singletons (`tel`, `hist`, `shiftLog`, `shiftTimes`, `gateUse`, `clock`, `MODES`) that both the live page and the demo driver feed.
 - **`demo-driver.js`** — turns the pure lap into the animated whole-engine state the gallery reads: it advances a clock and, each `tick(dt)`, writes the input channels, telemetry, history, and shifter accumulators onto the `draw-kit` singletons. This is the piece that used to live inline in the prototype's `catalogue.html`; ported faithfully (it reproduces the QA fixture exactly). The live overlay page does **not** use it — real calibrated input drives that.
 - **`state.js`** — the channel state object shape.
@@ -60,7 +61,11 @@ The module owns only its id and its drawing. Everything else (name, size, set, s
 
 ### Layer 4 — pages
 
-`pages/overlay.html` is a thin orchestrator: read the URL, fetch the manifest, resolve the entry, `import()` the overlay module, size the canvas from the manifest, wire calibration, and run the draw loop. Because it uses native ES modules and dynamic `import()`, there is **no build step** — the page runs as static files ([ADR 0002](../decisions/0002-static-first-hosting.md)).
+`pages/overlay.html` is the OBS source and, per [ADR 0006](../decisions/0006-setup-surface-pure-overlay.md), a **pure renderer**: read the URL, resolve the entry, `import()` the module, size the canvas, then each frame `live-input.poll()` (live wheel, or rest at zero) → `draw()`. **No setup UI, ever** — so nothing can appear on a live scene; calibration lives on `setup.html`. Native ES modules + dynamic `import()`, so there is **no build step** ([ADR 0002](../decisions/0002-static-first-hosting.md)).
+
+`pages/setup.html` is the calibration surface the overlay lost: it mounts the `calibration.js` panel (which writes the per-wheel map to `localStorage`), shows a live input readout, carries the [ADR 0003](../decisions/0003-obs-gamepad-fallback.md) OBS fallback guidance, and holds design slots for the deferred shifter (SO-0006) and telemetry (SO-0007). Because calibration is per-browser-context, it's calibrated once in each context that renders overlays.
+
+`pages/admin.html` is the write/curate view over `catalogue.json` (the gallery's live-preview engine + an edit/export layer); see the [tickets](../tickets/tickets.md) (SO-0015).
 
 `pages/gallery.html` is the same shape at N-up: it fetches the manifest, builds a card per non-excluded overlay, and runs **one** `requestAnimationFrame` loop with **one** `demo-driver` — each frame ticks the driver once, then every on-screen tile lazily `import()`s its module and draws over the shared state. An `IntersectionObserver` keeps only visible tiles painting, so 68 live canvases stay cheap. It supersedes the prototype's `catalogue.html` + `Live/gallery.html`.
 

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wheel Setup — Stream Overlays</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --asphalt:#131418; --panel:#1b1d23; --panel-2:#22252d; --line:#2e323c; --line-2:#3a3f4a;
+  --ink:#eceae5; --mute:#8a909c;
+  --thr:#34d97a; --brk:#f2453d; --clu:#ffb020; --str:#64b5ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--asphalt);color:var(--ink);font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:13.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:720px;margin:0 auto;padding:24px 18px 100px}
+h1{font-family:Oxanium,monospace;font-weight:800;font-size:24px;margin:0 0 5px}
+.lede{color:var(--mute);margin:0 0 18px;font-size:12.8px}
+.lede code,.card code{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px}
+.lede b{color:var(--ink)}
+a{color:var(--str);text-decoration:none}
+a:hover{text-decoration:underline}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:15px 16px;margin-bottom:16px}
+.card h2{font-family:Oxanium,monospace;font-weight:600;font-size:15px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+.card p{color:var(--mute);font-size:12.3px;margin:.3em 0}
+.card.soon{opacity:.72}
+.tag{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;border:1px solid var(--line);color:var(--mute)}
+.tag.later{color:var(--clu);border-color:rgba(255,176,32,.5)}
+/* live readout */
+.readout{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.rrow{display:flex;align-items:center;gap:9px}
+.rrow .lbl{font-size:10px;letter-spacing:.08em;color:var(--mute);width:34px;text-transform:uppercase}
+.bar{flex:1;height:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.bar span{display:block;height:100%;width:0;border-radius:6px;transition:width .04s linear}
+.bar.thr span{background:var(--thr)} .bar.brk span{background:var(--brk)} .bar.clu span{background:var(--clu)}
+.rval{font-family:Oxanium,monospace;font-size:12px;width:38px;text-align:right;color:var(--ink)}
+.wheel{display:flex;align-items:center;gap:9px}
+.wheel .track{flex:1;height:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;position:relative}
+.wheel .track b{position:absolute;top:1px;bottom:1px;left:50%;width:5px;margin-left:-2.5px;background:var(--str);border-radius:3px;transition:left .04s linear}
+.hint{font-size:11.5px;color:var(--mute);line-height:1.55}
+.hint b{color:var(--ink)}
+ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font-size:12.3px}
+#file-warning{display:none;color:var(--clu);background:rgba(255,176,32,.09);border:1px solid rgba(255,176,32,.45);border-radius:8px;padding:11px 13px;margin-bottom:16px;line-height:1.6}
+#file-warning.shown{display:block}
+#file-warning code{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Wheel Setup</h1>
+  <p class="lede">Calibrate your wheel once, here. Calibration is saved in <b>this browser</b> (it's intrinsic to your
+    physical wheel), so the <a href="gallery.html">gallery</a>'s Live mode and any <code>overlay.html</code> in
+    <b>this same browser</b> pick it up automatically. The overlay page itself has no setup — it's a pure renderer, so
+    nothing here can ever end up on your stream.</p>
+
+  <div id="file-warning"></div>
+  <script>
+  if (location.protocol === "file:") {
+    var w = document.getElementById("file-warning");
+    w.className = "shown";
+    w.innerHTML = "<b>Serve this over http.</b> Opened from <code>file://</code>, the browser blocks ES modules, " +
+      "<code>fetch</code>, and the Gamepad API. Run <b>npm run serve</b>, then open " +
+      "<code>http://localhost:8000/pages/setup.html</code>.";
+  }
+  </script>
+
+  <div class="card">
+    <h2>Calibrate</h2>
+    <p>Connect your wheel and press any button so the browser sees it, then <b>Calibrate all</b> — release everything for
+      Neutral, then press each pedal fully. Steering is optional.</p>
+    <div id="calmount"></div>
+    <div class="readout">
+      <div class="rrow"><span class="lbl">Thr</span><div class="bar thr"><span id="b-thr"></span></div><span class="rval" id="v-thr">0</span></div>
+      <div class="rrow"><span class="lbl">Brk</span><div class="bar brk"><span id="b-brk"></span></div><span class="rval" id="v-brk">0</span></div>
+      <div class="rrow"><span class="lbl">Clu</span><div class="bar clu"><span id="b-clu"></span></div><span class="rval" id="v-clu">0</span></div>
+      <div class="rrow"><span class="lbl">Str</span><div class="wheel"><div class="track"><b id="b-str"></b></div></div><span class="rval" id="v-str">0</span></div>
+    </div>
+  </div>
+
+  <div class="card soon">
+    <h2>Shifter / gear <span class="tag later">next</span></h2>
+    <p>H-shifter and paddle/gear binding — direct HID input, part of the v0 plan. Not wired yet; the slot is here so the
+      shifter overlays can go live without a redesign (SO-0006).</p>
+  </div>
+
+  <div class="card soon">
+    <h2>Telemetry <span class="tag later">later</span></h2>
+    <p>RPM, speed, and gear-from-sim are <b>telemetry</b>, not wheel input — a G923 doesn't expose them. Deferred to a
+      later milestone (SO-0007); telemetry overlays run on demo data until a sim feed exists.</p>
+  </div>
+
+  <div class="card">
+    <h2>Using it in OBS</h2>
+    <p class="hint">Overlays are a separate, pure page (<code>overlay.html?style=&lt;id&gt;</code>) — see the
+      <a href="../../../docs/product/user-guide.md">user guide</a>. Because calibration is per-browser, OBS's built-in
+      browser needs its own one-time calibration:</p>
+    <ol>
+      <li>Add <b>this setup page</b> as a temporary OBS Browser Source.</li>
+      <li>Right-click it → <b>Interact</b>, press a wheel button, and calibrate here.</li>
+      <li>Remove the setup source. Every <code>overlay.html</code> in that OBS browser now reads the saved calibration.</li>
+    </ol>
+    <p class="hint"><b>No device showing?</b> The Gamepad API only wakes on a focused page — that's what the Interact
+      window gives you. If it still won't appear, run the overlay in a real Chrome window and use OBS <b>Window Capture</b>
+      instead (see <a href="../../../docs/decisions/0003-obs-gamepad-fallback.md">ADR 0003</a>).</p>
+  </div>
+</div>
+
+<script type="module">
+import { createState } from "../engine/state.js";
+import { createCalibration } from "../engine/calibration.js";
+import { CALIBRATION_KEY } from "../engine/live-input.js";
+
+const state = createState();
+const cal = createCalibration({
+  state,
+  mount: document.getElementById("calmount"),
+  storeKey: CALIBRATION_KEY,     // same key the overlay + gallery read
+  autoHideWhenLive: false        // this is the setup surface — keep the panel up
+});
+
+const bars = {
+  thr: [document.getElementById("b-thr"), document.getElementById("v-thr")],
+  brk: [document.getElementById("b-brk"), document.getElementById("v-brk")],
+  clu: [document.getElementById("b-clu"), document.getElementById("v-clu")]
+};
+const strBar = document.getElementById("b-str"), strVal = document.getElementById("v-str");
+
+function frame() {
+  cal.poll();
+  for (const k of ["thr", "brk", "clu"]) {
+    const v = Math.max(0, Math.min(1, state[k] || 0));
+    bars[k][0].style.width = (v * 100) + "%";
+    bars[k][1].textContent = Math.round(v * 100);
+  }
+  const s = Math.max(-1, Math.min(1, state.str || 0));
+  strBar.style.left = (50 + s * 50) + "%";
+  strVal.textContent = (s > 0 ? "+" : "") + Math.round(s * 100);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

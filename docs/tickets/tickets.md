@@ -8,20 +8,19 @@ Rows are pointers; anything needing more than a sentence has a block in **Detail
 
 ## In progress
 
-*(none — migration into the repo is complete. Validate the current local G923 binding before starting the On deck sequence.)*
+*(none — the ADR 0006 structural split is done: overlay is a pure renderer (SO-0013) and calibration lives on the new setup page (SO-0017). Remaining binding work: gallery Live mode (SO-0018) and the shifter capture (SO-0006, needs a real-G923 round-trip), then hosting.)*
 
 ## On deck
 
-The committed next few, in intended order. The binding overhaul under
-[ADR 0006](../decisions/0006-setup-surface-pure-overlay.md) is the top block and **should be built
-together**; hosting follows. **Input binding is a v0 requirement** — including the H-shifter/gear
+The committed next few, in intended order. Remaining of the
+[ADR 0006](../decisions/0006-setup-surface-pure-overlay.md) binding overhaul, then hosting.
+**Input binding is a v0 requirement** — including the H-shifter/gear (SO-0006), which is direct HID,
+not telemetry. **Telemetry (SO-0007) is explicitly deferred** — a **Input binding is a v0 requirement** — including the H-shifter/gear
 (SO-0006), which is direct HID, not telemetry. **Telemetry (SO-0007) is explicitly deferred** — a
 far-off goal — but the setup page and overlay are designed to leave a slot for it.
 
 | ID | Pri | Type | Title |
 |---|---|---|---|
-| [SO-0013](#so-0013) | P1 | Feature | Overlay page → pure renderer + polish |
-| [SO-0017](#so-0017) | P1 | Feature | Dedicated setup page (`setup.html`) |
 | [SO-0018](#so-0018) | P1 | Feature | Gallery live-input control surface (Demo ⇄ Live) |
 | [SO-0006](#so-0006) | P1 | Feature | Shifter / gear live calibration + input (v0 input binding) |
 | [SO-0008](#so-0008) | P1 | Chore | Hosting + deploy pipeline |
@@ -66,6 +65,8 @@ are in the docs.*
 
 | ID | Title | Closed |
 |---|---|---|
+| SO-0013 | **Overlay page → pure renderer** ([ADR 0006](../decisions/0006-setup-surface-pure-overlay.md)) — `pages/overlay.html` stripped of all setup chrome: it reads calibration from `localStorage` via the new DOM-free `engine/live-input.js` + live input, draws, and rests at zero uncalibrated. No panel, no "press c", no error UI on a live scene — the structural fix for the mid-stream-chrome risk. Config-time-only messages (bad `?style=`, `file://`) remain. Verified headless: pure (no `#setup`/`#calmount`), transparent, paints, unit-tested mapping. | 2026-07-23 |
+| SO-0017 | **Dedicated setup page (`pages/setup.html`)** ([ADR 0006](../decisions/0006-setup-surface-pure-overlay.md)) — the calibration surface extracted from the overlay: mounts the (unchanged, known-good) `calibration.js` panel, adds a live thr/brk/clu/steering readout, the [ADR 0003](../decisions/0003-obs-gamepad-fallback.md) OBS fallback guidance, the per-browser-context flow, and design slots for the deferred shifter (SO-0006) + telemetry (SO-0007). Writes the same `localStorage` key the overlay/gallery read. *(Shifter wiring itself is SO-0006.)* | 2026-07-23 |
 | SO-0015 | **Admin view (`pages/admin.html`)** — the write/curate view over `catalogue.json`, rebuilt on the repo's module architecture (the gallery's live-preview engine + an edit layer) rather than porting the prototype's duplicate engine. Per-overlay stage (live/draft/experimental/excluded), hidden toggle, and editable note; edits persist in localStorage and **Export** downloads a new `catalogue.json` to commit (static-first — no backend). Shows all 72 entries incl. the 4 module-less ones (as "no module"). Verified headless: 68/68 previews paint, edit→dirty→export→revert all correct, valid JSON out. Supersedes the prototype's `catalogue.html`. | 2026-07-23 |
 | SO-0012 | **Bring the design-principles doc + parked prototype into the repo** — `overlays/sim-racing/design-principles.md` (+ HTML pair; renderer-contract section reconciled to ADR 0005), the parked correlation-demo prototype under `overlays/sim-racing/prototypes/`, and the early catalogue drafts under `overlays/sim-racing/archive/`, each with a framing README. Part of emptying `Home/`. | 2026-07-23 |
 | SO-0002 | **Gallery page over demo data** (`pages/gallery.html`) — browse all 68 non-excluded overlays animated live over a shared demo driver, filter by set/stage, search, pause/speed/shift-mode. Required extracting the missing animated demo engine: `engine/demo-lap.js` rebuilt as the richer 30s lap (gears + rpm/spd), and a new Layer-2 `engine/demo-driver.js` (`tick(dt)`) ported byte-faithfully from the prototype's `catalogue.html` — it **reproduces `qa/fixture.json` exactly**. Verified: all 68 tiles paint live, no errors (headless). **Supersedes the prototype's `catalogue.html` + `Live/gallery.html`** (a delete-gate condition). | 2026-07-23 |
