@@ -14,9 +14,10 @@ Sim racers who stream (and streamers who race) on **Logitech G923** today — th
 
 - An **engine** that turns raw wheel axes into normalised channel values through a per-wheel calibration, plus the shared drawing kit overlays are built from.
 - A **catalogue of 72 overlay designs** (`overlays/sim-racing/catalogue.json`), the manifest that is the source of truth.
-- **Three overlays** migrated to the live one-file-per-overlay architecture, proving the contract; the rest are pending ([SO-0001](../tickets/tickets.md)).
-- A **test suite** that guards the manifest's integrity and that every overlay actually paints.
+- **All 68 non-excluded overlays** migrated to the one-file-per-overlay architecture, each draw body byte-for-byte from the prototype and pixel-verified against a golden ([SO-0001](../tickets/tickets.md) ✅).
+- A **gallery** (`pages/gallery.html`) that renders every overlay live over a synthetic demo lap — pedals, steering, gears, and telemetry all moving — so a style can be judged before a wheel is connected ([SO-0002](../tickets/tickets.md) ✅).
+- A **test suite** that guards the manifest's integrity, that every overlay actually paints, and that the demo driver stays faithful to the reference.
 
 ## What does not exist yet
 
-A streamer-facing site — a gallery to browse overlays and a configure page that generates the URL. Those come next; see the [roadmap in the README](../../README.md#roadmap). The vocabulary those pages will use is fixed now in [concepts.md](concepts.md).
+The rest of the streamer-facing site — a configure page that generates the OBS URL, hosting, and a discovery/landing front door. Those come next; see the [roadmap in the README](../../README.md#roadmap). The vocabulary those pages will use is fixed now in [concepts.md](concepts.md).

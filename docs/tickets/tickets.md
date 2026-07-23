@@ -6,7 +6,7 @@ The backlog. Board-first: a lightweight tracker until a real one is warranted. I
 
 ## In progress
 
-*(none — SO-0001 complete; next up is the site work, SO-0002/0003/0008/0009.)*
+*(none — SO-0001 and SO-0002 complete; next up is the site work, SO-0003/0008/0009.)*
 
 ## Open — road to a real hosted website
 
@@ -14,7 +14,6 @@ The product work between this pilot and "a site streamers find, set up, and use.
 
 | ID | Title | Notes |
 | --- | --- | --- |
-| **SO-0002** | Gallery page over demo data | Browse every overlay rendered against `engine/demo-lap.js`, for choosing a style. Built on the module architecture. |
 | **SO-0003** | Configure page → URL generator | Bind inputs, pick style/scale/colours, emit the `?style=…` URL to paste into OBS. Realises [ADR 0001](../decisions/0001-config-in-the-url.md); no storage. |
 | **SO-0004** | OBS gamepad fallback flow | The guided ladder from [ADR 0003](../decisions/0003-obs-gamepad-fallback.md): device-presence timeout, Interact prompt, Window-Capture path, optional local bridge. |
 | **SO-0008** | Hosting + deploy pipeline | Pick a static host (GitHub Pages / Netlify / Cloudflare Pages — all give the HTTPS the Gamepad API requires), wire a deploy from `main`, decide on a domain. See [ADR 0002](../decisions/0002-static-first-hosting.md). |
@@ -42,3 +41,4 @@ The product work between this pilot and "a site streamers find, set up, and use.
 | --- | --- |
 | **SO-0000** | Scaffold the repo: layered engine extracted from the prototype, manifest quality-gate, pytest + `node --test` suites, ADRs. |
 | **SO-0001** | **Migrate all 68 non-excluded overlays to modules** — full engine port (helpers + shifter/telemetry state + settable-global-ctx), draw bodies byte-for-byte. Verified: unit blank-tile guard, manifest coherence (`REQUIRE_FULL_COVERAGE` on), and **68/68 pixel-faithful to the reference render** (qa golden-diff). The golden faithfulness harness (`qa/`) was built alongside. |
+| **SO-0002** | **Gallery page over demo data** (`pages/gallery.html`) — browse all 68 non-excluded overlays animated live over a shared demo driver, filter by set/stage, search, pause/speed/shift-mode. Required extracting the missing animated demo engine: `engine/demo-lap.js` rebuilt as the richer 30s lap (gears + rpm/spd), and a new Layer-2 `engine/demo-driver.js` (`tick(dt)`) ported byte-faithfully from the prototype's `catalogue.html` — it **reproduces `qa/fixture.json` exactly**. Verified: all 68 tiles paint live, no errors (headless). **Supersedes the prototype's `catalogue.html` + `Live/gallery.html`** (a delete-gate condition). |

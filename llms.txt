@@ -22,7 +22,7 @@
 
 - Requires only a static HTTP server (the Gamepad API and ES modules need an HTTP context).
 - Clone: https://github.com/dberardi2020/stream-overlays
-- Serve `overlays/sim-racing` and open `pages/overlay.html?style=bowtie`.
+- Serve `overlays/sim-racing` and open `pages/gallery.html` to browse every overlay over a demo lap, or `pages/overlay.html?style=bowtie` for one live.
 - In OBS: Browser Source → Interact → press a wheel button → calibrate.
 
 ## Source
@@ -32,6 +32,7 @@
 - Engine: https://github.com/dberardi2020/stream-overlays/tree/main/overlays/sim-racing/engine
 - Overlay modules: https://github.com/dberardi2020/stream-overlays/tree/main/overlays/sim-racing/overlays
 - Live overlay page: https://github.com/dberardi2020/stream-overlays/blob/main/overlays/sim-racing/pages/overlay.html
+- Gallery page: https://github.com/dberardi2020/stream-overlays/blob/main/overlays/sim-racing/pages/gallery.html
 - Tests: https://github.com/dberardi2020/stream-overlays/tree/main/tests
 
 ## Docs

@@ -24,7 +24,7 @@ Browser **overlays for streamers** that read your hardware in the browser and co
 </svg>
 </p>
 
-> **Status: early.** The catalogue holds **72 overlays** (`overlays/sim-racing/catalogue.json`, the source of truth); all **68** non-excluded ones are migrated to the one-file-per-overlay module architecture and **pixel-verified against the reference render** (see [Testing](#testing)). This is not yet a streamer-facing site — it is the engine and overlay library the site will be built on (gallery, configure page, hosting: [Roadmap](#roadmap)).
+> **Status: early.** The catalogue holds **72 overlays** (`overlays/sim-racing/catalogue.json`, the source of truth); all **68** non-excluded ones are migrated to the one-file-per-overlay module architecture and **pixel-verified against the reference render** (see [Testing](#testing)). This is not yet a streamer-facing site — it is the engine, overlay library, and gallery the site will be built on (configure page, hosting, landing still to come: [Roadmap](#roadmap)).
 
 ## Install
 
@@ -59,7 +59,7 @@ Every overlay is a small canvas renderer selected by its immutable id: `?style=<
 | `dot-ladder` | brake · throttle · clutch | Ten dots per channel; reads at tiny sizes and survives stream compression. |
 | `wheel` | steering | A flat-bottomed GT rim with real spokes and a top-dead-centre marker. |
 | `dash-cluster` | all five channels | The classic: rev arc + gear centre, pedals and wheel around it. |
-| *…64 more* | pedals · wheel · shifter · combos | The full catalogue — a gallery to browse them all is coming (SO-0002). |
+| *…64 more* | pedals · wheel · shifter · combos | The full catalogue — browse them all animated over a demo lap in `pages/gallery.html` (SO-0002). |
 
 Overlays are grouped by **set** — `pedals`, `wheel`, `shifter`, or `combo`. Both `set` and the exact channels an overlay reads are **derived from its draw code** and verified against the manifest — see [`docs/technical`](docs/technical/README.md).
 
@@ -75,9 +75,9 @@ Full approach, coverage, and gaps: [`docs/technical/testing.md`](docs/technical/
 
 ## Roadmap
 
-The overlay library and engine are done and verified; next is the site around them:
+The overlay library, engine, and **gallery** (`pages/gallery.html` — browse all overlays animated over a demo lap, SO-0002 ✅) are done and verified; next is the rest of the site around them:
 
-- A **gallery** page (browse all overlays over demo data) and a **configure** page that emits the URL.
+- A **configure** page that binds inputs and emits the OBS URL (SO-0003).
 - **Hosting + deploy** and a **discovery/landing** front door (SO-0008/0009).
 - The **OBS gamepad fallback** flow ([ADR 0003](docs/decisions/0003-obs-gamepad-fallback.md)) as a guided UI.
 - Longer-term, a **builder** that composes overlays from named sub-visuals — which the module architecture is shaped to enable.

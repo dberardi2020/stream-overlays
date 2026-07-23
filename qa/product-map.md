@@ -16,7 +16,9 @@ product — those live in the repo docs and this links to them:
 | Pure calibration maths | `engine/calibration-math.js` | No — unit-tested in node |
 | Overlay modules (canvas draw) | `overlays/sim-racing/overlays/*.js` | **Yes — real canvas pixels** |
 | Live overlay page | `pages/overlay.html?style=<id>` | **Yes — needs a real wheel + OBS** |
-| Gallery / configure / landing | *not built yet* (SO-0002/3/9/10) | Yes, when they exist |
+| Demo driver (animated preview state) | `engine/demo-lap.js` + `engine/demo-driver.js` | No — pure, node-testable; reproduces `qa/fixture.json` |
+| Gallery page | `pages/gallery.html` | **Yes — 68 live canvases in a real browser** |
+| Configure / landing | *not built yet* (SO-0003/9/10) | Yes, when they exist |
 
 ## How to run
 
@@ -43,13 +45,14 @@ npm run serve                       # static server on overlays/sim-racing
 
 Run the layers a change touches; these must stay true.
 
-- [ ] `node --test` green — maths + every migrated overlay paints (mock).
+- [ ] `node --test` green — maths + every migrated overlay paints (mock) + **the demo driver reproduces `qa/fixture.json` exactly** (`tests/demo-driver.test.mjs`).
 - [ ] `pytest` green — manifest valid; `set` agrees with `uses`; no orphan modules.
 - [ ] `node qa/acceptance.mjs` green — every migrated overlay paints in **real** Chromium **and** is pixel-faithful to its prototype golden (any new overlay whose helper is mis-ported fails here).
 - [ ] `overlay.html?style=bowtie` served over **http** (never `file://`).
 - [ ] Overlay page background stays **transparent** (OBS composites over it).
 - [ ] A bad `?style=` shows an honest "unknown overlay", not a silent default.
 - [ ] Adding an overlay = module + manifest entry, and both test layers still pass.
+- [ ] `pages/gallery.html` (over http) — all 68 non-excluded tiles paint and animate; set/stage filters, search, and pause/speed/shift controls work; `excluded` overlays are absent; each "Open in OBS →" points at `overlay.html?style=<id>`.
 
 ## Gotchas (QA-side)
 
@@ -59,6 +62,7 @@ Run the layers a change touches; these must stay true.
 - The 4 `excluded` overlays are archived-in-manifest, intentionally module-less — expect no module for them.
 - **Canvas text has subpixel rendering variance** across page contexts, so glyph-dense overlays (e.g. `terminal`) diff ~0.5% while looking identical. Tolerance is 0.6% with an AA-aware pixelmatch threshold; a real mis-port is a wrong shape at many percent. Don't tighten to chase glyph noise; do investigate any diff whose `.diff.png` shows a *structural* change (missing element, wrong position/colour), not edge scatter.
 - **Golden faithfulness needs the fixture + goldens to agree.** `qa/render.html` and the goldens both read `qa/fixture.json`; if you re-capture goldens, the fixture is rewritten in lockstep.
+- **The demo driver is pinned to the fixture too.** `engine/demo-driver.js` is a byte-faithful port of the prototype's `catalogue.html` `tick()`; `tests/demo-driver.test.mjs` drives it with the capture's exact schedule (DT 1/60, 480 steps) and asserts it reproduces `qa/fixture.json`. So a re-baseline touches three things in lockstep: goldens, fixture, and this test. The gallery shares **one** driver + clock across all tiles (as the prototype did) — a tile that reads stale state is a per-module bug, not a driver bug.
 - **State is two objects, like the reference:** `s` (input — pedals/steering/gear/shift) and a separate `tel` (rpm/spd). `s` has **no** rpm/spd. Telemetry bodies (signature `(w,h,s,t)`) get `t = tel` via the module wrapper. An overlay that reads `s.rpm` gets `undefined` — that's a real reference bug (`split-panel`), faithfully preserved; fixing it is SO-0007. If a golden-diff shows a *structural* change on a telemetry overlay, suspect the s/tel split first.
 
 ## QA roadmap (this system is self-improving)

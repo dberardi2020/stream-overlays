@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overlay gallery — Stream Overlays</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --asphalt:#131418; --panel:#1b1d23; --panel-2:#22252d; --line:#2e323c; --line-2:#3a3f4a;
+  --ink:#eceae5; --mute:#8a909c;
+  --thr:#34d97a; --brk:#f2453d; --clu:#ffb020; --str:#64b5ff; --gear:#e7e3da;
+  --live:#34d97a; --draft:#64b5ff; --exp:#c77dff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--asphalt);color:var(--ink);
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:13.5px;line-height:1.6;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1500px;margin:0 auto;padding:24px 18px 120px}
+h1{font-family:Oxanium,monospace;font-weight:800;font-size:26px;margin:0 0 5px}
+.lede{color:var(--mute);margin:0 0 16px;max-width:88ch;font-size:12.8px}
+.lede code{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px}
+a{color:var(--str);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ---- control bar ---- */
+.bar{position:sticky;top:0;z-index:30;background:rgba(19,20,24,.95);backdrop-filter:blur(9px);
+  border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:18px;
+  display:flex;flex-direction:column;gap:9px}
+.bar .row{display:flex;flex-wrap:wrap;gap:9px 16px;align-items:center}
+.grp{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.grp.grow{flex:1 1 190px;min-width:150px}
+.lbl{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);
+  opacity:.7;user-select:none;white-space:nowrap}
+.btn{font-family:inherit;font-size:11.5px;letter-spacing:.04em;color:var(--mute);
+  background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:6px 10px;
+  cursor:pointer;transition:.13s;white-space:nowrap}
+.btn:hover{color:var(--ink);border-color:var(--line-2)}
+.btn.on{color:var(--ink);border-color:var(--ink);background:rgba(255,255,255,.07)}
+input.search{font-family:inherit;font-size:12px;color:var(--ink);background:var(--panel-2);
+  border:1px solid var(--line);border-radius:6px;padding:6px 10px;width:100%;outline:none}
+input.search:focus{border-color:var(--str)}
+input[type=range]{width:104px;accent-color:var(--str)}
+.tally{margin-left:auto;font-size:11.5px;color:var(--mute);flex:0 0 auto}
+.tally b{font-family:Oxanium,monospace;font-size:14px;color:var(--ink)}
+
+/* ---- groups + cards ---- */
+h2{font-family:Oxanium,monospace;font-weight:800;font-size:17px;margin:26px 0 11px;
+  padding-top:14px;border-top:1px solid var(--line);display:flex;gap:9px;align-items:baseline;
+  text-transform:capitalize}
+h2 .c{color:var(--mute);font-size:12px;font-weight:400;font-family:"IBM Plex Mono",monospace}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:12px;display:flex;flex-direction:column;gap:9px;transition:.13s}
+.card.hide{display:none}
+.card.live{border-left:3px solid var(--live)}
+.card.draft{border-left:3px solid var(--draft)}
+.card.experimental{border-left:3px solid var(--exp)}
+.hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.hd h3{font-family:Oxanium,monospace;font-weight:600;font-size:15px;margin:0}
+.hd .sz{font-size:11px;color:var(--mute);white-space:nowrap}
+.badges{display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-height:19px}
+.tag{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;
+  border:1px solid var(--line);color:var(--mute);white-space:nowrap}
+.tag.stage-live{color:var(--live);border-color:rgba(52,217,122,.5)}
+.tag.stage-draft{color:var(--draft);border-color:rgba(100,181,255,.5)}
+.tag.stage-experimental{color:var(--exp);border-color:rgba(199,125,255,.5)}
+.tag.tel{color:var(--clu);border-color:rgba(255,176,32,.5)}
+.chans{display:flex;flex-wrap:wrap;gap:4px}
+.ch{font-size:9.5px;font-weight:600;letter-spacing:.05em;padding:1px 5px;border-radius:3px;
+  background:rgba(255,255,255,.05)}
+.ch-thr{color:var(--thr)} .ch-brk{color:var(--brk)} .ch-clu{color:var(--clu)}
+.ch-str{color:var(--str)} .ch-gear,.ch-rpm,.ch-spd{color:var(--gear)}
+.stage-plate{background:linear-gradient(160deg,#0f1013,#1a1c22);border:1px solid var(--line);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;padding:10px;min-height:96px;overflow:hidden}
+canvas{display:block}
+.note{color:var(--mute);font-size:12px;margin:0;line-height:1.5}
+.foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto}
+.foot .use{font-size:11.5px;letter-spacing:.03em}
+.foot .demo-only{font-size:10px;color:var(--mute);opacity:.85}
+.empty{color:var(--mute);padding:40px 0;text-align:center}
+#err{color:var(--brk);background:rgba(242,69,61,.08);border:1px solid rgba(242,69,61,.4);
+  border-radius:8px;padding:10px 12px;margin-bottom:16px;display:none}
+#file-warning{display:none;color:var(--clu);background:rgba(255,176,32,.09);
+  border:1px solid rgba(255,176,32,.45);border-radius:8px;padding:11px 13px;margin-bottom:16px;line-height:1.6}
+#file-warning.shown{display:block}
+#file-warning code{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px}
+#file-warning b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Overlay gallery</h1>
+  <p class="lede">Every sim-racing overlay, rendered live against a synthetic demo lap — throttle, brake,
+    steering, gears, and telemetry all move so you can judge a style before a wheel is ever connected.
+    Pick one, then open it in OBS with <code>overlay.html?style=&lt;id&gt;</code>. Telemetry and shifter
+    overlays animate here from demo data; running them <em>live</em> needs a sim feed (see the roadmap).</p>
+
+  <div id="err"></div>
+  <div id="file-warning"></div>
+  <script>
+  /* Classic (non-module) script — runs even under file://, where the module
+     script at the bottom is blocked and never executes. Under file:// the
+     browser kills ES modules AND fetch, so the gallery silently can't load;
+     say so plainly instead of leaving a blank page. Under http this is a no-op. */
+  if (location.protocol === "file:") {
+    var w = document.getElementById("file-warning");
+    w.className = "shown";
+    w.innerHTML = "<b>This page must be served over http.</b> You opened it from " +
+      "<code>file://</code>, and the browser blocks ES modules and <code>fetch</code> there — " +
+      "so nothing loads. From the repo root run <code>npm run serve</code> " +
+      "(<code>python3 -m http.server --directory overlays/sim-racing</code>), then open " +
+      "<code>http://localhost:8000/pages/gallery.html</code>. Why: <a href=\"../../../docs/decisions/0002-static-first-hosting.md\">ADR 0002</a>.";
+  }
+  </script>
+
+  <div class="bar">
+    <div class="row">
+      <div class="grp"><span class="lbl">Set</span><span id="setBtns"></span></div>
+      <div class="grp"><span class="lbl">Stage</span><span id="stageBtns"></span></div>
+      <div class="grp grow"><input id="q" class="search" type="search" placeholder="search name or description…"></div>
+    </div>
+    <div class="row">
+      <div class="grp"><button id="play" class="btn on">Pause</button></div>
+      <div class="grp"><span class="lbl">Speed</span><input id="speed" type="range" min="0.25" max="2" step="0.25" value="1"><span id="speedV" class="lbl">1×</span></div>
+      <div class="grp"><span class="lbl">Shift</span><button id="mode" class="btn">Mode: H</button></div>
+      <div class="tally"><b id="visN">0</b> shown</div>
+    </div>
+  </div>
+
+  <div id="groups"></div>
+  <div id="empty" class="empty" style="display:none">No overlays match those filters.</div>
+</div>
+
+<script type="module">
+import { setMode, MODES } from "../engine/draw-kit.js";
+import { createDemoDriver } from "../engine/demo-driver.js";
+
+const errEl = document.getElementById("err");
+const fail = msg => { errEl.style.display = "block"; errEl.innerHTML = msg; };
+
+/* ---- manifest ---- */
+let manifest;
+try {
+  manifest = await fetch("../catalogue.json").then(r => r.json());
+} catch (e) {
+  fail("Could not load <b>catalogue.json</b>. Serve this over http (e.g. <b>python&nbsp;-m&nbsp;http.server</b>) — " +
+       "file:// blocks fetch and ES modules.");
+  throw e;
+}
+
+// The product gallery shows every migrated overlay; `excluded` are archived-in-manifest
+// and intentionally module-less, so they never render here.
+const SET_ORDER = ["pedals", "wheel", "shifter", "combo"];
+const CHAN_ORDER = ["clu", "brk", "thr", "str", "gear", "rpm", "spd"];
+const entries = manifest
+  .filter(e => e.stage !== "excluded")
+  .sort((a, b) => SET_ORDER.indexOf(a.set) - SET_ORDER.indexOf(b.set));
+
+/* ---- one shared driver + clock for the whole page (as the prototype does) ---- */
+const driver = createDemoDriver();
+driver.reset();
+
+/* ---- build cards ---- */
+const groups = document.getElementById("groups");
+const tiles = [];
+const dpr = window.devicePixelRatio || 1;
+
+for (const set of SET_ORDER) {
+  const items = entries.filter(e => e.set === set);
+  if (!items.length) continue;
+
+  const h = document.createElement("h2");
+  h.dataset.set = set;
+  h.innerHTML = set + ' <span class="c">' + items.length + "</span>";
+  groups.appendChild(h);
+
+  const grid = document.createElement("div");
+  grid.className = "grid"; grid.dataset.set = set;
+  groups.appendChild(grid);
+
+  for (const e of items) {
+    const tel = e.telemetry && e.telemetry.length;
+    const card = document.createElement("div");
+    card.className = "card " + e.stage;
+    card.dataset.id = e.id; card.dataset.set = set;
+
+    const chans = (e.uses || [])
+      .filter(u => CHAN_ORDER.indexOf(u) >= 0)
+      .sort((a, b) => CHAN_ORDER.indexOf(a) - CHAN_ORDER.indexOf(b))
+      .map(u => '<span class="ch ch-' + u + '">' + u.toUpperCase() + "</span>").join("");
+
+    card.innerHTML =
+      '<div class="hd"><h3>' + e.name + '</h3><span class="sz">' + e.size.w + "×" + e.size.h + "</span></div>" +
+      '<div class="badges">' +
+        '<span class="tag stage-' + e.stage + '">' + e.stage + "</span>" +
+        (tel ? '<span class="tag tel">tel: ' + e.telemetry.join(",") + "</span>" : "") +
+      "</div>" +
+      '<div class="chans">' + chans + "</div>" +
+      '<div class="stage-plate"></div>' +
+      '<p class="note">' + (e.note || "") + "</p>" +
+      '<div class="foot">' +
+        '<a class="use" href="overlay.html?style=' + e.id + '">Open in OBS →</a>' +
+        (tel ? '<span class="demo-only" title="renders from demo data; live needs a sim telemetry feed">demo only</span>' : "") +
+      "</div>";
+
+    const cv = document.createElement("canvas");
+    cv.style.width = e.size.w + "px"; cv.style.height = e.size.h + "px";
+    cv.width = e.size.w * dpr; cv.height = e.size.h * dpr;
+    const ctx = cv.getContext("2d");
+    ctx.scale(dpr, dpr);
+    card.querySelector(".stage-plate").appendChild(cv);
+
+    grid.appendChild(card);
+    tiles.push({ e, card, ctx, mem: {}, visible: true, logged: false });
+  }
+}
+
+/* only paint tiles on (or near) screen — 68 live canvases otherwise cost too much */
+const io = new IntersectionObserver(es => {
+  es.forEach(x => { const t = tiles.find(t => t.card === x.target); if (t) t.visible = x.isIntersecting; });
+}, { rootMargin: "260px" });
+tiles.forEach(t => io.observe(t.card));
+
+/* ---- render loop: one driver.tick per frame, then every visible tile draws ---- */
+await document.fonts.ready;                 // real font, not a fallback
+const modules = new Map();                  // id -> module (lazy, cached)
+
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  driver.tick(dt);
+
+  for (const t of tiles) {
+    if (!t.visible || t.card.classList.contains("hide")) continue;
+    let mod = modules.get(t.e.id);
+    if (mod === undefined) {                 // kick off a lazy import once
+      modules.set(t.e.id, null);
+      import(`../overlays/${t.e.id}.js`)
+        .then(m => modules.set(t.e.id, m))
+        .catch(err => { modules.set(t.e.id, false); if (!t.logged) { console.error(t.e.id, err); t.logged = true; } });
+      continue;
+    }
+    if (!mod) continue;                       // still loading (null) or failed (false)
+    t.ctx.clearRect(0, 0, t.e.size.w, t.e.size.h);
+    try {
+      mod.draw(t.ctx, t.e.size.w, t.e.size.h, driver.state, t.mem);
+    } catch (err) {
+      t.ctx.fillStyle = "#f2453d"; t.ctx.font = "11px monospace";
+      t.ctx.fillText("draw error: " + err.message, 8, 18);
+      if (!t.logged) { console.error(t.e.id, err); t.logged = true; }
+    }
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ---- filters ---- */
+let filterSet = "all", filterStage = "all", query = "";
+
+function makeToggle(host, values, get, set) {
+  values.forEach((v, i) => {
+    const b = document.createElement("button");
+    b.className = "btn" + (i === 0 ? " on" : "");
+    b.textContent = v.label; b.dataset.val = v.val;
+    b.onclick = () => {
+      set(v.val);
+      host.querySelectorAll(".btn").forEach(x => x.classList.toggle("on", x === b));
+      refresh();
+    };
+    host.appendChild(b);
+  });
+}
+makeToggle(document.getElementById("setBtns"),
+  [{ val: "all", label: "All" }, ...SET_ORDER.map(s => ({ val: s, label: s }))],
+  () => filterSet, v => filterSet = v);
+makeToggle(document.getElementById("stageBtns"),
+  [{ val: "all", label: "All" }, { val: "live", label: "Live" }, { val: "draft", label: "Draft" }, { val: "experimental", label: "Exp" }],
+  () => filterStage, v => filterStage = v);
+
+const empty = document.getElementById("empty");
+const visN = document.getElementById("visN");
+function refresh() {
+  const q = query.toLowerCase();
+  let shown = 0;
+  for (const t of tiles) {
+    const e = t.e;
+    const hit = !q || e.name.toLowerCase().includes(q) || (e.note || "").toLowerCase().includes(q);
+    const show = hit && (filterSet === "all" || e.set === filterSet) && (filterStage === "all" || e.stage === filterStage);
+    t.card.classList.toggle("hide", !show);
+    if (show) shown++;
+  }
+  document.querySelectorAll("h2").forEach(h => {
+    const vis = [...document.querySelectorAll('.card[data-set="' + h.dataset.set + '"]')].filter(c => !c.classList.contains("hide")).length;
+    const grid = document.querySelector('.grid[data-set="' + h.dataset.set + '"]');
+    h.style.display = vis ? "" : "none";
+    if (grid) grid.style.display = vis ? "" : "none";
+    h.querySelector(".c").textContent = vis;
+  });
+  empty.style.display = shown ? "none" : "block";
+  visN.textContent = shown;
+}
+
+/* ---- playback controls ---- */
+const playBtn = document.getElementById("play");
+playBtn.onclick = () => { driver.playing = !driver.playing; playBtn.textContent = driver.playing ? "Pause" : "Play"; playBtn.classList.toggle("on", driver.playing); };
+const speed = document.getElementById("speed"), speedV = document.getElementById("speedV");
+speed.oninput = () => { driver.speed = +speed.value; speedV.textContent = speed.value + "×"; };
+let modeIdx = 0;
+const modeBtn = document.getElementById("mode");
+modeBtn.onclick = () => { modeIdx = (modeIdx + 1) % MODES.length; setMode(modeIdx); modeBtn.textContent = "Mode: " + MODES[modeIdx].id; };
+document.getElementById("q").oninput = e => { query = e.target.value; refresh(); };
+
+refresh();
+</script>
+</body>
+</html>

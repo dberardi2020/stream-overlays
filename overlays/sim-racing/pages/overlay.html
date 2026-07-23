@@ -39,6 +39,19 @@ body.live #stage{position:fixed;top:0;left:0;margin:0}
 
 <div id="stage"><canvas id="cv" class="ov"></canvas></div>
 
+<script>
+/* Classic (non-module) script — runs even under file://, where the module script
+   below is blocked and never executes. Under file:// ES modules + fetch are dead,
+   so the overlay silently can't load; say so in #cap instead of a blank page. */
+if (location.protocol === "file:") {
+  var cap = document.getElementById("cap");
+  cap.className = "err";
+  cap.innerHTML = "<b>Serve this over http.</b> Opened from <code>file://</code>, the browser blocks " +
+    "ES modules and <code>fetch</code>, so nothing loads. Run <b>npm run serve</b> from the repo root, " +
+    "then open <b>http://localhost:8000/pages/overlay.html?style=bowtie</b>. (The Gamepad API needs http too.)";
+}
+</script>
+
 <script type="module">
 import { createState } from "../engine/state.js";
 import { pushHistory } from "../engine/draw-kit.js";
