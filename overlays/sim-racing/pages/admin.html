@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catalogue Admin — Stream Overlays</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --asphalt:#131418; --panel:#1b1d23; --panel-2:#22252d; --line:#2e323c; --line-2:#3a3f4a;
+  --ink:#eceae5; --mute:#8a909c;
+  --thr:#34d97a; --brk:#f2453d; --clu:#ffb020; --str:#64b5ff; --gear:#e7e3da;
+  --live:#34d97a; --draft:#64b5ff; --exp:#c77dff; --exc:#f2453d;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--asphalt);color:var(--ink);
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:13.5px;line-height:1.6;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1500px;margin:0 auto;padding:24px 18px 120px}
+h1{font-family:Oxanium,monospace;font-weight:800;font-size:26px;margin:0 0 5px}
+.lede{color:var(--mute);margin:0 0 16px;max-width:92ch;font-size:12.8px}
+.lede code{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px}
+.lede b{color:var(--ink)}
+a{color:var(--str);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ---- control bar ---- */
+.bar{position:sticky;top:0;z-index:30;background:rgba(19,20,24,.96);backdrop-filter:blur(9px);
+  border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:18px;
+  display:flex;flex-direction:column;gap:9px}
+.bar .row{display:flex;flex-wrap:wrap;gap:9px 16px;align-items:center}
+.grp{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.grp.grow{flex:1 1 190px;min-width:150px}
+.lbl{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);opacity:.7;user-select:none;white-space:nowrap}
+.btn{font-family:inherit;font-size:12px;font-weight:500;letter-spacing:.02em;color:var(--mute);
+  background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:6px 12px;cursor:pointer;transition:.13s;white-space:nowrap}
+.btn:hover{color:var(--ink);border-color:var(--line-2);background:#2a2e37}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.on{color:var(--str);border-color:var(--str);background:rgba(100,181,255,.13)}
+.btn.on:hover{background:rgba(100,181,255,.18)}
+.btn.primary{color:var(--live);border-color:rgba(52,217,122,.55);background:rgba(52,217,122,.12)}
+.btn.primary:hover{background:rgba(52,217,122,.2)}
+.segmented{display:inline-flex;gap:5px}
+input.search{font-family:inherit;font-size:12px;color:var(--ink);background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:6px 10px;width:100%;outline:none}
+input.search:focus{border-color:var(--str)}
+input[type=range]{width:104px;accent-color:var(--str)}
+input[type=color]{width:34px;height:28px;padding:2px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2);cursor:pointer}
+input[type=color]::-webkit-color-swatch{border:none;border-radius:3px}
+input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+.tally{margin-left:auto;font-size:11.5px;color:var(--mute);flex:0 0 auto}
+.tally b{font-family:Oxanium,monospace;font-size:14px;color:var(--ink)}
+
+/* ---- save/export bar ---- */
+.savebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:10px 13px;margin-bottom:16px}
+.savebar .dirty{font-size:12.5px;color:var(--mute)}
+.savebar .dirty b{font-family:Oxanium,monospace;color:var(--clu)}
+.savebar.clean .dirty b{color:var(--mute)}
+.savebar .spacer{margin-left:auto}
+.savebar .hint{font-size:11px;color:var(--mute);opacity:.85;flex-basis:100%;line-height:1.5}
+.savebar .hint code{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+
+/* ---- groups + cards ---- */
+h2{font-family:Oxanium,monospace;font-weight:800;font-size:17px;margin:26px 0 11px;
+  padding-top:14px;border-top:1px solid var(--line);display:flex;gap:9px;align-items:baseline;text-transform:capitalize}
+h2 .c{color:var(--mute);font-size:12px;font-weight:400;font-family:"IBM Plex Mono",monospace}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:9px;transition:.13s}
+.card.hide{display:none}
+.card.live{border-left:3px solid var(--live)}
+.card.draft{border-left:3px solid var(--draft)}
+.card.experimental{border-left:3px solid var(--exp)}
+.card.excluded{border-left:3px solid var(--exc);opacity:.72}
+.card.edited{box-shadow:0 0 0 1px var(--clu) inset}
+.hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.hd h3{font-family:Oxanium,monospace;font-weight:600;font-size:15px;margin:0}
+.hd .sz{font-size:11px;color:var(--mute);white-space:nowrap}
+.badges{display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-height:19px}
+.tag{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;border:1px solid var(--line);color:var(--mute);white-space:nowrap}
+.tag.id{color:var(--mute)}
+.tag.tel{color:var(--clu);border-color:rgba(255,176,32,.5)}
+.tag.hiddenflag{color:var(--exp);border-color:rgba(199,125,255,.5)}
+.chans{display:flex;flex-wrap:wrap;gap:4px}
+.ch{font-size:9.5px;font-weight:600;letter-spacing:.05em;padding:1px 5px;border-radius:3px;background:rgba(255,255,255,.05)}
+.ch-thr{color:var(--thr)} .ch-brk{color:var(--brk)} .ch-clu{color:var(--clu)}
+.ch-str{color:var(--str)} .ch-gear,.ch-rpm,.ch-spd{color:var(--gear)}
+.stage-plate{position:relative;border:1px solid var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;padding:10px;min-height:112px;overflow:hidden;
+  background-color:#2a2d33;
+  background-image:linear-gradient(45deg,#3a3e46 25%,transparent 25%,transparent 75%,#3a3e46 75%),linear-gradient(45deg,#3a3e46 25%,transparent 25%,transparent 75%,#3a3e46 75%);
+  background-size:20px 20px;background-position:0 0,10px 10px}
+.stage-plate .scene{position:absolute;inset:0;background:var(--scene-bg,#33373e);transition:background .12s}
+.stage-plate canvas{position:relative;z-index:1;display:block;max-width:100%;height:auto}
+.no-module{position:relative;z-index:1;font-size:11px;color:var(--mute);text-align:center;padding:6px 10px;
+  background:rgba(10,11,14,.7);border:1px dashed var(--line-2);border-radius:6px}
+.note{color:var(--mute);font-size:12px;margin:0;line-height:1.5;border:1px solid transparent;border-radius:6px;padding:3px 6px;transition:.12s}
+.note[contenteditable]:hover{border-color:var(--line)}
+.note[contenteditable]:focus{outline:none;border-color:var(--str);background:rgba(100,181,255,.06);color:var(--ink)}
+
+/* ---- per-card editor ---- */
+.edit{display:flex;flex-wrap:wrap;gap:6px;align-items:center;border-top:1px solid var(--line);padding-top:9px}
+.edit .lbl{margin-right:2px}
+.sbtn{font-family:inherit;font-size:10.5px;font-weight:500;letter-spacing:.03em;color:var(--mute);
+  background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:4px 8px;cursor:pointer;transition:.12s}
+.sbtn:hover{color:var(--ink);border-color:var(--line-2)}
+.sbtn.on[data-stage=live]{color:var(--live);border-color:var(--live);background:rgba(52,217,122,.14)}
+.sbtn.on[data-stage=draft]{color:var(--draft);border-color:var(--draft);background:rgba(100,181,255,.14)}
+.sbtn.on[data-stage=experimental]{color:var(--exp);border-color:var(--exp);background:rgba(199,125,255,.14)}
+.sbtn.on[data-stage=excluded]{color:var(--exc);border-color:var(--exc);background:rgba(242,69,61,.14)}
+.hbtn.on{color:var(--exp);border-color:var(--exp);background:rgba(199,125,255,.14)}
+.foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto}
+.foot .use{font-size:11.5px;letter-spacing:.03em}
+.empty{color:var(--mute);padding:40px 0;text-align:center}
+#err{color:var(--brk);background:rgba(242,69,61,.08);border:1px solid rgba(242,69,61,.4);border-radius:8px;padding:10px 12px;margin-bottom:16px;display:none}
+#file-warning{display:none;color:var(--clu);background:rgba(255,176,32,.09);border:1px solid rgba(255,176,32,.45);border-radius:8px;padding:11px 13px;margin-bottom:16px;line-height:1.6}
+#file-warning.shown{display:block}
+#file-warning code{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px}
+#file-warning b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Catalogue Admin</h1>
+  <p class="lede">The write/curate view over <code>catalogue.json</code> — the same source of truth the public
+    <a href="gallery.html">gallery</a> reads. Set each overlay's <b>stage</b> (live / draft / experimental / excluded),
+    toggle <b>hidden</b>, and tweak its <b>note</b>. This is a static tool with no backend: edits live in your browser
+    (localStorage), and <b>Export</b> downloads a new <code>catalogue.json</code> for you to drop into the repo and commit.</p>
+
+  <div id="err"></div>
+  <div id="file-warning"></div>
+  <script>
+  if (location.protocol === "file:") {
+    var w = document.getElementById("file-warning");
+    w.className = "shown";
+    w.innerHTML = "<b>This page must be served over http.</b> You opened it from <code>file://</code>, and the browser " +
+      "blocks ES modules and <code>fetch</code> there — so nothing loads. From the repo root run <code>npm run serve</code>, " +
+      "then open <code>http://localhost:8000/pages/admin.html</code>.";
+  }
+  </script>
+
+  <div class="savebar clean" id="savebar">
+    <div class="dirty"><b id="dirtyN">0</b> unsaved edit(s)</div>
+    <button id="export" class="btn primary">Export catalogue.json</button>
+    <button id="revert" class="btn" disabled>Revert all</button>
+    <div class="spacer"></div>
+    <div class="hint">Export downloads <code>catalogue.json</code>; replace <code>overlays/sim-racing/catalogue.json</code> with it and commit. Edits persist in this browser until you revert.</div>
+  </div>
+
+  <div class="bar">
+    <div class="row">
+      <div class="grp"><span class="lbl">Set</span><span id="setBtns" class="segmented"></span></div>
+      <div class="grp"><span class="lbl">Stage</span><span id="stageBtns" class="segmented"></span></div>
+      <div class="grp grow"><input id="q" class="search" type="search" placeholder="Search name, id, or description…"></div>
+    </div>
+    <div class="row">
+      <div class="grp"><button id="play" class="btn on">Pause</button></div>
+      <div class="grp"><span class="lbl">Speed</span><input id="speed" type="range" min="0.25" max="2" step="0.25" value="1"><span id="speedV" class="lbl">1×</span></div>
+      <div class="grp"><span class="lbl">Shift</span><button id="mode" class="btn">Mode: H</button></div>
+      <div class="tally"><b id="visN">0</b> shown</div>
+    </div>
+    <div class="row">
+      <div class="grp"><span class="lbl">Backdrop</span><span id="bdPresets" class="segmented"></span></div>
+      <div class="grp"><span class="lbl">Colour</span><input id="bdColor" type="color" value="#33373e" title="scene colour"></div>
+      <div class="grp"><span class="lbl">Opacity</span><input id="bdAlpha" type="range" min="0" max="100" step="1" value="100"><span id="bdAlphaV" class="lbl">100%</span></div>
+    </div>
+  </div>
+
+  <div id="groups"></div>
+  <div id="empty" class="empty" style="display:none">No overlays match those filters.</div>
+</div>
+
+<script type="module">
+import { setMode, MODES } from "../engine/draw-kit.js";
+import { createDemoDriver } from "../engine/demo-driver.js";
+
+const errEl = document.getElementById("err");
+const fail = msg => { errEl.style.display = "block"; errEl.innerHTML = msg; };
+
+const STORE_KEY = "so.catalogue.admin.v1";
+const STAGES = ["live", "draft", "experimental", "excluded"];
+const SET_ORDER = ["pedals", "wheel", "shifter", "combo"];
+const CHAN_ORDER = ["clu", "brk", "thr", "str", "gear", "rpm", "spd"];
+
+/* ---- manifest (the on-disk source of truth) ---- */
+let manifest;
+try {
+  manifest = await fetch("../catalogue.json").then(r => r.json());
+} catch (e) {
+  fail("Could not load <b>catalogue.json</b>. Serve this over http (<b>npm run serve</b>) — file:// blocks fetch and ES modules.");
+  throw e;
+}
+
+// disk snapshot of the editable fields, so "dirty" = differs from what's committed
+const disk = {};
+for (const e of manifest) disk[e.id] = { stage: e.stage, hidden: !!e.hidden, note: e.note || "" };
+const isDirty = e => e.stage !== disk[e.id].stage || !!e.hidden !== disk[e.id].hidden || (e.note || "") !== disk[e.id].note;
+
+// apply any locally-persisted (uncommitted) edits over the manifest, in place
+let edits = {};
+try { edits = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch {}
+for (const e of manifest) {
+  const ed = edits[e.id];
+  if (!ed) continue;
+  if (ed.stage !== undefined) e.stage = ed.stage;
+  if (ed.hidden !== undefined) e.hidden = ed.hidden;
+  if (ed.note !== undefined) e.note = ed.note;
+}
+
+const driver = createDemoDriver();
+driver.reset();
+
+/* ---- build cards (ALL entries — admin sees excluded + hidden too) ---- */
+const groups = document.getElementById("groups");
+const tiles = [];
+const dpr = window.devicePixelRatio || 1;
+const bySet = new Map(SET_ORDER.map(s => [s, []]));
+for (const e of manifest) (bySet.get(e.set) || bySet.set(e.set, []).get(e.set)).push(e);
+
+for (const set of SET_ORDER) {
+  const items = bySet.get(set) || [];
+  if (!items.length) continue;
+
+  const h = document.createElement("h2");
+  h.dataset.set = set;
+  h.innerHTML = set + ' <span class="c">' + items.length + "</span>";
+  groups.appendChild(h);
+
+  const grid = document.createElement("div");
+  grid.className = "grid"; grid.dataset.set = set;
+  groups.appendChild(grid);
+
+  for (const e of items) {
+    const card = document.createElement("div");
+    card.dataset.id = e.id; card.dataset.set = set;
+
+    const chans = (e.uses || []).filter(u => CHAN_ORDER.indexOf(u) >= 0)
+      .sort((a, b) => CHAN_ORDER.indexOf(a) - CHAN_ORDER.indexOf(b))
+      .map(u => '<span class="ch ch-' + u + '">' + u.toUpperCase() + "</span>").join("");
+
+    const stageBtns = STAGES.map(s =>
+      '<button class="sbtn" data-stage="' + s + '" title="' + s + '">' +
+      (s === "experimental" ? "Exp" : s === "excluded" ? "Excl" : s[0].toUpperCase() + s.slice(1)) + "</button>").join("");
+
+    card.innerHTML =
+      '<div class="hd"><h3>' + e.name + '</h3><span class="sz">' + e.size.w + "×" + e.size.h + "</span></div>" +
+      '<div class="badges">' +
+        '<span class="tag id">' + e.id + "</span>" +
+        (e.telemetry && e.telemetry.length ? '<span class="tag tel">tel: ' + e.telemetry.join(",") + "</span>" : "") +
+        '<span class="tag hiddenflag" style="display:none">hidden</span>' +
+      "</div>" +
+      '<div class="chans">' + chans + "</div>" +
+      '<div class="stage-plate"><div class="scene"></div></div>' +
+      '<p class="note" contenteditable="true" spellcheck="false">' + (e.note || "") + "</p>" +
+      '<div class="edit">' +
+        '<span class="lbl">Stage</span>' + stageBtns +
+        '<button class="sbtn hbtn" title="hidden — down but not archived">Hidden</button>' +
+      "</div>" +
+      '<div class="foot"><a class="use" href="overlay.html?style=' + e.id + '">Open in OBS →</a></div>';
+
+    const plate = card.querySelector(".stage-plate");
+    const cv = document.createElement("canvas");
+    cv.style.width = e.size.w + "px";
+    cv.width = e.size.w * dpr; cv.height = e.size.h * dpr;
+    const ctx = cv.getContext("2d"); ctx.scale(dpr, dpr);
+    plate.appendChild(cv);
+
+    grid.appendChild(card);
+    const tile = { e, card, ctx, plate, mem: {}, visible: true, module: undefined, placeheld: false };
+    tiles.push(tile);
+    wireCard(tile);
+    paintCard(tile);
+  }
+}
+
+/* ---- editing ---- */
+const dirtyN = document.getElementById("dirtyN");
+const savebar = document.getElementById("savebar");
+const revertBtn = document.getElementById("revert");
+
+function recordEdit(e) {
+  if (isDirty(e)) edits[e.id] = { stage: e.stage, hidden: !!e.hidden, note: e.note || "" };
+  else delete edits[e.id];
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(edits)); } catch {}
+  updateDirty();
+}
+function updateDirty() {
+  const n = Object.keys(edits).length;
+  dirtyN.textContent = n;
+  savebar.classList.toggle("clean", n === 0);
+  revertBtn.disabled = n === 0;
+}
+
+// reflect an entry's current state onto its card (badge, border, buttons)
+function paintCard(t) {
+  const e = t.e, c = t.card;
+  c.className = "card " + e.stage + (isDirty(e) ? " edited" : "");
+  c.querySelectorAll(".sbtn[data-stage]").forEach(b => b.classList.toggle("on", b.dataset.stage === e.stage));
+  const hb = c.querySelector(".hbtn"); hb.classList.toggle("on", !!e.hidden);
+  c.querySelector(".hiddenflag").style.display = e.hidden ? "" : "none";
+}
+
+function wireCard(t) {
+  const e = t.e, c = t.card;
+  c.querySelectorAll(".sbtn[data-stage]").forEach(b => b.onclick = () => {
+    e.stage = b.dataset.stage; recordEdit(e); paintCard(t); refresh();
+  });
+  c.querySelector(".hbtn").onclick = () => { e.hidden = !e.hidden; recordEdit(e); paintCard(t); };
+  const note = c.querySelector(".note");
+  note.addEventListener("blur", () => { e.note = note.textContent.trim(); recordEdit(e); paintCard(t); });
+}
+updateDirty();
+
+document.getElementById("export").onclick = () => {
+  const blob = new Blob([JSON.stringify(manifest, null, 2) + "\n"], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "catalogue.json"; a.click();
+  URL.revokeObjectURL(a.href);
+};
+revertBtn.onclick = () => {
+  if (!confirm("Discard all " + Object.keys(edits).length + " local edit(s) and return to the committed catalogue.json?")) return;
+  edits = {}; try { localStorage.removeItem(STORE_KEY); } catch {}
+  for (const t of tiles) {
+    const d = disk[t.e.id];
+    t.e.stage = d.stage; t.e.hidden = d.hidden; t.e.note = d.note;
+    t.card.querySelector(".note").textContent = d.note;
+    paintCard(t);
+  }
+  updateDirty(); refresh();
+};
+
+/* ---- render loop (same engine as the gallery) ---- */
+const io = new IntersectionObserver(es => {
+  es.forEach(x => { const t = tiles.find(t => t.card === x.target); if (t) t.visible = x.isIntersecting; });
+}, { rootMargin: "260px" });
+tiles.forEach(t => io.observe(t.card));
+
+await document.fonts.ready;
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  driver.tick(dt);
+  for (const t of tiles) {
+    if (!t.visible || t.card.classList.contains("hide")) continue;
+    if (t.module === undefined) {
+      t.module = null;
+      import(`../overlays/${t.e.id}.js`)
+        .then(m => t.module = m)
+        .catch(() => { t.module = false; showNoModule(t); });
+      continue;
+    }
+    if (!t.module) continue;
+    t.ctx.clearRect(0, 0, t.e.size.w, t.e.size.h);
+    try { t.module.draw(t.ctx, t.e.size.w, t.e.size.h, driver.state, t.mem); }
+    catch (err) { t.ctx.fillStyle = "#f2453d"; t.ctx.font = "11px monospace"; t.ctx.fillText("draw error: " + err.message, 8, 18); }
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function showNoModule(t) {
+  if (t.placeheld) return;
+  t.placeheld = true;
+  t.plate.querySelector("canvas").style.display = "none";
+  const ph = document.createElement("div");
+  ph.className = "no-module";
+  ph.textContent = "no module — not migrated";
+  t.plate.appendChild(ph);
+}
+
+/* ---- filters ---- */
+let filterSet = "all", filterStage = "all", query = "";
+function makeToggle(host, values, set) {
+  values.forEach((v, i) => {
+    const b = document.createElement("button");
+    b.className = "btn" + (i === 0 ? " on" : "");
+    b.textContent = v.label; b.dataset.val = v.val;
+    b.onclick = () => { set(v.val); host.querySelectorAll(".btn").forEach(x => x.classList.toggle("on", x === b)); refresh(); };
+    host.appendChild(b);
+  });
+}
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+makeToggle(document.getElementById("setBtns"),
+  [{ val: "all", label: "All" }, ...SET_ORDER.map(s => ({ val: s, label: cap(s) }))], v => filterSet = v);
+makeToggle(document.getElementById("stageBtns"),
+  [{ val: "all", label: "All" }, ...STAGES.map(s => ({ val: s, label: s === "experimental" ? "Exp" : s === "excluded" ? "Excl" : cap(s) }))], v => filterStage = v);
+
+const empty = document.getElementById("empty");
+const visN = document.getElementById("visN");
+function refresh() {
+  const q = query.toLowerCase();
+  let shown = 0;
+  for (const t of tiles) {
+    const e = t.e;
+    const hit = !q || e.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q) || (e.note || "").toLowerCase().includes(q);
+    const show = hit && (filterSet === "all" || e.set === filterSet) && (filterStage === "all" || e.stage === filterStage);
+    t.card.classList.toggle("hide", !show);
+    if (show) shown++;
+  }
+  document.querySelectorAll("h2").forEach(h => {
+    const vis = [...document.querySelectorAll('.card[data-set="' + h.dataset.set + '"]')].filter(c => !c.classList.contains("hide")).length;
+    const grid = document.querySelector('.grid[data-set="' + h.dataset.set + '"]');
+    h.style.display = vis ? "" : "none";
+    if (grid) grid.style.display = vis ? "" : "none";
+    h.querySelector(".c").textContent = vis;
+  });
+  empty.style.display = shown ? "none" : "block";
+  visN.textContent = shown;
+}
+
+/* ---- playback ---- */
+const playBtn = document.getElementById("play");
+playBtn.onclick = () => { driver.playing = !driver.playing; playBtn.textContent = driver.playing ? "Pause" : "Play"; playBtn.classList.toggle("on", driver.playing); };
+const speed = document.getElementById("speed"), speedV = document.getElementById("speedV");
+speed.oninput = () => { driver.speed = +speed.value; speedV.textContent = speed.value + "×"; };
+let modeIdx = 0;
+const modeBtn = document.getElementById("mode");
+modeBtn.onclick = () => { modeIdx = (modeIdx + 1) % MODES.length; setMode(modeIdx); modeBtn.textContent = "Mode: " + MODES[modeIdx].id; };
+document.getElementById("q").oninput = ev => { query = ev.target.value; refresh(); };
+
+/* ---- backdrop builder ---- */
+const bdColor = document.getElementById("bdColor"), bdAlpha = document.getElementById("bdAlpha"), bdAlphaV = document.getElementById("bdAlphaV");
+const PRESETS = [
+  { label: "Black", hex: "#000000", a: 100 }, { label: "Dark", hex: "#33373e", a: 100 },
+  { label: "Light", hex: "#c8ccd2", a: 100 }, { label: "White", hex: "#ffffff", a: 100 },
+  { label: "Checker", hex: "#33373e", a: 0 }
+];
+const toRgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + (a / 100) + ")"; };
+const presetBtns = [];
+PRESETS.forEach(p => {
+  const b = document.createElement("button");
+  b.className = "btn"; b.textContent = p.label; b.dataset.hex = p.hex; b.dataset.a = p.a;
+  b.onclick = () => { bdColor.value = p.hex; bdAlpha.value = p.a; applyBackdrop(); };
+  document.getElementById("bdPresets").appendChild(b); presetBtns.push(b);
+});
+function applyBackdrop() {
+  const hex = bdColor.value, a = +bdAlpha.value;
+  document.body.style.setProperty("--scene-bg", toRgba(hex, a));
+  bdAlphaV.textContent = a + "%";
+  presetBtns.forEach(b => b.classList.toggle("on", b.dataset.hex.toLowerCase() === hex.toLowerCase() && +b.dataset.a === a));
+}
+bdColor.oninput = applyBackdrop; bdAlpha.oninput = applyBackdrop; applyBackdrop();
+
+refresh();
+</script>
+</body>
+</html>

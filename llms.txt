@@ -33,6 +33,8 @@
 - Overlay modules: https://github.com/dberardi2020/stream-overlays/tree/main/overlays/sim-racing/overlays
 - Live overlay page: https://github.com/dberardi2020/stream-overlays/blob/main/overlays/sim-racing/pages/overlay.html
 - Gallery page: https://github.com/dberardi2020/stream-overlays/blob/main/overlays/sim-racing/pages/gallery.html
+- Admin page (curate + export catalogue.json): https://github.com/dberardi2020/stream-overlays/blob/main/overlays/sim-racing/pages/admin.html
+- Overlay design principles: https://github.com/dberardi2020/stream-overlays/blob/main/overlays/sim-racing/design-principles.md
 - Tests: https://github.com/dberardi2020/stream-overlays/tree/main/tests
 
 ## Docs
