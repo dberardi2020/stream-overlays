@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>User guide</title><style>
+:root{--bg:#fbfbfa;--fg:#22201d;--muted:#6b6862;--line:#e6e3dd;--code-bg:#f0eee9;--accent:#b5651d;--link:#a1571a}
+@media(prefers-color-scheme:dark){:root{--bg:#1a1917;--fg:#e6e3dd;--muted:#9a968e;--line:#332f2a;--code-bg:#26241f;--accent:#d99a5b;--link:#e0a866}}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;margin:0}
+.wrap{max-width:760px;margin:0 auto;padding:64px 28px 120px}
+h1{font-size:2rem;line-height:1.2;margin:0 0 .3em;letter-spacing:-.02em}
+h2{font-size:1.35rem;margin:2.2em 0 .5em;padding-bottom:.25em;border-bottom:1px solid var(--line)}
+h3{font-size:1.08rem;margin:1.8em 0 .4em}
+p{margin:.7em 0}
+a{color:var(--link);text-decoration:none;border-bottom:1px solid transparent}
+a:hover{border-bottom-color:var(--link)}
+code{background:var(--code-bg);padding:.12em .4em;border-radius:4px;font:.86em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre{background:var(--code-bg);padding:16px 18px;border-radius:8px;overflow-x:auto;border:1px solid var(--line)}
+pre code{background:none;padding:0;font-size:.85em}
+ul,ol{padding-left:1.4em;margin:.7em 0}
+li{margin:.3em 0}
+blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:var(--code-bg);border-radius:0 6px 6px 0;color:var(--muted)}
+blockquote strong{color:var(--fg)}
+table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.92em;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5em .7em;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+hr{border:none;border-top:1px solid var(--line);margin:2em 0}
+strong{font-weight:650}
+</style></head><body><main class="wrap">
+<h1>User guide</h1>
+<p>How to get an overlay onto your stream. No code assumed — you pick a style, paste a URL into OBS, and calibrate your wheel once.</p>
+<h2>Requirements</h2>
+<ul><li>A <strong>Chromium-based browser</strong> (Chrome or Edge). OBS's Browser Source is Chromium (CEF), so it works there too.</li><li>The pages must be served over <strong>http/https</strong>, not opened as <code>file://</code> — the browser blocks ES modules, <code>fetch</code>, and the Gamepad API on <code>file://</code>. Locally, <code>npm run serve</code> (or any static server) is enough; <code>localhost</code> counts as a secure context, so calibration works there. A public deploy needs <strong>https</strong> (the Gamepad API refuses insecure origins). See <a href="../decisions/0002-static-first-hosting.md">ADR 0002</a>.</li><li>A wheel/pedals the browser can see as a <strong>gamepad</strong> (built for the Logitech G923; other HID wheels may work for the direct channels).</li></ul>
+<h2>Pick a style</h2>
+<p>Open the <a href="../../overlays/sim-racing/pages/gallery.html">gallery</a> (<code>pages/gallery.html</code>). Every overlay animates over a demo lap so you can judge it before plugging anything in — filter by set/stage, and use the <strong>Backdrop</strong> control to preview it against a light, dark, or busy scene. Each tile shows its <strong>id</strong> and its <strong>native size</strong>; note the id of the one you want (e.g. <code>dot-ladder</code>).</p>
+<h2>Add it to OBS</h2>
+<p>The overlay page paints no background, so OBS renders it transparent automatically — it composites over your scene.</p>
+<ol><li>In OBS: <strong>Sources → + → Browser</strong>. Untick <strong>Local file</strong>.</li><li>Set <strong>URL</strong> to the overlay page with your chosen id: <code>…/pages/overlay.html?style=&lt;id&gt;</code> — e.g. <code>…/pages/overlay.html?style=dot-ladder</code>. Add options below as needed.</li><li>Set the Browser Source <strong>Width / Height</strong> to the size shown in the overlay's setup caption (its native size × your <code>scale</code>). <strong>Don't</strong> scale the source in OBS itself — it resamples and goes soft; use the <code>scale</code> param so it redraws sharp.</li><li>Connect your wheel: right-click the source → <strong>Interact</strong>, then <strong>press any wheel button</strong> — browsers only expose gamepads after a real input on a focused page — and calibrate (below).</li><li>Close Interact. The setup panel hides itself once you're live, leaving only the overlay.</li></ol>
+<blockquote>
+<p>A <strong>configure page</strong> that builds this URL for you (pick style, scale, colours → copy link) is planned — <a href="../tickets/tickets.md">SO-0003</a>. Until then you write the URL by hand.</p>
+</blockquote>
+<h2>URL options</h2>
+<p>All configuration lives in the URL, so a configured overlay is a shareable link (<a href="../decisions/0001-config-in-the-url.md">ADR 0001</a>).</p>
+<table><thead><tr><th>Param</th><th>Meaning</th><th>Default</th></tr></thead><tbody><tr><td><code>style</code></td><td>Which overlay — an <strong>id</strong> (<code>dot-ladder</code>), or an alias.</td><td><em>(required)</em></td></tr><tr><td><code>scale</code></td><td>Size multiplier, <code>0.5</code>–<code>6</code>. Redraws at the larger size (sharp), never resampled.</td><td><code>2</code></td></tr><tr><td><code>bg</code></td><td>Contrast-plate colour behind the overlay, hex (e.g. <code>ffffff</code>, <code>000000</code>).</td><td>none</td></tr><tr><td><code>bga</code></td><td>Plate opacity, <code>0</code>–<code>1</code> (<code>0</code> = no plate, fully transparent).</td><td><code>0</code></td></tr><tr><td><code>radius</code></td><td>Plate corner radius, px (<code>0</code>–<code>40</code>).</td><td><code>8</code></td></tr></tbody></table>
+<p>Example: <code>overlay.html?style=rolling-trace&amp;scale=2.5&amp;bg=ffffff&amp;bga=0.15</code></p>
+<p>An unknown <code>style</code> shows an honest "unknown overlay" message rather than silently picking a default.</p>
+<h2>Calibration</h2>
+<p>Calibration maps your wheel's raw axis values to true channel values (each pedal's rest→full travel, the wheel's centre and extremes), so bars hit 100% only at a real full press. It's saved in the browser (<code>localStorage</code>) and auto-connects on later launches. It lives on the machine and never travels — it's intrinsic to that physical wheel.</p>
+<ul><li><strong>Neutral</strong> — release all pedals and centre the wheel, then Confirm. Captures a clean rest baseline so nothing false-triggers.</li><li><strong>Pedals</strong> (throttle / brake / clutch) — press fully, then release. Records rest + the real full-press extreme.</li><li><strong>Steering</strong> (optional) — sweep fully left, fully right, then re-centre. Maps to −100 %…+100 %. Only a couple of styles use it, so it's skippable.</li></ul>
+<p>Each channel confirms on its own (with <strong>Redo</strong>), and already-assigned axes are excluded so releasing one control can't be mistaken for the next. Use <strong>Calibrate all</strong> for the full sequence, a per-row <strong>Redo/Set</strong> to fix one channel, or <strong>Clear</strong> to wipe it. Press <strong><code>c</code></strong> in the OBS Interact window to reopen calibration any time.</p>
+<h2>Notes &amp; limitations</h2>
+<ul><li><strong>Chromium only</strong> — Chrome, Edge, or OBS's CEF. Other engines may not expose the Gamepad API the same way.</li><li>If OBS clears the browser cache, saved calibration is lost and you re-run the flow.</li><li><strong>Telemetry overlays</strong> (rpm / speed / gear-from-sim) render from demo data but can't run <em>live</em> yet — a G923 exposes no telemetry, so those need a sim feed (<a href="../tickets/tickets.md">SO-0007</a>). They still work as visuals; they just rest until a source exists.</li></ul>
+</main></body></html>
