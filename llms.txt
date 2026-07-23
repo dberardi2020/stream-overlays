@@ -1,0 +1,42 @@
+# Stream Overlays
+
+> Browser overlays for streamers: read your hardware in the browser via the Gamepad API,
+> draw it to a transparent canvas, and composite over your scene in OBS. Static files only,
+> configuration in the URL — no install, no accounts, no server. The first vertical is sim
+> racing: live throttle/brake/clutch/steering from a Logitech G923, as a catalogue of small
+> canvas overlays. Currently a pilot: the engine and module architecture are built and
+> tested; three overlays are migrated, the rest of the 72-overlay catalogue is pending.
+
+## What it is
+
+- **Static-first.** Overlays are plain HTML/JS served over HTTP; the browser reads the wheel
+  client-side, so nothing leaves the user's machine and there is nothing to host but files.
+- **Config in the URL.** `?style=<id>&scale=<n>` — portable, shareable, bookmarkable. No storage.
+- **Layered architecture.** Pure logic (calibration maths, demo lap) with no DOM; a browser
+  runtime (gamepad seam, calibration engine, draw kit, loop); one module per overlay exporting
+  `id` + `draw(ctx,w,h,state,mem)`; thin pages that wire it together.
+- **The manifest is the source of truth.** `catalogue.json` carries every overlay's id, name,
+  size, set, stage, and channels; `set`/`uses` are derived from the draw code and verified.
+
+## Install
+
+- Requires only a static HTTP server (the Gamepad API and ES modules need an HTTP context).
+- Clone: https://github.com/dberardi2020/stream-overlays
+- Serve `overlays/sim-racing` and open `pages/overlay.html?style=bowtie`.
+- In OBS: Browser Source → Interact → press a wheel button → calibrate.
+
+## Source
+
+- Repo: https://github.com/dberardi2020/stream-overlays
+- Manifest (source of truth): https://raw.githubusercontent.com/dberardi2020/stream-overlays/main/overlays/sim-racing/catalogue.json
+- Engine: https://github.com/dberardi2020/stream-overlays/tree/main/overlays/sim-racing/engine
+- Overlay modules: https://github.com/dberardi2020/stream-overlays/tree/main/overlays/sim-racing/overlays
+- Live overlay page: https://github.com/dberardi2020/stream-overlays/blob/main/overlays/sim-racing/pages/overlay.html
+- Tests: https://github.com/dberardi2020/stream-overlays/tree/main/tests
+
+## Docs
+
+- Docs index: https://github.com/dberardi2020/stream-overlays/blob/main/docs/README.md
+- Technical: https://github.com/dberardi2020/stream-overlays/blob/main/docs/technical/README.md
+- Decisions (ADRs): https://github.com/dberardi2020/stream-overlays/blob/main/docs/decisions/README.md
+- Backlog: https://github.com/dberardi2020/stream-overlays/blob/main/docs/tickets/tickets.md

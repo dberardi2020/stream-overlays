@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# macOS
+.DS_Store
+
+# Build intermediates — the manifest is the source of truth; any assembled
+# artefacts (concatenated engines, picked/blocks scratch files) are regenerated.
+overlays/**/build/engine.js
+overlays/**/build/picked.json
+overlays/**/build/blocks.json

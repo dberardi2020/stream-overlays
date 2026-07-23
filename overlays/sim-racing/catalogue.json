@@ -1,0 +1,1439 @@
+[
+  {
+    "id": "bowtie",
+    "name": "Bowtie",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 250,
+      "h": 100
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "Brake grows left, throttle grows right, from a shared centre line. Symmetry makes overlap obvious."
+  },
+  {
+    "id": "comet",
+    "name": "Comet",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 250,
+      "h": 110
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "History as fading dots. Ambient and pretty; less precise than a line but far less busy."
+  },
+  {
+    "id": "dot-ladder",
+    "name": "Dot Ladder",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 160,
+      "h": 130
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "Ten dots per channel. Reads at tiny sizes and survives heavy stream compression."
+  },
+  {
+    "id": "filled-trace",
+    "name": "Filled Trace",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 250,
+      "h": 120
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "Same history, filled areas. Overlap between throttle and brake shows as a mixed band."
+  },
+  {
+    "id": "hairline",
+    "name": "Hairline",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 270,
+      "h": 70
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "Three two-pixel rules pinned to a screen edge. The least intrusive option that still works."
+  },
+  {
+    "id": "horizontal-bars",
+    "name": "Horizontal Bars",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 230,
+      "h": 100
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "Fits a lower-third strip. Easier to place under a facecam than a tall stack."
+  },
+  {
+    "id": "needle-gauges",
+    "name": "Needle Gauges",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 240,
+      "h": 110
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "Sweeping needles over a 180 degree scale. Analogue character, reads slower than a bar."
+  },
+  {
+    "id": "numerals",
+    "name": "Numerals",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 220,
+      "h": 90
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "No graphics at all. Colour plus tabular figures. Ultra clean, terrible for showing technique."
+  },
+  {
+    "id": "peak-hold",
+    "name": "Peak Hold",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 150,
+      "h": 140
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "Bars with a decaying peak marker. Shows whether you actually reached full brake pressure."
+  },
+  {
+    "id": "pedal-box",
+    "name": "Pedal Box",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 230,
+      "h": 140
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "Side view, hinged like the real G923. Closest to literally showing your feet."
+  },
+  {
+    "id": "pedal-glow",
+    "name": "Pedal Glow",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 200,
+      "h": 120
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "No bars at all - the pedal faces just brighten. Almost zero visual noise on stream."
+  },
+  {
+    "id": "ribbon",
+    "name": "Ribbon",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 250,
+      "h": 120
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "History drawn as varying thickness. Reads like a heartbeat and scales to any width."
+  },
+  {
+    "id": "ring-gauges",
+    "name": "Ring Gauges",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 240,
+      "h": 110
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "Three separate dials. Costs the most width but each channel gets equal weight."
+  },
+  {
+    "id": "rolling-trace",
+    "name": "Rolling Trace",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 250,
+      "h": 120
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "Four second history. The one that actually teaches - trail braking has a shape."
+  },
+  {
+    "id": "segment-ladder",
+    "name": "Segment Ladder",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 150,
+      "h": 140
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "Discrete blocks read like a rev light bar. Quantised, so tiny changes stop being noise."
+  },
+  {
+    "id": "split-ring",
+    "name": "Split Ring",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 150,
+      "h": 140
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "One ring, throttle clockwise and brake anticlockwise from top dead centre. Overlap is unmissable."
+  },
+  {
+    "id": "terminal",
+    "name": "Terminal",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 230,
+      "h": 100
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "Monospace block bars. On-brand if your channel leans developer, and trivially themeable."
+  },
+  {
+    "id": "vertical-bars",
+    "name": "Vertical Bars",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 150,
+      "h": 140
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "The baseline. Smallest footprint, instantly legible, no history."
+  },
+  {
+    "id": "waterfall",
+    "name": "Waterfall",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 140,
+      "h": 150
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "History scrolls downward instead of sideways. Sits nicely down a screen edge."
+  },
+  {
+    "id": "angle-histogram",
+    "name": "Angle Histogram",
+    "aliases": [],
+    "set": "wheel",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 240,
+      "h": 120
+    },
+    "uses": [
+      "str"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Where the wheel actually lives, accumulated over a session. Most people are surprised how skewed theirs is."
+  },
+  {
+    "id": "centre-out-bar",
+    "name": "Centre-out Bar",
+    "aliases": [],
+    "set": "wheel",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 240,
+      "h": 80
+    },
+    "uses": [
+      "str"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "A bar growing from centre. The cheapest possible steering readout, and it works."
+  },
+  {
+    "id": "countersteer-flash",
+    "name": "Countersteer Flash",
+    "aliases": [],
+    "set": "wheel",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 180,
+      "h": 140
+    },
+    "uses": [
+      "str"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Quiet until the wheel reverses hard. Rate of change of one axis - still direct, no physics involved."
+  },
+  {
+    "id": "front-axle",
+    "name": "Front Axle",
+    "aliases": [],
+    "set": "wheel",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 170,
+      "h": 150
+    },
+    "uses": [
+      "str"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Top-down car with the front wheels turning. Reads instantly even to people who do not sim race."
+  },
+  {
+    "id": "ghost-wheel",
+    "name": "Ghost Wheel",
+    "aliases": [],
+    "set": "wheel",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 180,
+      "h": 155
+    },
+    "uses": [
+      "str"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "A recorded lap of your own steering behind the live rim. Recorded input, so still nothing from the game."
+  },
+  {
+    "id": "horizon",
+    "name": "Horizon",
+    "aliases": [],
+    "set": "wheel",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 220,
+      "h": 110
+    },
+    "uses": [
+      "str"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "An artificial-horizon tilt. Abstract, ambient, fills a wide frame without shouting."
+  },
+  {
+    "id": "path-preview",
+    "name": "Path Preview",
+    "aliases": [],
+    "set": "wheel",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 190,
+      "h": 150
+    },
+    "uses": [
+      "str"
+    ],
+    "telemetry": [],
+    "origin": "v1",
+    "note": "The arc your current lock would carve, drawn ahead of a car marker. Shows intent, not just position."
+  },
+  {
+    "id": "rotation-ring",
+    "name": "Rotation Ring",
+    "aliases": [],
+    "set": "wheel",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 160,
+      "h": 150
+    },
+    "uses": [
+      "str"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Lock-to-lock marks with a live degree readout. The wheel abstracted to the number that matters."
+  },
+  {
+    "id": "rudder-scale",
+    "name": "Rudder Scale",
+    "aliases": [],
+    "set": "wheel",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 240,
+      "h": 90
+    },
+    "uses": [
+      "str"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "A marker sliding along a marked scale. Precise, unusual, and cheap to draw."
+  },
+  {
+    "id": "smoothness-meter",
+    "name": "Smoothness Meter",
+    "aliases": [],
+    "set": "wheel",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 200,
+      "h": 110
+    },
+    "uses": [
+      "str"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Rate of change scored live. Sawing pushes it red, clean input keeps it calm."
+  },
+  {
+    "id": "steering-ribbon",
+    "name": "Steering Ribbon",
+    "aliases": [],
+    "set": "wheel",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 250,
+      "h": 120
+    },
+    "uses": [
+      "str"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "History as a curving ribbon. Almost decorative, still readable."
+  },
+  {
+    "id": "steering-trace",
+    "name": "Steering Trace",
+    "aliases": [],
+    "set": "wheel",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 250,
+      "h": 120
+    },
+    "uses": [
+      "str"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Four seconds of history. Corrections and wobble become shapes you can point at."
+  },
+  {
+    "id": "wheel",
+    "name": "Wheel",
+    "aliases": [],
+    "set": "wheel",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 160,
+      "h": 150
+    },
+    "uses": [
+      "str"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "A flat-bottomed GT rim with proper spokes and a top-dead-centre marker. Reads as a wheel, not a symbol."
+  },
+  {
+    "id": "wheel-in-a-ring",
+    "name": "Wheel in a Ring",
+    "aliases": [],
+    "set": "wheel",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 170,
+      "h": 160
+    },
+    "uses": [
+      "str"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "The same rim inside a fixed reference ring, so you can see how far from centre it is at a glance."
+  },
+  {
+    "id": "yoke",
+    "name": "Yoke",
+    "aliases": [],
+    "set": "wheel",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 190,
+      "h": 120
+    },
+    "uses": [
+      "str"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "A flat top and bottom instead of a full rim. Modern, and it fills a wide slot better than a circle."
+  },
+  {
+    "id": "big-numeral",
+    "name": "Big Numeral",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 150,
+      "h": 130
+    },
+    "uses": [
+      "gear"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "One large digit that pulses on change and reads N between gears. Zero ambiguity at any stream resolution."
+  },
+  {
+    "id": "gate-heatmap",
+    "name": "Gate Heatmap",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 200,
+      "h": 150
+    },
+    "uses": [
+      "gear"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Gate positions shaded by time spent in each gear, accumulating all session from button state alone."
+  },
+  {
+    "id": "gate-map",
+    "name": "Gate Map",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 200,
+      "h": 150
+    },
+    "uses": [
+      "gear"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "The knob travels the real channels - out to the neutral rail, across, then in. Mid-shift it genuinely reads neutral."
+  },
+  {
+    "id": "gate-with-trail",
+    "name": "Gate with Trail",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 200,
+      "h": 150
+    },
+    "uses": [
+      "gear"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "A fading path behind the knob. You see the whole throw, and it hugs the H instead of cutting across."
+  },
+  {
+    "id": "gear-donut",
+    "name": "Gear Donut",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 150,
+      "h": 150
+    },
+    "uses": [
+      "gear"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Time in each gear as ring segments. Ambient, accumulates all session, needs nothing but buttons."
+  },
+  {
+    "id": "gear-ladder",
+    "name": "Gear Ladder",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 110,
+      "h": 160
+    },
+    "uses": [
+      "gear"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "All gears stacked with the engaged one lit, and nothing lit while the lever is crossing."
+  },
+  {
+    "id": "gear-timeline",
+    "name": "Gear Timeline",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 260,
+      "h": 130
+    },
+    "uses": [
+      "gear"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Gear selection as a scrolling piano roll. A whole lap in one glance, straight off button state."
+  },
+  {
+    "id": "lever-position",
+    "name": "Lever Position",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 170,
+      "h": 150
+    },
+    "uses": [
+      "gear"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "The gate as two axes. Reads as data rather than diagram, and neutral is unmistakable."
+  },
+  {
+    "id": "paddle-pair",
+    "name": "Paddle Pair",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 200,
+      "h": 120
+    },
+    "uses": [
+      "gear"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Two flippers that flash when pulled. Presence only, which is exactly what a paddle reports."
+  },
+  {
+    "id": "rev-arc",
+    "name": "Rev Arc",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 150,
+      "h": 140
+    },
+    "uses": [
+      "gear",
+      "rpm"
+    ],
+    "telemetry": [
+      "rpm"
+    ],
+    "origin": "v3",
+    "note": "Circular tach with the gear at its centre. The arc is telemetry; the number in the middle is not."
+  },
+  {
+    "id": "rev-drum",
+    "name": "Rev Drum",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "excluded",
+    "hidden": false,
+    "size": {
+      "w": 150,
+      "h": 160
+    },
+    "uses": [
+      "gear",
+      "rpm"
+    ],
+    "telemetry": [
+      "rpm"
+    ],
+    "origin": "v1",
+    "note": "A vertical rolling scale, like an aircraft altimeter tape. Unusual, and it makes small rpm changes visible."
+  },
+  {
+    "id": "rev-needle",
+    "name": "Rev Needle",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "excluded",
+    "hidden": false,
+    "size": {
+      "w": 180,
+      "h": 120
+    },
+    "uses": [
+      "gear",
+      "rpm"
+    ],
+    "telemetry": [
+      "rpm"
+    ],
+    "origin": "v3",
+    "note": "Analogue sweep with a marker at your average upshift point. Both values are telemetry."
+  },
+  {
+    "id": "sequential-column",
+    "name": "Sequential Column",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 120,
+      "h": 170
+    },
+    "uses": [
+      "gear"
+    ],
+    "telemetry": [],
+    "origin": "v2",
+    "note": "Counted position with a directional chevron. Honest about being a count - it needs a reset button in real use."
+  },
+  {
+    "id": "shift-counter",
+    "name": "Shift Counter",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 200,
+      "h": 120
+    },
+    "uses": [
+      "gear"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "A running total for the session, split up and down. A count of events is not a position, so it cannot drift."
+  },
+  {
+    "id": "shift-light-bar",
+    "name": "Shift Light Bar",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 250,
+      "h": 90
+    },
+    "uses": [
+      "gear",
+      "rpm"
+    ],
+    "telemetry": [
+      "rpm"
+    ],
+    "origin": "v3",
+    "note": "Rev LEDs beside the gear. The gear is a button; the revs are not."
+  },
+  {
+    "id": "shift-point-scatter",
+    "name": "Shift Point Scatter",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 250,
+      "h": 130
+    },
+    "uses": [
+      "gear",
+      "rpm"
+    ],
+    "telemetry": [
+      "rpm"
+    ],
+    "origin": "v3",
+    "note": "Every shift plotted against the rpm you took it at. Consistency becomes a cluster - but rpm comes from the game."
+  },
+  {
+    "id": "shift-pulse",
+    "name": "Shift Pulse",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 170,
+      "h": 140
+    },
+    "uses": [
+      "gear"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Pure event visual. A chevron fires on every shift - no gear number, so there is nothing to drift out of sync."
+  },
+  {
+    "id": "shift-rhythm",
+    "name": "Shift Rhythm",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 260,
+      "h": 120
+    },
+    "uses": [
+      "gear"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Every shift as a tick on a timeline, up above the line and down below. Cadence without any position guessing."
+  },
+  {
+    "id": "throw-timer",
+    "name": "Throw Timer",
+    "aliases": [],
+    "set": "shifter",
+    "stage": "experimental",
+    "hidden": false,
+    "size": {
+      "w": 210,
+      "h": 110
+    },
+    "uses": [
+      "gear"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Time the lever spent between gears, measured button-release to button-press. Smooth shifting becomes a number."
+  },
+  {
+    "id": "ambient-trio",
+    "name": "Ambient Trio",
+    "aliases": [],
+    "set": "combo",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 230,
+      "h": 140
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "gear",
+      "str",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Three glows and a gear. No bars, no numbers. Presence without clutter."
+  },
+  {
+    "id": "arc-cluster",
+    "name": "Arc Cluster",
+    "aliases": [],
+    "set": "combo",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 190,
+      "h": 130
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "str",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "live",
+    "note": "Concentric arcs with steering through the middle. Very compact for a corner placement."
+  },
+  {
+    "id": "broadcast-tower",
+    "name": "Broadcast Tower",
+    "aliases": [],
+    "set": "combo",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 150,
+      "h": 290
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "gear",
+      "rpm",
+      "spd",
+      "str",
+      "thr"
+    ],
+    "telemetry": [
+      "rpm",
+      "spd"
+    ],
+    "origin": "v3",
+    "note": "A vertical timing tower down the frame edge. The speed and rev rows need telemetry; the rest do not."
+  },
+  {
+    "id": "case-column",
+    "name": "Case Column",
+    "aliases": [],
+    "set": "combo",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 158,
+      "h": 300
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "gear",
+      "str",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Built tall for a vertical panel. Everything stacked, nothing cramped, nothing inferred."
+  },
+  {
+    "id": "clutch-and-gate",
+    "name": "Clutch and Gate",
+    "aliases": [],
+    "set": "combo",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 230,
+      "h": 150
+    },
+    "uses": [
+      "clu",
+      "gear"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Clutch travel beside the gate. Shows whether you are actually clutching or forcing it - both values off the rig."
+  },
+  {
+    "id": "cockpit",
+    "name": "Cockpit",
+    "aliases": [],
+    "set": "combo",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 250,
+      "h": 180
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "gear",
+      "str",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Top-down driver - wheel, feet, hand on the lever. Fully diegetic and fully direct."
+  },
+  {
+    "id": "corner-card",
+    "name": "Corner Card",
+    "aliases": [],
+    "set": "combo",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 170,
+      "h": 170
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "gear",
+      "str",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Compact square for a screen corner. Everything present, nothing oversized."
+  },
+  {
+    "id": "dash-cluster",
+    "name": "Dash Cluster",
+    "aliases": [],
+    "set": "combo",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 310,
+      "h": 170
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "gear",
+      "rpm",
+      "str",
+      "thr"
+    ],
+    "telemetry": [
+      "rpm"
+    ],
+    "origin": "v3",
+    "note": "The classic. Rev arc and gear centre, pedals and wheel around it - the arc needs the game."
+  },
+  {
+    "id": "engineer-view",
+    "name": "Engineer View",
+    "aliases": [],
+    "set": "combo",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 280,
+      "h": 155
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "gear",
+      "str",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Numbers with sparklines. Ugly on purpose, and the most information per pixel on this page."
+  },
+  {
+    "id": "gate-strip",
+    "name": "Gate Strip",
+    "aliases": [],
+    "set": "combo",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 350,
+      "h": 96
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "gear",
+      "str",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "A lower third with a live H-gate in it. Fully direct, and no other stream has one."
+  },
+  {
+    "id": "hud",
+    "name": "HUD",
+    "aliases": [],
+    "set": "combo",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 300,
+      "h": 110
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "gear",
+      "str",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Hairlines and numerals, like a projected display. The least intrusive full readout here."
+  },
+  {
+    "id": "input-cluster",
+    "name": "Input Cluster",
+    "aliases": [],
+    "set": "combo",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 310,
+      "h": 170
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "gear",
+      "str",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Gear, pedals and wheel with nothing borrowed from the game. The one you can ship today."
+  },
+  {
+    "id": "lower-third",
+    "name": "Lower Third",
+    "aliases": [],
+    "set": "combo",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 330,
+      "h": 80
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "gear",
+      "rpm",
+      "str",
+      "thr"
+    ],
+    "telemetry": [
+      "rpm"
+    ],
+    "origin": "v1",
+    "note": "A wide strip for the bottom of frame. Never covers the racing line, always readable."
+  },
+  {
+    "id": "minimal-edge",
+    "name": "Minimal Edge",
+    "aliases": [],
+    "set": "combo",
+    "stage": "draft",
+    "hidden": false,
+    "size": {
+      "w": 300,
+      "h": 110
+    },
+    "uses": [
+      "brk",
+      "gear",
+      "str",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Pedals as edge hairlines, wheel as a travelling dot, gear as a numeral. Nearly invisible until you look."
+  },
+  {
+    "id": "radial-hub",
+    "name": "Radial Hub",
+    "aliases": [],
+    "set": "combo",
+    "stage": "draft",
+    "hidden": true,
+    "size": {
+      "w": 190,
+      "h": 190
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "gear",
+      "str",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "Wheel outside, pedal arcs inside, gear at the core. One circle, all direct."
+  },
+  {
+    "id": "retro-dash",
+    "name": "Retro Dash",
+    "aliases": [],
+    "set": "combo",
+    "stage": "excluded",
+    "hidden": false,
+    "size": {
+      "w": 290,
+      "h": 160
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "gear",
+      "rpm",
+      "str",
+      "thr"
+    ],
+    "telemetry": [
+      "rpm"
+    ],
+    "origin": "v3",
+    "note": "Analogue tach, printed gate, wheel and pedals. Period character, one telemetry dependency."
+  },
+  {
+    "id": "split-panel",
+    "name": "Split Panel",
+    "aliases": [],
+    "set": "combo",
+    "stage": "draft",
+    "hidden": true,
+    "size": {
+      "w": 300,
+      "h": 140
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "gear",
+      "rpm",
+      "str",
+      "thr"
+    ],
+    "telemetry": [
+      "rpm"
+    ],
+    "origin": "v1",
+    "note": "Inputs left, gearbox right, divided by a rule. Easy to rearrange, easy to theme."
+  },
+  {
+    "id": "ticker",
+    "name": "Ticker",
+    "aliases": [],
+    "set": "combo",
+    "stage": "excluded",
+    "hidden": false,
+    "size": {
+      "w": 320,
+      "h": 115
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "gear",
+      "str",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "One scrolling ribbon carrying every channel. Fills a full-width strip and never needs resizing."
+  },
+  {
+    "id": "unified-trace",
+    "name": "Unified Trace",
+    "aliases": [],
+    "set": "combo",
+    "stage": "draft",
+    "hidden": true,
+    "size": {
+      "w": 300,
+      "h": 150
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "gear",
+      "str",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "v3",
+    "note": "All four axes on one graph with a gear track underneath. The engineer's view, entirely from the rig."
+  }
+]

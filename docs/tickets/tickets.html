@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tickets</title><style>
+:root{--bg:#fbfbfa;--fg:#22201d;--muted:#6b6862;--line:#e6e3dd;--code-bg:#f0eee9;--accent:#b5651d;--link:#a1571a}
+@media(prefers-color-scheme:dark){:root{--bg:#1a1917;--fg:#e6e3dd;--muted:#9a968e;--line:#332f2a;--code-bg:#26241f;--accent:#d99a5b;--link:#e0a866}}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;margin:0}
+.wrap{max-width:760px;margin:0 auto;padding:64px 28px 120px}
+h1{font-size:2rem;line-height:1.2;margin:0 0 .3em;letter-spacing:-.02em}
+h2{font-size:1.35rem;margin:2.2em 0 .5em;padding-bottom:.25em;border-bottom:1px solid var(--line)}
+h3{font-size:1.08rem;margin:1.8em 0 .4em}
+p{margin:.7em 0}
+a{color:var(--link);text-decoration:none;border-bottom:1px solid transparent}
+a:hover{border-bottom-color:var(--link)}
+code{background:var(--code-bg);padding:.12em .4em;border-radius:4px;font:.86em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre{background:var(--code-bg);padding:16px 18px;border-radius:8px;overflow-x:auto;border:1px solid var(--line)}
+pre code{background:none;padding:0;font-size:.85em}
+ul,ol{padding-left:1.4em;margin:.7em 0}
+li{margin:.3em 0}
+blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:var(--code-bg);border-radius:0 6px 6px 0;color:var(--muted)}
+blockquote strong{color:var(--fg)}
+table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.92em;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5em .7em;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+hr{border:none;border-top:1px solid var(--line);margin:2em 0}
+strong{font-weight:650}
+</style></head><body><main class="wrap">
+<h1>Tickets</h1>
+<p>The backlog. Board-first: a lightweight tracker until a real one is warranted. IDs are <code>SO-NNNN</code>, uppercase, never reused.</p>
+<h2>In progress</h2>
+<p><em>(none)</em></p>
+<h2>Open</h2>
+<table><thead><tr><th>ID</th><th>Title</th><th>Notes</th></tr></thead><tbody><tr><td><strong>SO-0001</strong></td><td>Migrate the remaining catalogue overlays to modules</td><td>3 of 72 overlays are migrated (Bowtie, Dot ladder, Comet). Migrate the rest: copy each draw body byte-for-byte into <code>overlays/sim-racing/overlays/&lt;id&gt;.js</code> exporting <code>id</code> + <code>draw</code>, per <a href="../decisions/0005-overlay-module-contract.md">ADR 0005</a>. Only permitted change: <code>this.mem</code> → the <code>mem</code> parameter. Guarded by the manifest-sync + blank-tile tests. When complete, flip <code>REQUIRE_FULL_COVERAGE</code> in <code>tests/test_overlay_modules.py</code>.</td></tr><tr><td><strong>SO-0002</strong></td><td>Gallery page over demo data</td><td>Browse all overlays rendered against <code>engine/demo-lap.js</code>, for choosing a style.</td></tr><tr><td><strong>SO-0003</strong></td><td>Configure page → URL generator</td><td>Bind inputs, pick style/scale/colours, emit the <code>?style=…</code> URL to paste into OBS. Realises <a href="../decisions/0001-config-in-the-url.md">ADR 0001</a>.</td></tr><tr><td><strong>SO-0004</strong></td><td>OBS gamepad fallback flow</td><td>The guided ladder from <a href="../decisions/0003-obs-gamepad-fallback.md">ADR 0003</a>: device-presence timeout, Interact prompt, Window-Capture path, optional local bridge.</td></tr><tr><td><strong>SO-0005</strong></td><td>Collapse near-duplicate overlay families</td><td>Curation: the 3 <code>Wheel</code> variants and the <code>bars</code>/<code>history</code> clusters. Family metadata exists to support this.</td></tr></tbody></table>
+<h2>Done</h2>
+<table><thead><tr><th>ID</th><th>Title</th></tr></thead><tbody><tr><td><strong>SO-0000</strong></td><td>Scaffold the repo: layered engine extracted from the prototype, 3 pilot overlays, manifest quality-gate, pytest + node test suites, ADRs.</td></tr></tbody></table>
+<h2>Notes</h2>
+<ul><li><code>excluded</code> overlays stay in the manifest (archived, not deleted); they are not migration targets.</li><li>The <strong>builder</strong> (compose overlays from swappable sub-visuals) is a longer-term direction, not a ticket yet — the module contract and named draw-kit callables are the groundwork for it.</li></ul>
+</main></body></html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Architecture</title><style>
+:root{--bg:#fbfbfa;--fg:#22201d;--muted:#6b6862;--line:#e6e3dd;--code-bg:#f0eee9;--accent:#b5651d;--link:#a1571a}
+@media(prefers-color-scheme:dark){:root{--bg:#1a1917;--fg:#e6e3dd;--muted:#9a968e;--line:#332f2a;--code-bg:#26241f;--accent:#d99a5b;--link:#e0a866}}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;margin:0}
+.wrap{max-width:760px;margin:0 auto;padding:64px 28px 120px}
+h1{font-size:2rem;line-height:1.2;margin:0 0 .3em;letter-spacing:-.02em}
+h2{font-size:1.35rem;margin:2.2em 0 .5em;padding-bottom:.25em;border-bottom:1px solid var(--line)}
+h3{font-size:1.08rem;margin:1.8em 0 .4em}
+p{margin:.7em 0}
+a{color:var(--link);text-decoration:none;border-bottom:1px solid transparent}
+a:hover{border-bottom-color:var(--link)}
+code{background:var(--code-bg);padding:.12em .4em;border-radius:4px;font:.86em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre{background:var(--code-bg);padding:16px 18px;border-radius:8px;overflow-x:auto;border:1px solid var(--line)}
+pre code{background:none;padding:0;font-size:.85em}
+ul,ol{padding-left:1.4em;margin:.7em 0}
+li{margin:.3em 0}
+blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:var(--code-bg);border-radius:0 6px 6px 0;color:var(--muted)}
+blockquote strong{color:var(--fg)}
+table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.92em;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5em .7em;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+hr{border:none;border-top:1px solid var(--line);margin:2em 0}
+strong{font-weight:650}
+</style></head><body><main class="wrap">
+<h1>Architecture</h1>
+<p>How the code is layered, and the rules that keep it maintainable as the catalogue grows. The overlays began as single-file prototypes; this is the shape they were extracted into so the logic is testable, reusable, and safe to build a platform on.</p>
+<h2>Three layers, dependencies flow one way</h2>
+<pre><code>Layer 1 — pure logic          calibration-math.js · demo-lap.js
+   (no DOM, no canvas)            ↑ imported by
+Layer 2 — browser runtime     gamepad.js · state.js · calibration.js · draw-kit.js · url-config.js
+   (Gamepad API, canvas)          ↑ imported by
+Layer 3 — overlays            overlays/&lt;id&gt;.js  — one module each, draw only
+   (draw to a canvas)             ↑ imported by
+Layer 4 — pages               pages/overlay.html — thin: wire it together</code></pre>
+<p>The rule: <strong>dependencies only ever point up this list.</strong> An overlay never touches the Gamepad API or the DOM; the pure maths never imports the runtime. This is what makes Layer 1 runnable under <code>node --test</code> with no browser, and what lets an overlay be reasoned about as just <code>draw(channels) → pixels</code>.</p>
+<h3>Layer 1 — pure logic</h3>
+<ul><li><strong><code>calibration-math.js</code></strong> — <code>mapPedal(a, rest, full)</code> and <code>mapWheel(a, rest, min, max)</code>: raw axis value + captured calibration → normalised channel. Pure functions, unit-tested directly. This is the logic that used to be trapped inside a closure in the prototype.</li><li><strong><code>demo-lap.js</code></strong> — the synthetic lap used as preview data by the (future) gallery. Pure array generation.</li></ul>
+<h3>Layer 2 — browser runtime</h3>
+<ul><li><strong><code>gamepad.js</code></strong> — the single hardware seam: <code>getPad()</code> is the only reader of <code>navigator.getGamepads()</code>. Everything downstream takes a plain <code>{ axes: [...] }</code>, so it is mockable.</li><li><strong><code>calibration.js</code></strong> — the calibration state machine and status panel. Writes the shared <code>state</code>. Imports its maths from Layer 1 and its wheel read from <code>gamepad.js</code>.</li><li><strong><code>draw-kit.js</code></strong> — the shared sub-visuals every overlay draws with: palette (<code>C</code>), channel table (<code>CH</code>), <code>glass</code>/<code>mono</code>/<code>pct</code>, and the rolling input <code>hist</code>. These are named callables on purpose — the future builder composes overlays from them.</li><li><strong><code>state.js</code></strong> — the channel state object shape.</li><li><strong><code>url-config.js</code></strong> — parse <code>?style=/scale=/bg=</code> and resolve a <code>?style=&lt;id&gt;</code> to a manifest entry.</li></ul>
+<h3>Layer 3 — overlays</h3>
+<p>One module per overlay. The contract is deliberately tiny — see <a href="../decisions/0005-overlay-module-contract.md">ADR 0005</a>:</p>
+<pre><code>export const id = "bowtie";
+export function draw(ctx, w, h, state, mem) { /* byte-for-byte from the prototype */ }</code></pre>
+<p>The module owns only its id and its drawing. Everything else (name, size, set, stage, note) lives in the manifest.</p>
+<h3>Layer 4 — pages</h3>
+<p><code>pages/overlay.html</code> is a thin orchestrator: read the URL, fetch the manifest, resolve the entry, <code>import()</code> the overlay module, size the canvas from the manifest, wire calibration, and run the draw loop. Because it uses native ES modules and dynamic <code>import()</code>, there is <strong>no build step</strong> — the page runs as static files (<a href="../decisions/0002-static-first-hosting.md">ADR 0002</a>).</p>
+<h2>The manifest stays honest</h2>
+<p><code>catalogue.json</code> is the source of truth, so its integrity is enforced rather than trusted:</p>
+<ul><li><strong><code>set</code>/<code>uses</code> are derived, not authored.</strong> <code>build/channels.py</code> reads what an overlay's draw body actually references and derives its channels; the tests assert the manifest agrees. This is the check that originally caught overlays labelled with the wrong set.</li><li><strong>Module ↔ manifest coherence.</strong> Every overlay module maps to a real manifest entry, and its exported <code>id</code> matches its filename. Full coverage (every entry has a module) flips on when the <a href="../tickets/tickets.md">SO-0001</a> migration completes.</li><li><strong>The blank-tile guard.</strong> Each overlay is drawn against a recording mock canvas and must paint — the dynamic successor to the prototype's static identifier check, which is what caught four would-be-blank tiles.</li></ul>
+<h2>What is not here yet</h2>
+<p>The gallery and configure pages, and the remaining ~69 overlay modules. The migration is mechanical and guarded: each overlay's draw body is copied byte-for-byte into a module, and the manifest-sync + blank-tile tests verify it. See <a href="../tickets/tickets.md">SO-0001</a>.</p>
+</main></body></html>
