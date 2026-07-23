@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Overlay gallery — Stream Overlays</title>
+<title>Overlay Gallery — Stream Overlays</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -77,20 +77,26 @@ h2 .c{color:var(--mute);font-size:12px;font-weight:400;font-family:"IBM Plex Mon
   background:rgba(255,255,255,.05)}
 .ch-thr{color:var(--thr)} .ch-brk{color:var(--brk)} .ch-clu{color:var(--clu)}
 .ch-str{color:var(--str)} .ch-gear,.ch-rpm,.ch-spd{color:var(--gear)}
-/* Contrast-test backdrop behind each preview — a neutral scene, not scenery.
-   The Backdrop control cycles it (dark → light → checker) so you can see how an
-   overlay reads against different OBS scene colours. Toggled via a body class. */
-.stage-plate{background:#3c4048;border:1px solid var(--line);border-radius:8px;
+/* Contrast-test backdrop behind each preview — a neutral scene, not scenery, so
+   you can judge how an overlay reads against different OBS scene colours. A
+   transparency checker is the permanent substrate; the chosen scene colour +
+   opacity (--scene-bg) composites over it, so opacity 0 = pure checker and any
+   tint shows the transparency through it. Driven by the Backdrop builder. */
+.stage-plate{position:relative;border:1px solid var(--line);border-radius:8px;
   display:flex;align-items:center;justify-content:center;padding:10px;min-height:112px;overflow:hidden;
-  transition:background .15s}
-body.bg-light .stage-plate{background:#c3c7cd}
-body.bg-check .stage-plate{
   background-color:#2a2d33;
   background-image:
     linear-gradient(45deg,#3a3e46 25%,transparent 25%,transparent 75%,#3a3e46 75%),
     linear-gradient(45deg,#3a3e46 25%,transparent 25%,transparent 75%,#3a3e46 75%);
   background-size:20px 20px;background-position:0 0,10px 10px}
+.stage-plate .scene{position:absolute;inset:0;background:var(--scene-bg,#33373e);transition:background .12s}
+.stage-plate canvas{position:relative;z-index:1}
 canvas{display:block;max-width:100%;height:auto}
+/* backdrop builder controls */
+input[type=color]{width:34px;height:28px;padding:2px;border:1px solid var(--line);border-radius:6px;
+  background:var(--panel-2);cursor:pointer}
+input[type=color]::-webkit-color-swatch{border:none;border-radius:3px}
+input[type=color]::-webkit-color-swatch-wrapper{padding:0}
 .note{color:var(--mute);font-size:12px;margin:0;line-height:1.5}
 .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto}
 .foot .use{font-size:11.5px;letter-spacing:.03em}
@@ -107,7 +113,7 @@ canvas{display:block;max-width:100%;height:auto}
 </head>
 <body>
 <div class="wrap">
-  <h1>Overlay gallery</h1>
+  <h1>Overlay Gallery</h1>
   <p class="lede">Every sim-racing overlay, rendered live against a synthetic demo lap — throttle, brake,
     steering, gears, and telemetry all move so you can judge a style before a wheel is ever connected.
     Pick one, then open it in OBS with <code>overlay.html?style=&lt;id&gt;</code>. Telemetry and shifter
@@ -141,8 +147,12 @@ canvas{display:block;max-width:100%;height:auto}
       <div class="grp"><button id="play" class="btn on">Pause</button></div>
       <div class="grp"><span class="lbl">Speed</span><input id="speed" type="range" min="0.25" max="2" step="0.25" value="1"><span id="speedV" class="lbl">1×</span></div>
       <div class="grp"><span class="lbl">Shift</span><button id="mode" class="btn">Mode: H</button></div>
-      <div class="grp"><span class="lbl">Backdrop</span><button id="backdrop" class="btn">Dark</button></div>
       <div class="tally"><b id="visN">0</b> shown</div>
+    </div>
+    <div class="row">
+      <div class="grp"><span class="lbl">Backdrop</span><span id="bdPresets" class="segmented"></span></div>
+      <div class="grp"><span class="lbl">Colour</span><input id="bdColor" type="color" value="#33373e" title="scene colour"></div>
+      <div class="grp"><span class="lbl">Opacity</span><input id="bdAlpha" type="range" min="0" max="100" step="1" value="100"><span id="bdAlphaV" class="lbl">100%</span></div>
     </div>
   </div>
 
@@ -215,7 +225,7 @@ for (const set of SET_ORDER) {
         (tel ? '<span class="tag tel">tel: ' + e.telemetry.join(",") + "</span>" : "") +
       "</div>" +
       '<div class="chans">' + chans + "</div>" +
-      '<div class="stage-plate"></div>' +
+      '<div class="stage-plate"><div class="scene"></div></div>' +
       '<p class="note">' + (e.note || "") + "</p>" +
       '<div class="foot">' +
         '<a class="use" href="overlay.html?style=' + e.id + '">Open in OBS →</a>' +
@@ -333,16 +343,42 @@ const modeBtn = document.getElementById("mode");
 modeBtn.onclick = () => { modeIdx = (modeIdx + 1) % MODES.length; setMode(modeIdx); modeBtn.textContent = "Mode: " + MODES[modeIdx].id; };
 document.getElementById("q").oninput = e => { query = e.target.value; refresh(); };
 
-/* Backdrop: cycle the contrast-test scene behind every preview (dark → light → checker) */
-const BACKDROPS = [{ cls: "", label: "Dark" }, { cls: "bg-light", label: "Light" }, { cls: "bg-check", label: "Checker" }];
-let bdIdx = 0;
-const backdropBtn = document.getElementById("backdrop");
-backdropBtn.onclick = () => {
-  bdIdx = (bdIdx + 1) % BACKDROPS.length;
-  document.body.classList.remove("bg-light", "bg-check");
-  if (BACKDROPS[bdIdx].cls) document.body.classList.add(BACKDROPS[bdIdx].cls);
-  backdropBtn.textContent = BACKDROPS[bdIdx].label;
+/* Backdrop builder: the contrast-test scene behind every preview is a colour +
+   opacity composited over a permanent transparency checker. Presets are just
+   shortcuts (Checker = opacity 0, Black/White the extremes, Dark/Light the soft
+   pair); the colour picker + opacity slider dial anything in between. */
+const bdColor = document.getElementById("bdColor");
+const bdAlpha = document.getElementById("bdAlpha");
+const bdAlphaV = document.getElementById("bdAlphaV");
+const PRESETS = [
+  { label: "Black",   hex: "#000000", a: 100 },
+  { label: "Dark",    hex: "#33373e", a: 100 },
+  { label: "Light",   hex: "#c8ccd2", a: 100 },
+  { label: "White",   hex: "#ffffff", a: 100 },
+  { label: "Checker", hex: "#33373e", a: 0 }
+];
+const toRgba = (hex, a) => {
+  const n = parseInt(hex.slice(1), 16);
+  return "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + (a / 100) + ")";
 };
+const presetBtns = [];
+const bdHost = document.getElementById("bdPresets");
+PRESETS.forEach((p, i) => {
+  const b = document.createElement("button");
+  b.className = "btn"; b.textContent = p.label; b.dataset.hex = p.hex; b.dataset.a = p.a;
+  b.onclick = () => { bdColor.value = p.hex; bdAlpha.value = p.a; applyBackdrop(); };
+  bdHost.appendChild(b); presetBtns.push(b);
+});
+function applyBackdrop() {
+  const hex = bdColor.value, a = +bdAlpha.value;
+  document.body.style.setProperty("--scene-bg", toRgba(hex, a));
+  bdAlphaV.textContent = a + "%";
+  // light up a preset only when the current colour+opacity exactly matches it
+  presetBtns.forEach(b => b.classList.toggle("on", b.dataset.hex.toLowerCase() === hex.toLowerCase() && +b.dataset.a === a));
+}
+bdColor.oninput = applyBackdrop;
+bdAlpha.oninput = applyBackdrop;
+applyBackdrop();   // default: Dark (the picker/slider's initial values)
 
 refresh();
 </script>
