@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Track-driven demo data</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --asphalt:#131418; --panel:#1b1d23; --panel-2:#22252d;
+  --line:#2e323c; --line-2:#3a3f4a;
+  --ink:#eceae5; --mute:#8a909c; --amber:#ffb020;
+  --thr:#34d97a; --brk:#f2453d; --clu:#ffb020; --str:#64b5ff; --gear:#e7e3da;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--asphalt);color:var(--ink);
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:14px;line-height:1.6;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1300px;margin:0 auto;padding:30px 20px 70px}
+button,select,input{touch-action:manipulation}
+
+.mast{display:flex;justify-content:space-between;align-items:flex-start;gap:28px;flex-wrap:wrap;
+  border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:20px}
+.mast h1{font-family:Oxanium,monospace;font-weight:800;font-size:29px;margin:0;line-height:1.06}
+.mast .sub{color:var(--mute);margin:8px 0 0;max-width:62ch;font-size:13.5px}
+
+.controls{display:flex;flex-wrap:wrap;gap:11px 20px;align-items:center;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:12px 15px;margin-bottom:20px}
+.ctl{display:flex;align-items:center;gap:9px}
+.ctl label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.btn{font-family:inherit;font-size:12px;background:var(--panel-2);color:var(--ink);
+  border:1px solid var(--line);border-radius:6px;padding:7px 13px;cursor:pointer;transition:.15s}
+.btn:hover{border-color:var(--line-2)}
+.btn.on{border-color:var(--amber);color:var(--amber);background:rgba(255,176,32,.08)}
+select{font-family:inherit;font-size:12px;background:var(--panel-2);color:var(--ink);
+  border:1px solid var(--line);border-radius:6px;padding:7px 10px;cursor:pointer}
+input[type=range]{accent-color:var(--amber);width:100px}
+.hint{color:var(--mute);font-size:12px;font-variant-numeric:tabular-nums}
+
+.layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:980px){.layout{grid-template-columns:1fr}}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:11px;overflow:hidden}
+.card .hd{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:13px 15px 0}
+.card h2{font-family:Oxanium,monospace;font-size:15px;font-weight:600;margin:0}
+.card .meta{color:var(--mute);font-size:11.5px;font-variant-numeric:tabular-nums}
+.card .body{padding:12px 15px 15px}
+.card p.desc{margin:5px 15px 0;color:var(--mute);font-size:12px;line-height:1.5}
+
+#mapWrap{display:flex;justify-content:center;background:#23262c;
+  border-top:1px solid var(--line);margin-top:12px;width:100%;overflow:hidden}
+canvas{display:block}
+#map{width:100%;height:auto}
+.tile canvas{max-width:100%;height:auto}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.tile{background:#3c4048;border:1px solid var(--line);border-radius:9px;
+  display:flex;align-items:center;justify-content:center;padding:8px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:9px;margin-top:13px}
+.stat{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+.stat .k{font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--mute)}
+.stat .v{font-family:Oxanium,monospace;font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.3}
+
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:11.5px;color:var(--mute)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:14px;height:4px;border-radius:2px;display:inline-block}
+
+.note{margin-top:26px;border-top:1px solid var(--line);padding-top:16px;
+  color:var(--mute);font-size:12.5px;line-height:1.7;max-width:90ch}
+.note b{color:var(--ink)}
+.note code{color:var(--ink);background:var(--panel-2);padding:1px 6px;border-radius:4px}
+
+/* ---------- mobile ---------- */
+@media (max-width:720px){
+  body{font-size:13.5px}
+  .wrap{padding:20px 14px 56px}
+
+  .mast{gap:16px;padding-bottom:14px;margin-bottom:16px}
+  .mast h1{font-size:23px}
+  .mast .sub{font-size:12.5px;margin-top:6px}
+
+  .controls{gap:9px;padding:11px 12px;margin-bottom:16px}
+  .ctl{flex:1 1 auto;min-width:0}
+  .ctl:has(select){flex:1 1 100%}
+  select{flex:1;min-width:0;min-height:42px;font-size:13px}
+  .btn{min-height:42px;padding:9px 14px;font-size:12.5px;flex:1;white-space:nowrap}
+  input[type=range]{flex:1;width:auto;min-width:80px;height:34px}
+
+  .layout{gap:14px}
+  .card .hd{padding:12px 13px 0;flex-wrap:wrap;gap:4px}
+  .card h2{font-size:14px}
+  .card .meta{font-size:11px}
+  .card p.desc{margin:5px 13px 0;font-size:11.5px}
+  .card .body{padding:11px 13px 13px}
+
+  .stats{grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px}
+  .stat{padding:8px 9px}
+  .stat .k{font-size:8.5px;letter-spacing:.1em}
+  .stat .v{font-size:17px}
+
+  .legend{gap:10px 14px;font-size:11px}
+  .tiles{grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px}
+  .tile{padding:6px}
+
+  .note{font-size:12px;margin-top:20px;padding-top:14px}
+}
+
+@media (max-width:400px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .tiles{grid-template-columns:repeat(2,1fr)}
+  .btn{font-size:12px;padding:9px 10px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <div>
+    <h1>Track-driven demo data</h1>
+    <p class="sub">The car is not animated to match the data. The data is derived from the car's position on the track - curvature gives steering, a speed profile gives throttle and brake, speed gives gear. Everything correlates because it all comes from one source: the geometry.</p>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="ctl">
+    <label for="trackSel">Circuit</label>
+    <select id="trackSel"></select>
+  </div>
+  <div class="ctl"><button class="btn" id="randBtn">Generate a new one</button></div>
+  <div class="ctl"><button class="btn on" id="playBtn">Pause</button></div>
+  <div class="ctl">
+    <label for="pace">Pace</label>
+    <input type="range" id="pace" min="0.3" max="1.15" step="0.05" value="1">
+    <span class="hint" id="paceVal">100%</span>
+  </div>
+  <div class="ctl"><button class="btn on" id="zoneBtn">Show zones</button></div>
+  <div class="ctl"><button class="btn" id="followBtn">Follow car</button></div>
+</div>
+
+<div class="layout">
+
+  <section class="card">
+    <div class="hd">
+      <h2 id="trackName">-</h2>
+      <span class="meta" id="trackMeta">-</span>
+    </div>
+    <p class="desc" id="trackDesc">-</p>
+    <div id="mapWrap"><canvas id="map" width="700" height="470"></canvas></div>
+    <div class="body">
+      <div class="legend">
+        <span><i style="background:var(--thr)"></i> on throttle</span>
+        <span><i style="background:var(--brk)"></i> braking</span>
+        <span><i style="background:#6c727e"></i> coasting</span>
+        <span><i style="background:var(--str)"></i> racing line</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="k">Speed</div><div class="v" id="sSpd" style="color:var(--gear)">0</div></div>
+        <div class="stat"><div class="k">Gear</div><div class="v" id="sGear" style="color:var(--gear)">-</div></div>
+        <div class="stat"><div class="k">Throttle</div><div class="v" id="sThr" style="color:var(--thr)">0</div></div>
+        <div class="stat"><div class="k">Brake</div><div class="v" id="sBrk" style="color:var(--brk)">0</div></div>
+        <div class="stat"><div class="k">Steering</div><div class="v" id="sStr" style="color:var(--str)">0</div></div>
+        <div class="stat"><div class="k">Lap</div><div class="v" id="sLap" style="color:var(--amber)">-</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="hd"><h2>Overlays, live off the lap</h2></div>
+    <p class="desc">Same draw functions as the catalogue, fed by the car above. Brake spikes line up with the red sections of track.</p>
+    <div class="body">
+      <div class="tiles" id="tiles"></div>
+    </div>
+  </section>
+
+</div>
+
+<p class="note">
+  <b>How it works.</b> Each circuit is a handful of control points, splined into a closed loop and resampled at even spacing. Curvature at every point gives a cornering speed limit; two passes over the loop propagate braking backwards and acceleration forwards, producing a speed profile. Longitudinal acceleration then falls out as throttle or brake, curvature becomes steering, and speed picks the gear. <b>Adding a circuit means adding an array of points</b>, which is why ten is not meaningfully harder than one.
+  <br><br>
+  <b>Honesty note.</b> Everything here is generated, including the values that would be telemetry on a real rig. That is fine for a showcase, but the site should say so plainly - a demo lap is demo data, and the <code>DESIGN.md</code> rule about never inferring one signal from another applies to live overlays, not to a simulator whose whole job is to be simulated.
+</p>
+
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   Circuits - just control points in an arbitrary space
+   ============================================================ */
+const TRACKS = [
+  { name:"Kestrel Park", len:3900, desc:"Club circuit. A long back straight into a heavy stop, then a technical infield.",
+    pts:[[10,50],[30,20],[58,14],[80,22],[90,42],[78,56],[58,52],[48,64],[60,78],[52,90],[28,88],[14,72]] },
+
+  { name:"Holton Oval", len:2400, desc:"Two corners and a lot of commitment. Almost no braking, almost no steering.",
+    pts:[[20,30],[70,26],[86,44],[80,64],[30,70],[12,54]] },
+
+  { name:"Sable Ridge", len:5400, desc:"Fast sweepers with barely a straight. Steering rarely returns to centre.",
+    pts:[[14,46],[26,22],[52,14],[76,20],[90,38],[84,58],[68,66],[72,82],[50,92],[26,84],[10,66]] },
+
+  { name:"Vance Street", len:3200, desc:"Street layout. Ninety degree corners, hard stops, second gear everywhere.",
+    pts:[[16,18],[62,18],[62,40],[86,40],[86,72],[54,72],[54,54],[16,54]] },
+
+  { name:"Corradine", len:6100, desc:"Long GP layout. A genuine top-gear straight and a hairpin at each end of it.",
+    pts:[[10,54],[16,26],[40,16],[68,16],[88,28],[92,50],[74,60],[80,78],[58,88],[34,86],[20,76],[12,68]] },
+
+  { name:"Pinnacle Karting", len:1400, desc:"Tight and relentless. Never leaves the lower gears, clutch gets a workout.",
+    pts:[[24,30],[46,22],[58,32],[48,44],[62,52],[78,44],[84,62],[64,74],[42,70],[34,58],[20,50]] },
+
+  { name:"Mereford Chicanes", len:4200, desc:"Straights interrupted by chicanes. Brake, flick, brake, flick.",
+    pts:[[12,44],[34,38],[42,50],[62,44],[70,56],[88,50],[90,68],[64,76],[46,70],[30,76],[12,66]] },
+
+  { name:"Bowl Speedway", len:2900, desc:"An oval with a kink that ruins the rhythm. One lift per lap.",
+    pts:[[22,34],[52,26],[74,32],[88,48],[76,66],[46,72],[24,66],[12,50]] },
+
+  { name:"Thorn Valley", len:4800, desc:"Hairpin heavy. Big downshift sequences, lots of trail braking.",
+    pts:[[14,40],[38,26],[44,44],[26,56],[42,70],[68,72],[76,54],[64,40],[80,28],[92,44],[86,74],[52,88],[20,76]] },
+
+  { name:"Ashcombe Long", len:7200, desc:"Endurance layout. Two enormous straights and a slow infield between them.",
+    pts:[[8,40],[44,30],[80,26],[92,42],[70,50],[62,62],[78,70],[74,86],[40,90],[16,80],[6,60]] },
+
+  { name:"Deller Snake", len:3600, desc:"A continuous s-bend. Steering never settles, throttle never fully commits.",
+    pts:[[12,52],[28,34],[44,52],[60,32],[76,50],[90,38],[92,62],[74,72],[58,60],[42,76],[26,66],[12,72]] }
+];
+
+/* Procedural circuit: polar radius modulated by a few harmonics.
+   Always closed, always non self-intersecting. */
+function randomTrack(){
+  const n = 13 + Math.floor(Math.random() * 6);
+  const harmonics = [
+    { k: 2 + Math.floor(Math.random()*2), a: 0.10 + Math.random()*0.16, p: Math.random()*6.28 },
+    { k: 3 + Math.floor(Math.random()*3), a: 0.06 + Math.random()*0.13, p: Math.random()*6.28 },
+    { k: 5 + Math.floor(Math.random()*4), a: 0.03 + Math.random()*0.09, p: Math.random()*6.28 }
+  ];
+  const pts = [];
+  for (let i = 0; i < n; i++){
+    const th = (i / n) * Math.PI * 2;
+    let r = 1;
+    for (const h of harmonics) r += h.a * Math.sin(h.k * th + h.p);
+    r = Math.max(0.42, r);
+    pts.push([50 + Math.cos(th) * r * 38, 50 + Math.sin(th) * r * 33]);
+  }
+  const names = ["Marlowe","Ferrenby","Kilbride","Rothvale","Winterbourne","Ashgate","Draymoor","Halloway","Norbeck","Steepleton"];
+  const suffix = ["Park","Circuit","Ring","Speedway","Raceway","Loop"];
+  return {
+    name: names[Math.floor(Math.random()*names.length)] + " " + suffix[Math.floor(Math.random()*suffix.length)],
+    len: 2600 + Math.floor(Math.random() * 4200),
+    desc: "Procedurally generated. Same pipeline, no hand authoring.",
+    pts
+  };
+}
+
+/* ============================================================
+   Geometry - spline, resample, curvature
+   ============================================================ */
+function catmullRom(p0, p1, p2, p3, t){
+  const t2 = t*t, t3 = t2*t;
+  return [
+    0.5*((2*p1[0]) + (-p0[0]+p2[0])*t + (2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2 + (-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3),
+    0.5*((2*p1[1]) + (-p0[1]+p2[1])*t + (2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2 + (-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3)
+  ];
+}
+
+function splineClosed(pts, perSeg){
+  const out = [];
+  const n = pts.length;
+  for (let i = 0; i < n; i++){
+    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i+1)%n], p3 = pts[(i+2)%n];
+    for (let s = 0; s < perSeg; s++) out.push(catmullRom(p0, p1, p2, p3, s / perSeg));
+  }
+  return out;
+}
+
+function resample(poly, count){
+  const n = poly.length;
+  const seg = [], cum = [0];
+  let total = 0;
+  for (let i = 0; i < n; i++){
+    const a = poly[i], b = poly[(i+1)%n];
+    const d = Math.hypot(b[0]-a[0], b[1]-a[1]);
+    seg.push(d); total += d; cum.push(total);
+  }
+  const out = [];
+  for (let i = 0; i < count; i++){
+    const target = (i / count) * total;
+    let lo = 0, hi = n;
+    while (lo < hi - 1){ const mid = (lo + hi) >> 1; if (cum[mid] <= target) lo = mid; else hi = mid; }
+    const a = poly[lo], b = poly[(lo+1)%n];
+    const f = seg[lo] > 0 ? (target - cum[lo]) / seg[lo] : 0;
+    out.push([a[0] + (b[0]-a[0])*f, a[1] + (b[1]-a[1])*f]);
+  }
+  return { pts: out, length: total };
+}
+
+/* signed curvature via circumradius of three consecutive points */
+function curvature(pts){
+  const n = pts.length, k = new Float32Array(n);
+  for (let i = 0; i < n; i++){
+    const a = pts[(i-1+n)%n], b = pts[i], c = pts[(i+1)%n];
+    const abx=b[0]-a[0], aby=b[1]-a[1], bcx=c[0]-b[0], bcy=c[1]-b[1];
+    const cross = abx*bcy - aby*bcx;
+    const la=Math.hypot(abx,aby), lb=Math.hypot(bcx,bcy), lc=Math.hypot(c[0]-a[0], c[1]-a[1]);
+    const denom = la*lb*lc;
+    k[i] = denom < 1e-9 ? 0 : (2 * cross) / denom;
+  }
+  // light smoothing so the car does not twitch
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++){
+    let s = 0;
+    for (let j = -3; j <= 3; j++) s += k[(i + j + n) % n];
+    out[i] = s / 7;
+  }
+  return out;
+}
+
+/* ============================================================
+   Physics - speed profile from curvature
+   ============================================================ */
+const CAR = {
+  vTop: 79,        // m/s, about 285 km/h
+  aLat: 15.5,      // m/s^2 cornering
+  aBrake: 19,      // m/s^2
+  aDrive: 8.4,     // m/s^2 at low speed
+  drag: 0.00055
+};
+
+function buildLap(track){
+  const dense = splineClosed(track.pts, 26);
+  const rs = resample(dense, 1400);
+  const n = rs.pts.length;
+
+  // scale geometry so the lap is the intended real-world length
+  const scale = track.len / rs.length;
+  const ds = rs.length * scale / n;
+
+  const kappaRaw = curvature(rs.pts);
+  const kappa = new Float32Array(n);
+  for (let i = 0; i < n; i++) kappa[i] = kappaRaw[i] / scale;
+
+  // cornering limit
+  const v = new Float32Array(n);
+  for (let i = 0; i < n; i++){
+    const ak = Math.abs(kappa[i]);
+    v[i] = ak < 1e-6 ? CAR.vTop : Math.min(CAR.vTop, Math.sqrt(CAR.aLat / ak));
+  }
+
+  // backward pass: braking
+  for (let pass = 0; pass < 2; pass++){
+    for (let i = n - 1; i >= 0; i--){
+      const nx = (i + 1) % n;
+      v[i] = Math.min(v[i], Math.sqrt(v[nx]*v[nx] + 2*CAR.aBrake*ds));
+    }
+  }
+  // forward pass: acceleration
+  for (let pass = 0; pass < 2; pass++){
+    for (let i = 0; i < n; i++){
+      const pv = (i - 1 + n) % n;
+      const drive = CAR.aDrive * (1 - v[pv]/CAR.vTop*0.62) - CAR.drag*v[pv]*v[pv];
+      v[i] = Math.min(v[i], Math.sqrt(Math.max(0, v[pv]*v[pv] + 2*Math.max(0.6, drive)*ds)));
+    }
+  }
+
+  // longitudinal demand -> pedals
+  const thr = new Float32Array(n), brk = new Float32Array(n), str = new Float32Array(n);
+  let kMax = 1e-6;
+  for (let i = 0; i < n; i++) kMax = Math.max(kMax, Math.abs(kappa[i]));
+  for (let i = 0; i < n; i++){
+    const nx = (i + 1) % n;
+    const aLong = (v[nx]*v[nx] - v[i]*v[i]) / (2*ds);
+    if (aLong >= 0){
+      const avail = Math.max(0.6, CAR.aDrive * (1 - v[i]/CAR.vTop*0.62));
+      thr[i] = Math.min(1, aLong / avail);
+      brk[i] = 0;
+    } else {
+      brk[i] = Math.min(1, -aLong / CAR.aBrake);
+      thr[i] = 0;
+    }
+    str[i] = Math.max(-1, Math.min(1, (kappa[i] / kMax) * 0.94));
+  }
+
+  // gears from speed
+  const GEARS = [0.13, 0.26, 0.40, 0.56, 0.74, 1.01];
+  const gear = new Int8Array(n);
+  for (let i = 0; i < n; i++){
+    const f = v[i] / CAR.vTop;
+    let g = 1;
+    for (let k = 0; k < GEARS.length; k++) if (f > GEARS[k] * 0.92) g = k + 1;
+    gear[i] = Math.max(1, Math.min(6, g));
+  }
+  // remove single-sample gear flicker
+  for (let pass = 0; pass < 3; pass++){
+    for (let i = 0; i < n; i++){
+      const p = gear[(i-1+n)%n], nx = gear[(i+1)%n];
+      if (p === nx && gear[i] !== p) gear[i] = p;
+    }
+  }
+
+  let lapTime = 0;
+  for (let i = 0; i < n; i++) lapTime += ds / Math.max(4, v[i]);
+
+  return { pts: rs.pts, n, ds, v, thr, brk, str, gear, kappa, length: track.len, lapTime, meta: track };
+}
+
+/* ============================================================
+   Live state
+   ============================================================ */
+let lap = null;
+let dist = 0;
+const clock = { playing:true, pace:1 };
+const S = { thr:0, brk:0, clu:0, str:0, gear:1, prevGear:1, lever:1, spd:0, shiftAge:9, shiftDir:0, shiftProg:1 };
+const hist = { thr:[], brk:[], clu:[], str:[] };
+let lapCount = 0, lastLapTime = 0, lapElapsed = 0;
+
+function sampleAt(d){
+  const total = lap.ds * lap.n;
+  let x = ((d % total) + total) % total;
+  const fi = x / lap.ds;
+  const i = Math.floor(fi) % lap.n;
+  const j = (i + 1) % lap.n;
+  const f = fi - Math.floor(fi);
+  const mix = (arr) => arr[i] + (arr[j] - arr[i]) * f;
+  return {
+    i,
+    pos: [ lap.pts[i][0] + (lap.pts[j][0]-lap.pts[i][0])*f,
+           lap.pts[i][1] + (lap.pts[j][1]-lap.pts[i][1])*f ],
+    v: mix(lap.v), thr: mix(lap.thr), brk: mix(lap.brk), str: mix(lap.str),
+    gear: lap.gear[i]
+  };
+}
+
+function step(dt){
+  if (!lap) return;
+  const s = sampleAt(dist);
+  S.spd = s.v * clock.pace;
+  S.thr = s.thr; S.brk = s.brk; S.str = s.str;
+
+  if (s.gear !== S.gear){
+    S.prevGear = S.gear;
+    S.shiftDir = s.gear > S.gear ? 1 : -1;
+    S.gear = s.gear;
+    S.shiftAge = 0;
+  } else S.shiftAge += dt;
+
+  S.shiftProg = Math.min(1, S.shiftAge / 0.30);
+  S.lever = S.shiftProg < 1 ? 0 : S.gear;
+  S.clu = S.shiftAge < 0.34 ? Math.sin(Math.PI * (S.shiftAge / 0.34)) : 0;
+
+  if (clock.playing){
+    const total = lap.ds * lap.n;
+    const before = dist;
+    dist += S.spd * dt;
+    lapElapsed += dt;
+    if (Math.floor(dist / total) > Math.floor(before / total)){
+      lapCount++; lastLapTime = lapElapsed; lapElapsed = 0;
+    }
+  }
+
+  hist.thr.push(S.thr); hist.brk.push(S.brk); hist.clu.push(S.clu); hist.str.push(S.str);
+  for (const k in hist) if (hist[k].length > 400) hist[k].shift();
+}
+
+/* ============================================================
+   Map rendering
+   ============================================================ */
+const mapCv = document.getElementById("map");
+const mapWrap = document.getElementById("mapWrap");
+const dpr = window.devicePixelRatio || 1;
+const mg = mapCv.getContext("2d");
+let MW = 700, MH = 470;
+
+function sizeMap(){
+  const avail = Math.max(240, mapWrap.clientWidth || 700);
+  MW = Math.min(700, avail);
+  // taller aspect on narrow screens so the circuit stays readable
+  const ratio = MW < 420 ? 0.86 : MW < 560 ? 0.75 : 0.67;
+  MH = Math.round(MW * ratio);
+
+  mapCv.style.width = MW + "px";
+  mapCv.style.height = MH + "px";
+  mapCv.width = Math.round(MW * dpr);
+  mapCv.height = Math.round(MH * dpr);
+  mg.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  if (lap) fitView();
+}
+
+let view = { s:1, ox:0, oy:0 };
+let showZones = true, follow = false;
+
+function fitView(){
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  for (const p of lap.pts){
+    minX=Math.min(minX,p[0]); maxX=Math.max(maxX,p[0]);
+    minY=Math.min(minY,p[1]); maxY=Math.max(maxY,p[1]);
+  }
+  const pad = MW < 460 ? 26 : 46;
+  const s = Math.min((MW-pad*2)/(maxX-minX), (MH-pad*2)/(maxY-minY));
+  view.s = s;
+  view.ox = MW/2 - (minX+maxX)/2 * s;
+  view.oy = MH/2 - (minY+maxY)/2 * s;
+}
+const TX = p => [p[0]*view.s + view.ox, p[1]*view.s + view.oy];
+
+function drawMap(){
+  mg.clearRect(0,0,MW,MH);
+  if (!lap) return;
+
+  const car = sampleAt(dist);
+  let ox = view.ox, oy = view.oy, sc = view.s;
+  if (follow){
+    sc = view.s * 2.1;
+    ox = MW/2 - car.pos[0]*sc;
+    oy = MH/2 - car.pos[1]*sc;
+  }
+  const T = p => [p[0]*sc + ox, p[1]*sc + oy];
+
+  // asphalt
+  mg.beginPath();
+  lap.pts.forEach((p,i)=>{ const q=T(p); i?mg.lineTo(q[0],q[1]):mg.moveTo(q[0],q[1]); });
+  mg.closePath();
+  mg.strokeStyle = "#31353d";
+  mg.lineWidth = Math.max(9, 15*sc/view.s);
+  mg.lineJoin = "round"; mg.lineCap = "round";
+  mg.stroke();
+
+  mg.strokeStyle = "rgba(255,255,255,0.10)";
+  mg.lineWidth = Math.max(11, 18*sc/view.s);
+  mg.stroke();
+
+  // racing line, coloured by what the driver is doing
+  const step2 = 4;
+  for (let i = 0; i < lap.n; i += step2){
+    const j = Math.min(i + step2, lap.n - 1);
+    const a = T(lap.pts[i]), b = T(lap.pts[j]);
+    let col = "#6c727e";
+    if (showZones){
+      if (lap.brk[i] > 0.06) col = "#f2453d";
+      else if (lap.thr[i] > 0.30) col = "#34d97a";
+    } else col = "#64b5ff";
+    mg.beginPath();
+    mg.moveTo(a[0],a[1]); mg.lineTo(b[0],b[1]);
+    mg.strokeStyle = col;
+    mg.lineWidth = showZones ? Math.max(2.5, 3.4*sc/view.s) : 2.4;
+    mg.globalAlpha = showZones ? (0.45 + Math.max(lap.brk[i], lap.thr[i])*0.55) : 0.8;
+    mg.stroke();
+  }
+  mg.globalAlpha = 1;
+
+  // start line
+  const sp = T(lap.pts[0]);
+  const nx = lap.pts[1], pv = lap.pts[0];
+  const ang = Math.atan2(nx[1]-pv[1], nx[0]-pv[0]) + Math.PI/2;
+  mg.beginPath();
+  mg.moveTo(sp[0]+Math.cos(ang)*10, sp[1]+Math.sin(ang)*10);
+  mg.lineTo(sp[0]-Math.cos(ang)*10, sp[1]-Math.sin(ang)*10);
+  mg.strokeStyle = "#eceae5"; mg.lineWidth = 2.5; mg.stroke();
+
+  // car
+  const cp = T(car.pos);
+  const cAng = Math.atan2(
+    lap.pts[(car.i+3)%lap.n][1] - lap.pts[car.i][1],
+    lap.pts[(car.i+3)%lap.n][0] - lap.pts[car.i][0]
+  );
+  mg.save();
+  mg.translate(cp[0], cp[1]); mg.rotate(cAng);
+  mg.beginPath(); mg.roundRect(-9,-5,18,10,3);
+  mg.fillStyle = "#ffb020"; mg.fill();
+  mg.strokeStyle = "rgba(0,0,0,.55)"; mg.lineWidth = 1.4; mg.stroke();
+  mg.restore();
+
+  mg.beginPath(); mg.arc(cp[0], cp[1], 15, 0, Math.PI*2);
+  mg.strokeStyle = "rgba(255,176,32,.35)"; mg.lineWidth = 1.5; mg.stroke();
+}
+
+/* ============================================================
+   Overlay tiles
+   ============================================================ */
+const C = { thr:"#34d97a", brk:"#f2453d", clu:"#ffb020", str:"#64b5ff", gear:"#e7e3da",
+  glass:"rgba(8,9,12,0.55)", edge:"rgba(255,255,255,0.14)", faint:"rgba(255,255,255,0.10)",
+  label:"rgba(255,255,255,0.66)", track:"rgba(8,9,12,0.6)" };
+let ctx;
+const pct = v => String(Math.round(v*100));
+const gn = g => g === 0 ? "N" : String(g);
+function glass(x,y,w,h,r){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r);
+  ctx.fillStyle=C.glass; ctx.fill(); ctx.strokeStyle=C.edge; ctx.lineWidth=1; ctx.stroke(); }
+function mono(sz,wt){ ctx.font=(wt||600)+" "+sz+"px 'IBM Plex Mono', monospace"; }
+function oxa(sz,wt){ ctx.font=(wt||800)+" "+sz+"px Oxanium, monospace"; }
+function txt(s,x,y,c,a){ ctx.fillStyle=c; ctx.textAlign=a||"center"; ctx.fillText(s,x,y); }
+function wheelGlyph(cx,cy,r,angle){
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(angle);
+  ctx.beginPath(); ctx.arc(0,0,r,Math.PI*0.72,Math.PI*2.28); ctx.closePath();
+  ctx.strokeStyle=C.str; ctx.lineWidth=Math.max(2.5,r*0.16); ctx.lineJoin="round"; ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-r*0.62,r*0.04); ctx.lineTo(r*0.62,r*0.04);
+  ctx.moveTo(0,r*0.04); ctx.lineTo(0,r*0.66);
+  ctx.globalAlpha=0.85; ctx.lineWidth=Math.max(1.6,r*0.10); ctx.lineCap="round"; ctx.stroke();
+  ctx.globalAlpha=1;
+  ctx.beginPath(); ctx.roundRect(-r*0.19,-r*0.13,r*0.38,r*0.30,r*0.09);
+  ctx.fillStyle=C.str; ctx.globalAlpha=0.9; ctx.fill(); ctx.globalAlpha=1;
+  ctx.beginPath(); ctx.arc(0,0,r,Math.PI*1.44,Math.PI*1.56);
+  ctx.strokeStyle=C.clu; ctx.lineWidth=Math.max(3,r*0.19); ctx.lineCap="butt"; ctx.stroke();
+  ctx.restore();
+}
+
+const TILES = [
+  { name:"bars", w:140, h:130, draw(w,h,s){
+      [["clu",C.clu],["brk",C.brk],["thr",C.thr]].forEach((p,i)=>{
+        const x=22+i*38, v=s[p[0]];
+        glass(x,18,26,h-46,4);
+        ctx.save(); ctx.beginPath(); ctx.roundRect(x,18,26,h-46,4); ctx.clip();
+        ctx.fillStyle=p[1]; ctx.fillRect(x,18+(h-46)*(1-v),26,(h-46)*v); ctx.restore();
+        mono(9,500); txt(p[0].toUpperCase(), x+13, h-12, C.label);
+      });
+  }},
+  { name:"trace", w:210, h:120, draw(w,h,s){
+      glass(.5,.5,w-1,h-1,7);
+      [["thr",C.thr],["brk",C.brk],["clu",C.clu]].forEach(([k,col])=>{
+        const d=hist[k], n=Math.min(d.length,220); if(n<2) return;
+        const st=d.length-n;
+        ctx.beginPath();
+        for(let i=0;i<n;i++){ const x=10+(i/(n-1))*(w-20), y=12+(h-24)*(1-d[st+i]);
+          i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+        ctx.strokeStyle=col; ctx.lineWidth=k==="clu"?1.3:2;
+        ctx.lineJoin="round"; ctx.lineCap="round"; ctx.stroke();
+      });
+  }},
+  { name:"wheel", w:140, h:140, draw(w,h,s){
+      wheelGlyph(w/2,h/2-8,42,s.str*Math.PI*0.78);
+      mono(12); txt(Math.round(s.str*450)+"\u00B0", w/2, h-12, C.str);
+  }},
+  { name:"gear", w:140, h:130, draw(w,h,s){
+      const pop=Math.max(0,1-s.shiftAge/0.3);
+      ctx.save(); ctx.shadowColor=s.shiftDir>0?C.thr:C.brk; ctx.shadowBlur=pop*26;
+      oxa(64+pop*8); txt(gn(s.lever), w/2, h/2+22, C.gear); ctx.restore();
+      mono(10,500); txt("GEAR", w/2, h-14, C.label);
+  }},
+  { name:"cluster", w:210, h:140, draw(w,h,s){
+      glass(.5,.5,w-1,h-1,9);
+      oxa(44); txt(gn(s.lever), 58, h/2+14, C.gear);
+      mono(9,500); txt("GEAR", 58, h/2+32, C.label);
+      [["clu",C.clu],["brk",C.brk],["thr",C.thr]].forEach((p,i)=>{
+        const x=108+i*22, v=s[p[0]];
+        glass(x,22,15,h-50,3);
+        ctx.save(); ctx.beginPath(); ctx.roundRect(x,22,15,h-50,3); ctx.clip();
+        ctx.fillStyle=p[1]; ctx.fillRect(x,22+(h-50)*(1-v),15,(h-50)*v); ctx.restore();
+      });
+      wheelGlyph(w-30, h/2, 20, s.str*Math.PI*0.78);
+  }},
+  { name:"speed", w:140, h:130, draw(w,h,s){
+      oxa(40); txt(String(Math.round(s.spd*3.6)), w/2, h/2+6, C.gear);
+      mono(10,500); txt("KM/H", w/2, h/2+24, C.label);
+      const f=Math.min(1,s.spd/CAR.vTop);
+      ctx.beginPath(); ctx.roundRect(20,h-28,w-40,7,4);
+      ctx.fillStyle="rgba(255,255,255,.1)"; ctx.fill();
+      ctx.beginPath(); ctx.roundRect(20,h-28,(w-40)*f,7,4);
+      ctx.fillStyle=C.amber||"#ffb020"; ctx.fillStyle="#ffb020"; ctx.fill();
+  }}
+];
+
+const tilesHost = document.getElementById("tiles");
+for (const t of TILES){
+  const box = document.createElement("div");
+  box.className = "tile";
+  const cv = document.createElement("canvas");
+  cv.style.width = t.w+"px"; cv.style.height = t.h+"px";
+  cv.width = t.w*dpr; cv.height = t.h*dpr;
+  const c2 = cv.getContext("2d"); c2.scale(dpr,dpr);
+  t.ctx = c2;
+  box.appendChild(cv);
+  tilesHost.appendChild(box);
+}
+
+/* ============================================================
+   Wiring
+   ============================================================ */
+const sel = document.getElementById("trackSel");
+TRACKS.forEach((t,i)=>{
+  const o = document.createElement("option");
+  o.value = i; o.textContent = t.name;
+  sel.appendChild(o);
+});
+
+function loadTrack(t){
+  lap = buildLap(t);
+  dist = 0; lapCount = 0; lapElapsed = 0; lastLapTime = 0;
+  for (const k in hist) hist[k].length = 0;
+  fitView();
+  document.getElementById("trackName").textContent = t.name;
+  document.getElementById("trackDesc").textContent = t.desc;
+  const mins = Math.floor(lap.lapTime/60), secs = (lap.lapTime%60).toFixed(1);
+  document.getElementById("trackMeta").textContent =
+    (t.len/1000).toFixed(2) + " km  \u00B7  est " + mins + ":" + String(secs).padStart(4,"0");
+}
+sel.addEventListener("change", ()=> loadTrack(TRACKS[parseInt(sel.value,10)]));
+
+document.getElementById("randBtn").addEventListener("click", ()=>{
+  const t = randomTrack();
+  TRACKS.push(t);
+  const o = document.createElement("option");
+  o.value = TRACKS.length-1; o.textContent = t.name;
+  sel.appendChild(o);
+  sel.value = TRACKS.length-1;
+  loadTrack(t);
+});
+
+const playBtn = document.getElementById("playBtn");
+playBtn.addEventListener("click", ()=>{
+  clock.playing = !clock.playing;
+  playBtn.textContent = clock.playing ? "Pause" : "Play";
+  playBtn.classList.toggle("on", clock.playing);
+});
+const paceEl = document.getElementById("pace"), paceVal = document.getElementById("paceVal");
+paceEl.addEventListener("input", ()=>{
+  clock.pace = parseFloat(paceEl.value);
+  paceVal.textContent = Math.round(clock.pace*100) + "%";
+});
+const zoneBtn = document.getElementById("zoneBtn");
+zoneBtn.addEventListener("click", ()=>{
+  showZones = !showZones;
+  zoneBtn.classList.toggle("on", showZones);
+});
+const followBtn = document.getElementById("followBtn");
+followBtn.addEventListener("click", ()=>{
+  follow = !follow;
+  followBtn.classList.toggle("on", follow);
+});
+
+loadTrack(TRACKS[0]);
+sizeMap();
+
+if (window.ResizeObserver){
+  let raf = 0;
+  new ResizeObserver(() => {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(sizeMap);
+  }).observe(mapWrap);
+} else {
+  window.addEventListener("resize", sizeMap);
+}
+window.addEventListener("orientationchange", () => setTimeout(sizeMap, 180));
+
+/* ============================================================
+   Loop
+   ============================================================ */
+const el = id => document.getElementById(id);
+let last = performance.now(), acc = 0;
+function frame(now){
+  const dt = Math.min(0.05, (now-last)/1000);
+  last = now;
+
+  step(dt);
+  drawMap();
+
+  for (const t of TILES){
+    ctx = t.ctx;
+    ctx.clearRect(0,0,t.w,t.h);
+    ctx.save();
+    t.draw(t.w, t.h, S);
+    ctx.restore();
+  }
+
+  acc += dt;
+  if (acc > 0.08){
+    acc = 0;
+    el("sSpd").textContent  = Math.round(S.spd*3.6);
+    el("sGear").textContent = gn(S.lever);
+    el("sThr").textContent  = pct(S.thr);
+    el("sBrk").textContent  = pct(S.brk);
+    el("sStr").textContent  = Math.round(S.str*450);
+    el("sLap").textContent  = lastLapTime
+      ? Math.floor(lastLapTime/60) + ":" + (lastLapTime%60).toFixed(1).padStart(4,"0")
+      : "\u2014";
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

@@ -6,6 +6,7 @@ How the code is built.
 | --- | --- |
 | [architecture.md](architecture.md) | The three layers, the one-way dependency rule, and how the manifest stays honest. |
 | [testing.md](testing.md) | The three test layers, the golden pixel-diff, coverage, and gaps. |
+| [design-principles.md](../../overlays/sim-racing/design-principles.md) | The overlay design system — the rules that produced the current visuals; read before adding one. Lives with the sim-racing vertical. |
 
 The overlay module contract has its own decision record: [ADR 0005](../decisions/0005-overlay-module-contract.md). Why the whole thing is static files is [ADR 0002](../decisions/0002-static-first-hosting.md).
 

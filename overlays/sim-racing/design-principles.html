@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Overlay design principles</title><style>
+:root{--bg:#fbfbfa;--fg:#22201d;--muted:#6b6862;--line:#e6e3dd;--code-bg:#f0eee9;--accent:#b5651d;--link:#a1571a}
+@media(prefers-color-scheme:dark){:root{--bg:#1a1917;--fg:#e6e3dd;--muted:#9a968e;--line:#332f2a;--code-bg:#26241f;--accent:#d99a5b;--link:#e0a866}}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;margin:0}
+.wrap{max-width:760px;margin:0 auto;padding:64px 28px 120px}
+h1{font-size:2rem;line-height:1.2;margin:0 0 .3em;letter-spacing:-.02em}
+h2{font-size:1.35rem;margin:2.2em 0 .5em;padding-bottom:.25em;border-bottom:1px solid var(--line)}
+h3{font-size:1.08rem;margin:1.8em 0 .4em}
+p{margin:.7em 0}
+a{color:var(--link);text-decoration:none;border-bottom:1px solid transparent}
+a:hover{border-bottom-color:var(--link)}
+code{background:var(--code-bg);padding:.12em .4em;border-radius:4px;font:.86em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre{background:var(--code-bg);padding:16px 18px;border-radius:8px;overflow-x:auto;border:1px solid var(--line)}
+pre code{background:none;padding:0;font-size:.85em}
+ul,ol{padding-left:1.4em;margin:.7em 0}
+li{margin:.3em 0}
+blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:var(--code-bg);border-radius:0 6px 6px 0;color:var(--muted)}
+blockquote strong{color:var(--fg)}
+table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:.92em;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.5em .7em;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+hr{border:none;border-top:1px solid var(--line);margin:2em 0}
+strong{font-weight:650}
+</style></head><body><main class="wrap">
+<h1>Overlay design principles</h1>
+<p>The rules that produced the current designs. Read this before adding a new visual so the next one belongs with the others.</p>
+<hr>
+<h2>1. Data honesty is the first rule</h2>
+<p>Every visual declares where its data comes from, and there are only two answers.</p>
+<ul><li><strong>Direct</strong> - read off the rig over HID. Pedal axes, wheel axis, shifter buttons, paddle presses. Works with no game integration.</li><li><strong>Telemetry</strong> - only the game knows it. RPM, speed, fuel, tyre temp, the gear the gearbox is actually in.</li></ul>
+<p>There is no third category. <strong>Never infer one signal from another.</strong> Do not estimate rpm from throttle. Do not count paddle presses to produce a gear number - counting a position drifts, and a gear readout that is quietly wrong is worse than no gear readout.</p>
+<p>Counting <em>events</em> is fine. A shift counter cannot drift because it never claims to know a position.</p>
+<p><strong>Test:</strong> if the value can disagree with reality and the overlay would not notice, it does not go on screen.</p>
+<hr>
+<h2>2. The renderer contract</h2>
+<p>Every overlay is one module exporting <code>draw(ctx, w, h, s, mem)</code> — the tiny contract in <a href="../../docs/decisions/0005-overlay-module-contract.md">ADR 0005</a>:</p>
+<ul><li><code>s</code> holds direct rig values: <code>thr brk clu str gear lever shiftAge shiftDir shiftProg</code></li><li>telemetry (<code>rpm spd</code>) lives on a <strong>separate <code>tel</code> object</strong>, imported explicitly from the engine — it is never a field on <code>s</code></li></ul>
+<p>A visual that never imports <code>tel</code> is <em>provably</em> rig-only. That is not documentation, it is enforcement — reading <code>s.rpm</code> yields <code>undefined</code> by design, so a telemetry value can't sneak in through the input state.</p>
+<p>Every visual is a pure function of state plus its own <code>mem</code> object for accumulators. No visual reads another visual's state. Adding a design means adding one file.</p>
+<hr>
+<h2>3. Draw the mechanism, not a symbol</h2>
+<p>Where a real physical thing exists, honour how it moves.</p>
+<ul><li>The H-gate knob travels <strong>out to the neutral rail, along the rail, then into the gear.</strong> Never diagonally. That is how the lever actually moves.</li><li>Mid-throw the lever really is in neutral, so the gate reads <strong>N</strong> and so does every gear numeral. This is not a nicety - it is what the buttons report.</li><li>Pedals <strong>travel</strong> as they are pressed. Prefer translation over rotation: <code>Pedal Box</code> renders a literal side-on hinge "like the real G923" and reads worse than the top-down treatment in <code>Cockpit</code>, which slides the pedal a few px and deepens its fill. Honouring the mechanism does not mean reproducing the geometry — at overlay scale a hinge reads as a wobble.</li><li>The wheel is a flat-bottomed rim with spokes and a hub, not a circle with a cross through it.</li></ul>
+<p>Skeuomorphism for its own sake is noise. Skeuomorphism that encodes real behaviour is information.</p>
+<hr>
+<h2>4. Colour is a fixed vocabulary</h2>
+<table><thead><tr><th>Channel</th><th>Colour</th><th></th></tr></thead><tbody><tr><td>Throttle</td><td><code>#34d97a</code></td><td>green</td></tr><tr><td>Brake</td><td><code>#f2453d</code></td><td>red</td></tr><tr><td>Clutch</td><td><code>#ffb020</code></td><td>amber</td></tr><tr><td>Steering</td><td><code>#64b5ff</code></td><td>blue</td></tr><tr><td>Gear / neutral text</td><td><code>#e7e3da</code></td><td>bone</td></tr></tbody></table>
+<p>These never change meaning between visuals. A viewer learns the vocabulary once. Neutral and inactive states use the same hue at reduced alpha, never a different hue.</p>
+<p>Amber doubles as the interface accent. Purple (<code>#c77dff</code>) marks telemetry in the catalogue chrome only - it never appears in an overlay.</p>
+<hr>
+<h2>5. The overlay sits on pixels you do not control</h2>
+<ul><li>Assume the backdrop can be bright sky, dark tunnel, or a busy crowd. Test against light, dark, and checker. (The gallery's Backdrop builder exists for exactly this.)</li><li>Use the glass treatment (<code>rgba(8,9,12,0.55)</code> fill, <code>rgba(255,255,255,0.14)</code> hairline border) when a visual needs a readable ground. Skip it when the shape is self-evident.</li><li>No pure white, no pure black. Both vibrate against video.</li><li>Text gets weight or a plate behind it, never a drop shadow as a crutch.</li></ul>
+<hr>
+<h2>6. Glance versus study</h2>
+<p>Decide which one a visual is for, and commit.</p>
+<ul><li><strong>Glance</strong> - bars, numerals, gate position, shift pulses. Legible in under half a second, no history.</li><li><strong>Study</strong> - traces, histograms, timelines, scatter. Reward a viewer who is paying attention.</li></ul>
+<p>A design that tries to be both is usually worse at both. Combined layouts should pair one of each rather than stacking three studies.</p>
+<hr>
+<h2>7. Motion means something or it does not happen</h2>
+<p>Every animation maps to a real event: a pulse on shift, a flash on countersteer, a decaying peak marker. Nothing loops, breathes, or drifts for atmosphere. If the rig is still, the overlay is still.</p>
+<p>The one exception is a decay envelope, which is legitimate because it encodes recency.</p>
+<hr>
+<h2>8. Silence is a valid state</h2>
+<p>The best visuals say nothing when nothing has happened. Countersteer flash is invisible until you catch a slide. Shift pulse is dim between shifts. An overlay that is always shouting stops carrying information.</p>
+<hr>
+<h2>9. Accumulate when it is free</h2>
+<p>Session-long state costs almost nothing and adds a story arc: gate heatmaps, gear donuts, angle histograms, shift counts. Prefer designs that get more interesting the longer the stream runs.</p>
+<p>Anything accumulating needs an obvious reset.</p>
+<hr>
+<h2>10. Name what can be wrong</h2>
+<p>A shifter button reports where the <strong>lever</strong> is, not where the <strong>gearbox</strong> is. Miss a shift and they disagree. Label the thing you are actually showing (<code>LEVER</code>, not <code>GEAR</code>, where the distinction matters) rather than papering over it. The disagreement is interesting content, not a bug to hide.</p>
+<hr>
+<h2>11. Fixed pixel sizes</h2>
+<p>Each visual has a native size and is designed at it. Never scale a browser source in OBS - it resamples and goes soft. If you need it bigger, add a scale parameter that redraws at the larger size.</p>
+<p>Design for a real slot: corner card, lower third, tall column. "Whatever size it ends up" produces designs that fit nowhere.</p>
+<hr>
+<h2>12. Typography</h2>
+<ul><li><strong>Oxanium</strong> for numerals and titles - technical, motorsport-adjacent, strong digits.</li><li><strong>IBM Plex Mono</strong> for labels and data - tabular figures so numbers do not jitter as they change.</li><li>Labels are uppercase, ~9-10px, letter-spaced, at ~66% white.</li><li>Values are the loudest thing in any visual. Labels are the quietest.</li></ul>
+<hr>
+<h2>Checklist for a new visual</h2>
+<ol><li>What does it read? List the channels. Any of them from <code>tel</code>?</li><li>Is anything inferred? If yes, cut it or reduce it to an event.</li><li>Glance or study?</li><li>Does it use the standard colour vocabulary?</li><li>Is it readable on a bright backdrop and a dark one?</li><li>Is it still when the rig is still?</li><li>Does it have a native size and a slot it is designed for?</li><li>If it accumulates, can it be reset?</li><li>Is anything on screen capable of being wrong without saying so?</li></ol>
+<hr>
+<p>These principles describe how a visual should behave. The overlay modules under <a href="overlays/"><code>overlays/</code></a> are the current designs, the <a href="pages/gallery.html">gallery</a> shows them in motion, and the early drafts under <a href="archive/"><code>archive/</code></a> are where they were worked out.</p>
+</main></body></html>

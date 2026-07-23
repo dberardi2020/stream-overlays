@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overlay catalogue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --asphalt:#131418;
+  --panel:#1b1d23;
+  --panel-2:#22252d;
+  --line:#2e323c;
+  --line-2:#3a3f4a;
+  --ink:#eceae5;
+  --mute:#8a909c;
+  --amber:#ffb020;
+
+  --thr:#34d97a;
+  --brk:#f2453d;
+  --clu:#ffb020;
+  --str:#64b5ff;
+  --gear:#e7e3da;
+  --direct:#34d97a;
+  --tele:#c77dff;
+
+  --gap:18px;
+  --radius:11px;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--asphalt);
+  color:var(--ink);
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:14px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1400px;margin:0 auto;padding:32px 20px 80px}
+
+/* ---------- masthead ---------- */
+.mast{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:32px;flex-wrap:wrap;
+  padding-bottom:20px;margin-bottom:20px;
+  border-bottom:1px solid var(--line);
+}
+.mast h1{
+  font-family:Oxanium,monospace;font-weight:800;font-size:30px;
+  margin:0;line-height:1.05;letter-spacing:-0.01em;
+}
+.mast .sub{color:var(--mute);margin:8px 0 0;max-width:58ch;font-size:13.5px}
+
+.readout{
+  font-size:11.5px;line-height:1.9;color:var(--mute);
+  background:var(--panel);border:1px solid var(--line);border-radius:9px;
+  padding:10px 14px;min-width:290px;
+}
+.readout b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.readout .hd,.readout .ht{
+  display:inline-block;width:76px;font-size:9.5px;letter-spacing:.14em;font-weight:600;
+}
+.readout .hd{color:var(--direct)}
+.readout .ht{color:var(--tele)}
+
+/* ---------- legend ---------- */
+.legend{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;margin-bottom:20px;
+}
+.legend div{display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--mute);line-height:1.55}
+.legend .src{flex:0 0 auto;margin-top:1px}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.tab{
+  font-family:Oxanium,monospace;font-size:14px;font-weight:600;
+  background:var(--panel);color:var(--mute);
+  border:1px solid var(--line);border-radius:8px;
+  padding:9px 18px;cursor:pointer;transition:.15s;
+}
+.tab:hover{color:var(--ink);border-color:var(--line-2)}
+.tab[aria-selected="true"]{background:var(--panel-2);color:var(--amber);border-color:var(--amber)}
+.tab .cnt{opacity:.55;font-weight:400;margin-left:7px;font-size:12px}
+
+/* ---------- controls ---------- */
+.controls{
+  display:flex;flex-wrap:wrap;gap:12px 22px;align-items:center;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:12px 16px;margin-bottom:26px;
+}
+.ctl{display:flex;align-items:center;gap:9px}
+.ctl label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.btn{
+  font-family:inherit;font-size:12px;
+  background:var(--panel-2);color:var(--ink);
+  border:1px solid var(--line);border-radius:6px;
+  padding:7px 13px;cursor:pointer;transition:.15s;
+}
+.btn:hover{border-color:var(--line-2)}
+.btn.on{border-color:var(--amber);color:var(--amber);background:rgba(255,176,32,.08)}
+.btn:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+input[type=range]{accent-color:var(--amber);width:100px}
+.hint{color:var(--mute);font-size:12px;font-variant-numeric:tabular-nums}
+
+/* ---------- panels ---------- */
+.panel{display:none}
+.panel.on{display:block}
+.panel .intro{
+  color:var(--mute);font-size:13px;line-height:1.65;
+  max-width:78ch;margin:0 0 22px;
+  border-left:2px solid var(--line);padding-left:14px;
+}
+.empty{color:var(--mute);font-size:13px;padding:30px 0}
+
+/* ---------- cards ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(304px,1fr));gap:var(--gap)}
+.card{
+  display:flex;flex-direction:column;
+  border:1px solid var(--line);border-radius:var(--radius);
+  background:var(--panel);overflow:hidden;cursor:pointer;transition:border-color .15s;
+}
+.card:hover{border-color:var(--line-2)}
+.card.pick{border-color:var(--amber)}
+
+.card .head{display:flex;align-items:center;gap:9px;padding:13px 14px 0}
+.card .num{font-size:11px;color:var(--mute);letter-spacing:.12em;font-variant-numeric:tabular-nums}
+.card h2{font-family:Oxanium,monospace;font-weight:600;font-size:14.5px;margin:0;flex:1;line-height:1.3}
+.card .star{color:var(--line-2);font-size:14px;line-height:1}
+.card.pick .star{color:var(--amber)}
+
+.card .note{
+  margin:7px 14px 0;color:var(--mute);font-size:12px;line-height:1.5;
+  min-height:54px;
+}
+.card .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:11px 14px 12px}
+
+.src{
+  font-size:9px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
+  border-radius:99px;padding:3px 9px;border:1px solid;line-height:1;
+}
+.src.direct{color:var(--direct);border-color:var(--direct);background:rgba(52,217,122,.08)}
+.src.tele{color:var(--tele);border-color:var(--tele);background:rgba(199,125,255,.08)}
+.chan{
+  font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--mute);
+  border:1px solid var(--line);border-radius:99px;padding:3px 8px;line-height:1;
+}
+.chan.t{color:var(--tele);border-color:rgba(199,125,255,.35)}
+
+.stage{
+  position:relative;height:190px;margin-top:auto;
+  border-top:1px solid var(--line);overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  background:#3c4048;
+}
+.stage.tall{height:308px}
+body.bg-light .stage{background:#c3c7cd}
+body.bg-check .stage{
+  background-color:#2a2d33;
+  background-image:linear-gradient(45deg,#3a3e46 25%,transparent 25%,transparent 75%,#3a3e46 75%),
+                   linear-gradient(45deg,#3a3e46 25%,transparent 25%,transparent 75%,#3a3e46 75%);
+  background-size:20px 20px;background-position:0 0,10px 10px;
+}
+canvas.ov{display:block}
+
+footer{
+  margin-top:40px;border-top:1px solid var(--line);padding-top:18px;
+  color:var(--mute);font-size:12px;line-height:1.7;max-width:88ch;
+}
+footer code{color:var(--ink);background:var(--panel-2);padding:1px 6px;border-radius:4px}
+footer b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <div>
+    <h1>Overlay catalogue</h1>
+    <p class="sub">Every tile declares its data source. Nothing is derived from something else and presented as though it were measured, and nothing is counted rather than read.</p>
+  </div>
+  <div class="readout" id="readout"></div>
+</header>
+
+<div class="legend">
+  <div>
+    <span class="src direct">Direct</span>
+    <span>Read straight off the rig over HID - pedal axes, wheel axis, shifter buttons, paddle presses. Works today with no game integration.</span>
+  </div>
+  <div>
+    <span class="src tele">Telemetry</span>
+    <span>Only the game knows it. RPM and speed. Shown here with stand-in values so the design can be judged, but it will not run on the rig alone.</span>
+  </div>
+</div>
+
+<div class="tabs" role="tablist">
+  <button class="tab" role="tab" data-tab="shift" aria-selected="true">Shifter<span class="cnt" id="c-shift"></span></button>
+  <button class="tab" role="tab" data-tab="steer" aria-selected="false">Steering<span class="cnt" id="c-steer"></span></button>
+  <button class="tab" role="tab" data-tab="combo" aria-selected="false">Combined<span class="cnt" id="c-combo"></span></button>
+</div>
+
+<div class="controls">
+  <div class="ctl"><button class="btn on" id="playBtn">Pause</button></div>
+  <div class="ctl">
+    <label for="speed">Playback</label>
+    <input type="range" id="speed" min="0.25" max="1.5" step="0.05" value="1">
+    <span class="hint" id="speedVal">1.00x</span>
+  </div>
+  <div class="ctl">
+    <label for="modeBtn">Shifter</label>
+    <button class="btn" id="modeBtn">H-pattern</button>
+  </div>
+  <div class="ctl">
+    <label for="filterBtn">Showing</label>
+    <button class="btn" id="filterBtn">All sources</button>
+  </div>
+  <div class="ctl"><button class="btn" id="bgBtn">Backdrop: dark</button></div>
+  <div class="ctl"><span class="hint" id="pickHint">Shortlisted: 0</span></div>
+</div>
+
+<section class="panel on" id="panel-shift">
+  <p class="intro">On an H-pattern shifter every gear is its own button, so gear and neutral are both directly readable - the knob below travels the real channels and genuinely sits in neutral mid-throw. Sequential and paddle rigs only report shift <em>events</em>, so those modes show event visuals only. Counting shifts to guess a gear drifts, and a drifting gear number on stream is worse than no gear number.</p>
+  <div class="grid" id="grid-shift"></div>
+  <p class="empty" id="empty-shift" style="display:none">Nothing matches the current filters.</p>
+</section>
+
+<section class="panel" id="panel-steer">
+  <p class="intro">One axis, so everything here is direct. The designs that earn their space add a second dimension out of that same value - history, rate of change, distribution, or a recorded reference lap.</p>
+  <div class="grid" id="grid-steer"></div>
+  <p class="empty" id="empty-steer" style="display:none">Nothing matches the current filters.</p>
+</section>
+
+<section class="panel" id="panel-combo">
+  <p class="intro">Layouts. The gear element assumes an H-pattern shifter, since that is the only setup where gear is directly readable. Filter to direct-only to see what could ship this week versus what waits on a telemetry adapter.</p>
+  <div class="grid" id="grid-combo"></div>
+  <p class="empty" id="empty-combo" style="display:none">Nothing matches the current filters.</p>
+</section>
+
+<footer>
+  <b>The contract:</b> every tile is <code>draw(ctx, w, h, input, tel)</code>. Direct values arrive in <code>input</code>; anything from the game arrives in <code>tel</code>, which stays null until a telemetry adapter exists. A tile that never reads <code>tel</code> is provably rig-only. Click a tile to shortlist it.
+</footer>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   1. Demo data
+   Pedals and steering are shaped like a real lap.
+   Gear changes are scripted lever events - not derived.
+   RPM and speed live in a separate object so nothing can borrow them.
+   ============================================================ */
+const HZ = 100, LAP_SECONDS = 30, N = HZ * LAP_SECONDS;
+const A = { thr:new Float32Array(N), brk:new Float32Array(N), str:new Float32Array(N) };
+const T = { rpm:new Float32Array(N), spd:new Float32Array(N) };
+const GEAR_EVENTS = [];
+
+const idx = t => Math.max(0, Math.min(N - 1, Math.round(t * HZ)));
+const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+
+function smooth(arr, r){
+  const out = new Float32Array(arr.length);
+  for (let i = 0; i < arr.length; i++){
+    let s = 0, c = 0;
+    for (let k = -r; k <= r; k++){
+      const j = i + k;
+      if (j >= 0 && j < arr.length){ s += arr[j]; c++; }
+    }
+    out[i] = s / c;
+  }
+  arr.set(out);
+}
+
+(function build(){
+  A.thr.fill(1);
+  const corners = [
+    { t:2.6,  peak:0.98, dur:1.6, rot:-0.85, apex:2.0, exit:2.2, down:[3,2] },
+    { t:7.6,  peak:0.62, dur:0.9, rot: 0.45, apex:1.1, exit:1.3, down:[4]   },
+    { t:11.4, peak:0.90, dur:1.3, rot: 0.78, apex:1.7, exit:1.9, down:[4,3] },
+    { t:16.4, peak:0.45, dur:0.6, rot:-0.35, apex:0.8, exit:1.0, down:[4]   },
+    { t:20.0, peak:1.00, dur:1.9, rot:-0.92, apex:2.4, exit:2.6, down:[4,3,2] },
+    { t:25.6, peak:0.55, dur:0.8, rot: 0.40, apex:1.0, exit:1.2, down:[3]   }
+  ];
+
+  for (const c of corners){
+    const b0 = idx(c.t), b1 = idx(c.t + c.dur), lift = idx(c.t - 0.12);
+    for (let i = lift; i < b0; i++) A.thr[i] = 1 - (i - lift) / Math.max(1, b0 - lift);
+    for (let i = b0; i < b1; i++){
+      const p = (i - b0) / (b1 - b0);
+      const rise = Math.min(1, p / 0.14);
+      const trail = 1 - Math.pow(Math.max(0, (p - 0.25) / 0.75), 1.35);
+      A.brk[i] = c.peak * rise * Math.max(0, trail);
+      A.thr[i] = 0;
+    }
+    const a1 = idx(c.t + c.apex);
+    for (let i = b1; i < a1; i++) A.thr[i] = 0.05;
+    const e1 = idx(c.t + c.apex + c.exit);
+    for (let i = a1; i < e1; i++){
+      A.thr[i] = Math.min(1, 0.05 + Math.pow((i - a1) / Math.max(1, e1 - a1), 0.72));
+    }
+    const s0 = idx(c.t + 0.15), sa = idx(c.t + c.apex), s1 = idx(c.t + c.apex + c.exit * 0.9);
+    for (let i = s0; i < sa; i++) A.str[i] = c.rot * Math.pow((i - s0) / Math.max(1, sa - s0), 0.8);
+    for (let i = sa; i < s1; i++) A.str[i] = c.rot * (1 - Math.pow((i - sa) / Math.max(1, s1 - sa), 1.2));
+
+    c.down.forEach((g, k) => GEAR_EVENTS.push({ t: c.t + 0.35 + k * 0.55, gear: g }));
+    const lowest = c.down.length ? c.down[c.down.length - 1] : 3;
+    for (let g = lowest + 1; g <= Math.min(6, lowest + 3); g++){
+      GEAR_EVENTS.push({ t: c.t + c.apex + 0.5 + (g - lowest - 1) * 1.15, gear: g });
+    }
+  }
+  GEAR_EVENTS.push({ t:0, gear:4 });
+  GEAR_EVENTS.sort((a, b) => a.t - b.t);
+
+  smooth(A.thr, 4); smooth(A.brk, 4); smooth(A.str, 7);
+
+  const RATIO = [0, 3.30, 2.25, 1.66, 1.30, 1.05, 0.86];
+  let speed = 22;
+  for (let i = 0; i < N; i++){
+    const t = i / HZ;
+    let g = 4;
+    for (const e of GEAR_EVENTS){ if (e.t <= t) g = e.gear; else break; }
+    speed = Math.max(6, Math.min(88,
+      speed + (A.thr[i] * 26 / (0.7 + RATIO[g]) - A.brk[i] * 42 - 1.4) / HZ));
+    T.spd[i] = speed;
+    T.rpm[i] = clamp01(speed * RATIO[g] * 0.0142);
+  }
+})();
+
+function scriptedGearAt(t){
+  let g = 4;
+  for (const e of GEAR_EVENTS){ if (e.t <= t) g = e.gear; else break; }
+  return g;
+}
+
+/* ============================================================
+   2. State
+   ============================================================ */
+const MODES = [
+  { id:"H",      label:"H-pattern",  throw:0.34, cluPeak:1.0, cluDur:0.40, absolute:true  },
+  { id:"SEQ",    label:"Sequential", throw:0.14, cluPeak:0.5, cluDur:0.14, absolute:false },
+  { id:"PADDLE", label:"Paddles",    throw:0.07, cluPeak:0,   cluDur:0,    absolute:false }
+];
+let modeIdx = 0;
+const mode = () => MODES[modeIdx];
+
+const input = {
+  thr:0, brk:0, clu:0, str:0,
+  gear:4, lever:4, prevGear:4,
+  shiftAge:99, shiftDir:0, shiftProg:1, shiftCount:0
+};
+const tel = { rpm:0, spd:0 };
+const clock = { playing:true, speed:1, lapTime:0, t:0 };
+
+const HIST_MAX = 500;
+const hist = { thr:[], brk:[], clu:[], str:[], gear:[] };
+const shiftLog = [];
+const shiftTimes = [];
+const gateUse = { 1:0, 2:0, 3:0, 4:0, 5:0, 6:0 };
+
+function tick(dt){
+  if (clock.playing) clock.lapTime = (clock.lapTime + dt * clock.speed) % LAP_SECONDS;
+  const i = idx(clock.lapTime);
+
+  input.thr = A.thr[i];
+  input.brk = A.brk[i];
+  input.str = A.str[i];
+  tel.rpm = T.rpm[i];
+  tel.spd = T.spd[i];
+
+  const g = scriptedGearAt(clock.lapTime);
+  if (g !== input.gear){
+    input.prevGear = input.gear;
+    input.shiftDir = g > input.gear ? 1 : -1;
+    input.gear = g;
+    input.shiftAge = 0;
+    input.shiftCount++;
+    shiftLog.push({ rpm: tel.rpm, dir: input.shiftDir });
+    shiftTimes.push({ t: clock.t, dir: input.shiftDir });
+    if (shiftLog.length > 60) shiftLog.shift();
+    if (shiftTimes.length > 40) shiftTimes.shift();
+  } else {
+    input.shiftAge += dt;
+  }
+
+  const m = mode();
+  input.shiftProg = clamp01(m.throw ? input.shiftAge / m.throw : 1);
+  input.lever = (m.absolute && input.shiftProg < 1) ? 0 : input.gear;
+  input.clu = (m.cluDur && input.shiftAge < m.cluDur)
+    ? Math.sin(Math.PI * (input.shiftAge / m.cluDur)) * m.cluPeak
+    : 0;
+
+  if (input.lever > 0) gateUse[input.lever] += dt;
+
+  hist.thr.push(input.thr);
+  hist.brk.push(input.brk);
+  hist.clu.push(input.clu);
+  hist.str.push(input.str);
+  hist.gear.push(input.gear);
+  for (const k in hist) if (hist[k].length > HIST_MAX) hist[k].shift();
+}
+
+/* ============================================================
+   3. Draw helpers
+   ============================================================ */
+const C = {
+  thr:"#34d97a", brk:"#f2453d", clu:"#ffb020", str:"#64b5ff", gear:"#e7e3da",
+  glass:"rgba(8,9,12,0.55)", edge:"rgba(255,255,255,0.14)",
+  faint:"rgba(255,255,255,0.10)", label:"rgba(255,255,255,0.66)",
+  track:"rgba(8,9,12,0.6)", ghost:"rgba(231,227,218,0.5)"
+};
+const pct      = v => String(Math.round(v * 100));
+const gearName = g => g === 0 ? "N" : String(g);
+const DEG      = s => Math.round(s.str * 450);
+let ctx;
+
+function glass(x, y, w, h, r){
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, r);
+  ctx.fillStyle = C.glass; ctx.fill();
+  ctx.strokeStyle = C.edge; ctx.lineWidth = 1; ctx.stroke();
+}
+function mono(sz, wt){ ctx.font = (wt || 600) + " " + sz + "px 'IBM Plex Mono', ui-monospace, monospace"; }
+function oxa(sz, wt){ ctx.font = (wt || 800) + " " + sz + "px Oxanium, 'IBM Plex Mono', monospace"; }
+function txt(s, x, y, color, align, base){
+  ctx.fillStyle = color;
+  ctx.textAlign = align || "center";
+  ctx.textBaseline = base || "alphabetic";
+  ctx.fillText(s, x, y);
+  ctx.textBaseline = "alphabetic";
+}
+function series(k, count){
+  const d = hist[k], n = Math.min(d.length, count);
+  return { d, n, start: d.length - n };
+}
+function line(k, x0, y0, gw, gh, count, color, width, map){
+  const { d, n, start } = series(k, count);
+  if (n < 2) return;
+  ctx.beginPath();
+  for (let i = 0; i < n; i++){
+    const v = map ? map(d[start + i]) : d[start + i];
+    const x = x0 + (i / (n - 1)) * gw, y = y0 + gh * (1 - v);
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width || 2;
+  ctx.lineJoin = "round"; ctx.lineCap = "round";
+  ctx.stroke();
+}
+
+/* ---- H gate ---- */
+const GATE = { 1:[-1,-1], 2:[-1,1], 3:[0,-1], 4:[0,1], 5:[1,-1], 6:[1,1] };
+function gateXY(g, cx, cy, sx, sy){
+  const p = GATE[g] || [0, 0];
+  return [cx + p[0] * sx, cy + p[1] * sy];
+}
+/* Knob follows the channels: out to the neutral rail, along it, then in. */
+function knobXY(cx, cy, sx, sy){
+  const p = input.shiftProg;
+  if (p >= 1 || input.prevGear === input.gear) return gateXY(input.gear, cx, cy, sx, sy);
+  const from = gateXY(input.prevGear, cx, cy, sx, sy);
+  const to   = gateXY(input.gear, cx, cy, sx, sy);
+  const d1 = Math.abs(from[1] - cy);
+  const d2 = Math.abs(to[0] - from[0]);
+  const d3 = Math.abs(to[1] - cy);
+  const total = d1 + d2 + d3;
+  if (total < 0.001) return to;
+  const t = p * total;
+  if (t <= d1) return [from[0], lerp(from[1], cy, d1 ? t / d1 : 1)];
+  if (t <= d1 + d2) return [lerp(from[0], to[0], d2 ? (t - d1) / d2 : 1), cy];
+  return [to[0], lerp(cy, to[1], d3 ? (t - d1 - d2) / d3 : 1)];
+}
+function drawGate(cx, cy, sx, sy, lw){
+  ctx.strokeStyle = C.faint;
+  ctx.lineWidth = lw || 6;
+  ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(cx - sx, cy); ctx.lineTo(cx + sx, cy); ctx.stroke();
+  for (const c of [-1, 0, 1]){
+    ctx.beginPath(); ctx.moveTo(cx + c * sx, cy - sy); ctx.lineTo(cx + c * sx, cy + sy); ctx.stroke();
+  }
+}
+function drawKnob(cx, cy, sx, sy, r){
+  const [kx, ky] = knobXY(cx, cy, sx, sy);
+  ctx.beginPath(); ctx.arc(kx, ky, r || 9, 0, Math.PI * 2);
+  ctx.fillStyle = input.lever === 0 ? C.ghost : C.gear;
+  ctx.fill();
+  return [kx, ky];
+}
+const revColor = r => r > 0.92 ? C.brk : r > 0.78 ? C.clu : C.thr;
+
+/* ---- Wheel: a flat-bottomed GT rim with real spokes ---- */
+function wheel(cx, cy, r, angle, opts){
+  const o = opts || {};
+  const col = o.color || C.str;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+
+  // rim, open at the bottom then closed with a flat chord
+  ctx.beginPath();
+  ctx.arc(0, 0, r, Math.PI * 0.72, Math.PI * 2.28);
+  ctx.closePath();
+  ctx.strokeStyle = col;
+  ctx.lineWidth = Math.max(2.5, r * 0.16);
+  ctx.lineJoin = "round";
+  ctx.stroke();
+
+  // spokes
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.62, r * 0.04); ctx.lineTo(r * 0.62, r * 0.04);
+  ctx.moveTo(0, r * 0.04);         ctx.lineTo(0, r * 0.66);
+  ctx.strokeStyle = col;
+  ctx.globalAlpha = 0.85;
+  ctx.lineWidth = Math.max(1.6, r * 0.10);
+  ctx.lineCap = "round";
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // hub
+  ctx.beginPath();
+  ctx.roundRect(-r * 0.19, -r * 0.13, r * 0.38, r * 0.30, r * 0.09);
+  ctx.fillStyle = col;
+  ctx.globalAlpha = 0.9;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // centre marker at top dead centre
+  if (o.mark !== false){
+    ctx.beginPath();
+    ctx.arc(0, 0, r, Math.PI * 1.44, Math.PI * 1.56);
+    ctx.strokeStyle = C.clu;
+    ctx.lineWidth = Math.max(3, r * 0.19);
+    ctx.lineCap = "butt";
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* ============================================================
+   4. Registry
+   ============================================================ */
+const SETS = { shift:[], steer:[], combo:[] };
+const TELE_CH = ["rpm", "spd"];
+const ALLK = ["H", "SEQ", "PADDLE"];
+
+function reg(set, name, note, kinds, uses, w, h, draw){
+  SETS[set].push({ name, note, kinds, uses, w, h, draw, mem:{} });
+}
+const sourceOf = st => st.uses.some(u => TELE_CH.includes(u)) ? "tele" : "direct";
+
+/* ------------------------------------------------------------
+   SHIFTER
+   Anything showing an absolute gear is H-only, because that is
+   the only rig where the gear is a button rather than a guess.
+   ------------------------------------------------------------ */
+
+reg("shift","Gate map","The knob travels the real channels - out to the neutral rail, across, then in. Mid-shift it genuinely reads neutral.",["H"],["gear"],200,150,(w,h,s)=>{
+  glass(.5,.5,w-1,h-1,8);
+  const cx=w/2, cy=h/2-4, sx=44, sy=36;
+  drawGate(cx,cy,sx,sy);
+  for(let g=1;g<=6;g++){
+    const [x,y]=gateXY(g,cx,cy,sx,sy);
+    mono(10,500); txt(String(g), x+GATE[g][0]*12, y+(GATE[g][1]<0?-10:18), C.label);
+  }
+  drawKnob(cx,cy,sx,sy,10);
+  mono(10,500); txt(s.lever===0?"NEUTRAL":"GEAR "+s.lever, cx, h-10, C.label);
+});
+
+reg("shift","Gate with trail","A fading path behind the knob. You see the whole throw, and it hugs the H instead of cutting across.",["H"],["gear"],200,150,function(w,h,s){
+  glass(.5,.5,w-1,h-1,8);
+  const cx=w/2, cy=h/2, sx=44, sy=38;
+  drawGate(cx,cy,sx,sy);
+  const m=this.mem; m.trail=m.trail||[];
+  const [kx,ky]=knobXY(cx,cy,sx,sy);
+  const last=m.trail[m.trail.length-1];
+  if(!last || Math.hypot(last[0]-kx,last[1]-ky)>0.5) m.trail.push([kx,ky]);
+  if(m.trail.length>60) m.trail.shift();
+  ctx.lineCap="round"; ctx.lineJoin="round";
+  for(let i=1;i<m.trail.length;i++){
+    ctx.globalAlpha=(i/m.trail.length)*0.6;
+    ctx.beginPath();
+    ctx.moveTo(m.trail[i-1][0],m.trail[i-1][1]);
+    ctx.lineTo(m.trail[i][0],m.trail[i][1]);
+    ctx.strokeStyle=C.clu; ctx.lineWidth=5; ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+  drawKnob(cx,cy,sx,sy,9);
+});
+
+reg("shift","Gate heatmap","Gate positions shaded by time spent in each gear, accumulating all session from button state alone.",["H"],["gear"],200,150,(w,h,s)=>{
+  glass(.5,.5,w-1,h-1,8);
+  const cx=w/2, cy=h/2, sx=44, sy=38;
+  let max=0.001;
+  for(const g in gateUse) max=Math.max(max,gateUse[g]);
+  for(let g=1;g<=6;g++){
+    const [x,y]=gateXY(g,cx,cy,sx,sy);
+    ctx.beginPath(); ctx.arc(x,y,16,0,Math.PI*2);
+    ctx.fillStyle=C.clu; ctx.globalAlpha=0.10+(gateUse[g]/max)*0.70; ctx.fill(); ctx.globalAlpha=1;
+    mono(11); txt(String(g),x,y+4,g===s.lever?C.gear:C.label);
+  }
+  drawGate(cx,cy,sx,sy,3);
+});
+
+reg("shift","Lever position","The gate as two axes. Reads as data rather than diagram, and neutral is unmistakable.",["H"],["gear"],170,150,(w,h,s)=>{
+  glass(.5,.5,w-1,h-1,8);
+  const cx=w/2, cy=h/2, sx=40, sy=34;
+  ctx.strokeStyle=C.faint; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(cx-sx-14,cy); ctx.lineTo(cx+sx+14,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,cy-sy-14); ctx.lineTo(cx,cy+sy+14); ctx.stroke();
+  const [kx,ky]=knobXY(cx,cy,sx,sy);
+  ctx.setLineDash([3,3]); ctx.strokeStyle=C.str; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(kx,cy); ctx.lineTo(kx,ky); ctx.lineTo(cx,ky); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(kx,ky,7,0,Math.PI*2); ctx.fillStyle=C.str; ctx.fill();
+  oxa(20); txt(gearName(s.lever), w-22, h-14, C.gear, "right");
+});
+
+reg("shift","Big numeral","One large digit that pulses on change and reads N between gears. Zero ambiguity at any stream resolution.",["H"],["gear"],150,130,(w,h,s)=>{
+  const pop=Math.max(0,1-s.shiftAge/0.3);
+  ctx.save();
+  ctx.shadowColor=s.shiftDir>0?C.thr:C.brk;
+  ctx.shadowBlur=pop*30;
+  oxa(74+pop*10);
+  txt(gearName(s.lever), w/2, h/2+26, C.gear);
+  ctx.restore();
+  mono(10,500); txt("GEAR", w/2, h-14, C.label);
+});
+
+reg("shift","Gear ladder","All gears stacked with the engaged one lit, and nothing lit while the lever is crossing.",["H"],["gear"],110,160,(w,h,s)=>{
+  glass(.5,.5,w-1,h-1,8);
+  for(let g=6;g>=1;g--){
+    const y=20+(6-g)*21, on=g===s.lever;
+    ctx.beginPath(); ctx.roundRect(14,y,w-28,17,4);
+    ctx.fillStyle=on?C.gear:"rgba(255,255,255,0.08)"; ctx.fill();
+    mono(12); txt(String(g), w/2, y+13, on?"#15171b":C.label);
+  }
+});
+
+reg("shift","Gear timeline","Gear selection as a scrolling piano roll. A whole lap in one glance, straight off button state.",["H"],["gear"],260,130,(w,h,s)=>{
+  glass(.5,.5,w-1,h-1,7);
+  const rowH=(h-24)/6;
+  for(let g=1;g<=6;g++){
+    const y=h-12-g*rowH;
+    ctx.beginPath(); ctx.moveTo(10,y); ctx.lineTo(w-24,y);
+    ctx.strokeStyle=C.faint; ctx.lineWidth=1; ctx.stroke();
+    mono(8,500); txt(String(g), w-14, y+rowH*0.75, C.label);
+  }
+  const {d,n,start}=series("gear",260);
+  if(n<2) return;
+  for(let i=0;i<n;i++){
+    const g=d[start+i];
+    ctx.fillStyle=g===s.gear?C.clu:"rgba(255,255,255,0.42)";
+    ctx.fillRect(10+(i/(n-1))*(w-36), h-12-g*rowH, Math.max(1.6,(w-36)/n+0.6), rowH-2);
+  }
+});
+
+reg("shift","Gear donut","Time in each gear as ring segments. Ambient, accumulates all session, needs nothing but buttons.",["H"],["gear"],150,150,(w,h,s)=>{
+  const cx=w/2, cy=h/2, r=48;
+  let total=0;
+  for(const g in gateUse) total+=gateUse[g];
+  total=Math.max(total,0.001);
+  let a=-Math.PI/2;
+  for(let g=1;g<=6;g++){
+    const span=(gateUse[g]/total)*Math.PI*2;
+    ctx.beginPath(); ctx.arc(cx,cy,r,a,a+span);
+    ctx.strokeStyle=g===s.lever?C.clu:"rgba(255,255,255,"+(0.15+g*0.05)+")";
+    ctx.lineWidth=g===s.lever?14:10;
+    ctx.stroke();
+    a+=span;
+  }
+  oxa(30); txt(gearName(s.lever), cx, cy+11, C.gear);
+});
+
+reg("shift","Throw timer","Time the lever spent between gears, measured button-release to button-press. Smooth shifting becomes a number.",["H"],["gear"],210,110,(w,h,s)=>{
+  glass(.5,.5,w-1,h-1,7);
+  const ms=Math.round(mode().throw*1000), p=s.shiftProg;
+  ctx.beginPath(); ctx.roundRect(16,h/2-6,w-32,12,6);
+  ctx.fillStyle="rgba(255,255,255,0.10)"; ctx.fill();
+  ctx.beginPath(); ctx.roundRect(16,h/2-6,(w-32)*p,12,6);
+  ctx.fillStyle=p<1?C.clu:C.thr; ctx.fill();
+  oxa(24); txt(gearName(s.lever), 34, h/2-18, C.gear);
+  mono(13); txt(ms+" ms", w-20, h/2-18, p<1?C.clu:C.label, "right");
+  mono(9,500); txt("LAST THROW", 16, h-14, C.label, "left");
+});
+
+reg("shift","Clutch and gate","Clutch travel beside the gate. Shows whether you are actually clutching or forcing it - both values off the rig.",["H"],["gear","clu"],230,150,(w,h,s)=>{
+  glass(.5,.5,w-1,h-1,8);
+  const cx=w/2+20, cy=h/2, sx=38, sy=32;
+  drawGate(cx,cy,sx,sy,5);
+  drawKnob(cx,cy,sx,sy,9);
+  const bx=22, bh=h-44;
+  ctx.beginPath(); ctx.roundRect(bx,22,22,bh,5);
+  ctx.fillStyle="rgba(8,9,12,0.5)"; ctx.fill();
+  ctx.strokeStyle=C.edge; ctx.lineWidth=1; ctx.stroke();
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(bx,22,22,bh,5); ctx.clip();
+  ctx.fillStyle=C.clu; ctx.fillRect(bx,22+bh*(1-s.clu),22,bh*s.clu);
+  ctx.restore();
+  mono(9,500); txt("CLU", bx+11, h-8, C.label);
+});
+
+/* --- event-only: valid on every rig, nothing to drift --- */
+
+reg("shift","Shift pulse","Pure event visual. A chevron fires on every shift - no gear number, so there is nothing to drift out of sync.",ALLK,["shift"],170,140,(w,h,s)=>{
+  const pop=Math.max(0,1-s.shiftAge/0.35);
+  const up=s.shiftDir>0, col=up?C.thr:C.brk;
+  for(let k=0;k<3;k++){
+    const off=k*16-16, yy=h/2+(up?off:-off);
+    ctx.globalAlpha=(0.16+pop*0.84)*(1-k*0.28);
+    ctx.beginPath();
+    ctx.moveTo(w/2-20, up?yy+12:yy-12);
+    ctx.lineTo(w/2, yy);
+    ctx.lineTo(w/2+20, up?yy+12:yy-12);
+    ctx.strokeStyle=col; ctx.lineWidth=4;
+    ctx.lineCap="round"; ctx.lineJoin="round";
+    ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+  mono(11); txt(up?"UPSHIFT":"DOWNSHIFT", w/2, h-14, pop>0.1?col:C.label);
+});
+
+reg("shift","Paddle pair","Two flippers that flash when pulled. Presence only, which is exactly what a paddle reports.",["SEQ","PADDLE"],["shift"],200,120,(w,h,s)=>{
+  const pop=Math.max(0,1-s.shiftAge/0.22);
+  const cx=w/2, cy=h/2;
+  ctx.beginPath(); ctx.arc(cx,cy,26,0,Math.PI*2);
+  ctx.strokeStyle="rgba(255,255,255,0.25)"; ctx.lineWidth=3; ctx.stroke();
+  mono(11,500); txt("SHIFT", cx, cy+4, C.label);
+  const flip=(sign,active,col)=>{
+    ctx.save();
+    ctx.translate(cx+sign*44, cy);
+    ctx.rotate(sign*(0.25+(active?pop*0.35:0)));
+    ctx.beginPath(); ctx.roundRect(-9,-30,18,60,8);
+    ctx.fillStyle=col; ctx.globalAlpha=0.18+(active?pop*0.8:0); ctx.fill(); ctx.globalAlpha=1;
+    ctx.strokeStyle=col; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.restore();
+  };
+  flip(-1, s.shiftDir<0, C.brk);
+  flip( 1, s.shiftDir>0, C.thr);
+  mono(9,500); txt("DOWN", cx-44, h-8, C.label); txt("UP", cx+44, h-8, C.label);
+});
+
+reg("shift","Shift rhythm","Every shift as a tick on a timeline, up above the line and down below. Cadence without any position guessing.",ALLK,["shift"],260,120,(w,h,s)=>{
+  glass(.5,.5,w-1,h-1,7);
+  const mid=h/2, span=12;
+  ctx.beginPath(); ctx.moveTo(12,mid); ctx.lineTo(w-12,mid);
+  ctx.strokeStyle=C.faint; ctx.lineWidth=1; ctx.stroke();
+  for(const ev of shiftTimes){
+    const age=clock.t-ev.t;
+    if(age>span) continue;
+    const x=w-12-(age/span)*(w-24);
+    const up=ev.dir>0;
+    ctx.globalAlpha=1-age/span*0.75;
+    ctx.beginPath();
+    ctx.moveTo(x,mid);
+    ctx.lineTo(x, up?mid-26:mid+26);
+    ctx.strokeStyle=up?C.thr:C.brk;
+    ctx.lineWidth=2.5; ctx.lineCap="round";
+    ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+  mono(9,500); txt("UP", 16, mid-30, C.label, "left");
+  mono(9,500); txt("DOWN", 16, mid+38, C.label, "left");
+});
+
+reg("shift","Shift counter","A running total for the session, split up and down. A count of events is not a position, so it cannot drift.",ALLK,["shift"],200,120,(w,h,s)=>{
+  const ups=shiftLog.filter(x=>x.dir>0).length;
+  const dns=shiftLog.length-ups;
+  oxa(40); txt(String(s.shiftCount), w/2, h/2+6, C.gear);
+  mono(10,500); txt("SHIFTS", w/2, h/2+24, C.label);
+  mono(12); txt("\u25B2 "+ups, w/2-42, h-16, C.thr);
+  mono(12); txt("\u25BC "+dns, w/2+42, h-16, C.brk);
+});
+
+/* --- telemetry-dependent --- */
+
+reg("shift","Shift light bar","Rev LEDs beside the gear. The gear is a button; the revs are not.",["H"],["gear","rpm"],250,90,(w,h,s,t)=>{
+  const LEDS=14, pad=12, gw=w-pad*2-58, lit=Math.round(t.rpm*LEDS);
+  for(let i=0;i<LEDS;i++){
+    const col=i<LEDS*0.55?C.thr:i<LEDS*0.82?C.clu:C.brk;
+    ctx.beginPath(); ctx.roundRect(pad+i*(gw/LEDS), h/2-14, gw/LEDS-4, 28, 3);
+    ctx.fillStyle=i<lit?col:"rgba(255,255,255,0.09)"; ctx.fill();
+  }
+  oxa(34); txt(gearName(s.lever), w-30, h/2+12, C.gear);
+});
+
+reg("shift","Rev arc","Circular tach with the gear at its centre. The arc is telemetry; the number in the middle is not.",["H"],["gear","rpm"],150,140,(w,h,s,t)=>{
+  const cx=w/2, cy=h/2, r=48, A0=Math.PI*0.75, A1=Math.PI*2.25;
+  ctx.beginPath(); ctx.arc(cx,cy,r,A0,A1);
+  ctx.strokeStyle=C.track; ctx.lineWidth=12; ctx.lineCap="round"; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,r,A0,A0+(A1-A0)*t.rpm);
+  ctx.strokeStyle=revColor(t.rpm); ctx.lineWidth=10; ctx.stroke();
+  oxa(38); txt(gearName(s.lever), cx, cy+13, C.gear);
+});
+
+reg("shift","Shift point scatter","Every shift plotted against the rpm you took it at. Consistency becomes a cluster - but rpm comes from the game.",ALLK,["shift","rpm"],250,130,(w,h,s,t)=>{
+  glass(.5,.5,w-1,h-1,7);
+  const x0=28, x1=w-14, y0=16, y1=h-24;
+  ctx.strokeStyle=C.faint; ctx.lineWidth=1;
+  for(const f of [0.25,0.5,0.75]){
+    const y=y0+(y1-y0)*f;
+    ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke();
+  }
+  shiftLog.slice(-26).forEach((sh,i)=>{
+    ctx.beginPath();
+    ctx.arc(x0+((i+0.5)/26)*(x1-x0), y0+(y1-y0)*(1-sh.rpm), 3.4, 0, Math.PI*2);
+    ctx.fillStyle=sh.dir>0?C.thr:C.brk;
+    ctx.globalAlpha=0.35+0.65*(i/26); ctx.fill(); ctx.globalAlpha=1;
+  });
+  mono(8,500); txt("SHIFT RPM", x0+2, y1+14, C.label, "left");
+});
+
+reg("shift","Rev needle","Analogue sweep with a marker at your average upshift point. Both values are telemetry.",["H"],["gear","rpm"],180,120,(w,h,s,t)=>{
+  const cx=w/2, cy=h-24, r=62;
+  ctx.beginPath(); ctx.arc(cx,cy,r,Math.PI,0);
+  ctx.strokeStyle=C.track; ctx.lineWidth=9; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,r,Math.PI*1.88,0);
+  ctx.strokeStyle="rgba(242,69,61,0.45)"; ctx.lineWidth=9; ctx.stroke();
+  const up=shiftLog.filter(x=>x.dir>0).slice(-10);
+  const avg=up.length?up.reduce((a,b)=>a+b.rpm,0)/up.length:0.9;
+  const ma=Math.PI+Math.PI*avg;
+  ctx.beginPath();
+  ctx.moveTo(cx+Math.cos(ma)*(r-14), cy+Math.sin(ma)*(r-14));
+  ctx.lineTo(cx+Math.cos(ma)*(r+7),  cy+Math.sin(ma)*(r+7));
+  ctx.strokeStyle=C.clu; ctx.lineWidth=2; ctx.stroke();
+  const na=Math.PI+Math.PI*t.rpm;
+  ctx.beginPath(); ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+Math.cos(na)*(r-10), cy+Math.sin(na)*(r-10));
+  ctx.strokeStyle=revColor(t.rpm); ctx.lineWidth=2.5; ctx.lineCap="round"; ctx.stroke();
+  oxa(20); txt(gearName(s.lever), cx, cy-14, C.gear);
+});
+
+/* ------------------------------------------------------------
+   STEERING
+   ------------------------------------------------------------ */
+
+reg("steer","Wheel","A flat-bottomed GT rim with proper spokes and a top-dead-centre marker. Reads as a wheel, not a symbol.",ALLK,["str"],160,150,(w,h,s)=>{
+  wheel(w/2, h/2-8, 46, s.str*Math.PI*0.78);
+  mono(12); txt(DEG(s)+"\u00B0", w/2, h-12, C.str);
+});
+
+reg("steer","Wheel in a ring","The same rim inside a fixed reference ring, so you can see how far from centre it is at a glance.",ALLK,["str"],170,160,(w,h,s)=>{
+  const cx=w/2, cy=h/2-6;
+  ctx.beginPath(); ctx.arc(cx,cy,62,0,Math.PI*2);
+  ctx.strokeStyle="rgba(255,255,255,0.10)"; ctx.lineWidth=7; ctx.stroke();
+  const a=-Math.PI/2, sweep=s.str*Math.PI*0.9;
+  ctx.beginPath(); ctx.arc(cx,cy,62,Math.min(a,a+sweep),Math.max(a,a+sweep));
+  ctx.strokeStyle=C.str; ctx.lineWidth=6; ctx.lineCap="round"; ctx.stroke();
+  wheel(cx,cy,42,s.str*Math.PI*0.78,{lw:3});
+  mono(12); txt(DEG(s)+"\u00B0", cx, h-10, C.str);
+});
+
+reg("steer","Rotation ring","Lock-to-lock marks with a live degree readout. The wheel abstracted to the number that matters.",ALLK,["str"],160,150,(w,h,s)=>{
+  const cx=w/2, cy=h/2, r=48;
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.strokeStyle=C.track; ctx.lineWidth=9; ctx.stroke();
+  const a=-Math.PI/2, sweep=s.str*Math.PI*0.9;
+  ctx.beginPath(); ctx.arc(cx,cy,r,Math.min(a,a+sweep),Math.max(a,a+sweep));
+  ctx.strokeStyle=C.str; ctx.lineWidth=8; ctx.lineCap="round"; ctx.stroke();
+  for(const m of [-0.9,-0.45,0,0.45,0.9]){
+    const ang=-Math.PI/2+m*Math.PI*0.9;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(ang)*(r-9), cy+Math.sin(ang)*(r-9));
+    ctx.lineTo(cx+Math.cos(ang)*(r+9), cy+Math.sin(ang)*(r+9));
+    ctx.strokeStyle=C.edge; ctx.lineWidth=1.5; ctx.stroke();
+  }
+  mono(17); txt(DEG(s)+"\u00B0", cx, cy+6, C.str);
+});
+
+reg("steer","Centre-out bar","A bar growing from centre. The cheapest possible steering readout, and it works.",ALLK,["str"],240,80,(w,h,s)=>{
+  const cx=w/2, half=w/2-16;
+  glass(14,h/2-11,w-28,22,5);
+  ctx.beginPath(); ctx.moveTo(cx,h/2-14); ctx.lineTo(cx,h/2+14);
+  ctx.strokeStyle=C.edge; ctx.lineWidth=1; ctx.stroke();
+  const len=half*Math.abs(s.str);
+  ctx.beginPath(); ctx.roundRect(s.str<0?cx-len:cx, h/2-9, len, 18, 3);
+  ctx.fillStyle=C.str; ctx.fill();
+  mono(11); txt(DEG(s)+"\u00B0", cx, h-10, C.label);
+});
+
+reg("steer","Steering trace","Four seconds of history. Corrections and wobble become shapes you can point at.",ALLK,["str"],250,120,(w,h,s)=>{
+  glass(.5,.5,w-1,h-1,7);
+  ctx.beginPath(); ctx.moveTo(10,h/2); ctx.lineTo(w-10,h/2);
+  ctx.strokeStyle=C.faint; ctx.lineWidth=1; ctx.stroke();
+  line("str",10,12,w-20,h-24,240,C.str,2,v=>(v+1)/2);
+  const y=12+(h-24)*(1-(s.str+1)/2);
+  ctx.beginPath(); ctx.arc(w-10,y,3,0,Math.PI*2); ctx.fillStyle=C.str; ctx.fill();
+});
+
+reg("steer","Front axle","Top-down car with the front wheels turning. Reads instantly even to people who do not sim race.",ALLK,["str"],170,150,(w,h,s)=>{
+  const cx=w/2, cy=h/2;
+  ctx.beginPath(); ctx.roundRect(cx-20,cy-42,40,84,8);
+  ctx.fillStyle="rgba(255,255,255,0.10)"; ctx.fill();
+  ctx.strokeStyle="rgba(255,255,255,0.28)"; ctx.lineWidth=1.4; ctx.stroke();
+  const tyre=(x,y,ang)=>{
+    ctx.save(); ctx.translate(x,y); ctx.rotate(ang);
+    ctx.beginPath(); ctx.roundRect(-5,-13,10,26,3);
+    ctx.fillStyle=C.str; ctx.fill(); ctx.restore();
+  };
+  const a=s.str*0.55;
+  tyre(cx-26,cy-28,a); tyre(cx+26,cy-28,a);
+  tyre(cx-26,cy+28,0); tyre(cx+26,cy+28,0);
+  mono(11); txt(DEG(s)+"\u00B0", cx, h-8, C.label);
+});
+
+reg("steer","Yoke","A flat top and bottom instead of a full rim. Modern, and it fills a wide slot better than a circle.",ALLK,["str"],190,120,(w,h,s)=>{
+  ctx.save();
+  ctx.translate(w/2,h/2);
+  ctx.rotate(s.str*Math.PI*0.6);
+  ctx.beginPath();
+  ctx.arc(0,0,40,Math.PI*1.10,Math.PI*1.90);
+  ctx.lineTo(26,15); ctx.lineTo(-26,15); ctx.closePath();
+  ctx.strokeStyle=C.str; ctx.lineWidth=5; ctx.lineJoin="round"; ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(-7,-5,14,12,3); ctx.fillStyle=C.str; ctx.fill();
+  ctx.beginPath(); ctx.arc(0,0,40,Math.PI*1.46,Math.PI*1.54);
+  ctx.strokeStyle=C.clu; ctx.lineWidth=7; ctx.stroke();
+  ctx.restore();
+  mono(11); txt(DEG(s)+"\u00B0", w/2, h-10, C.str);
+});
+
+reg("steer","Countersteer flash","Quiet until the wheel reverses hard. Rate of change of one axis - still direct, no physics involved.",ALLK,["str"],180,140,function(w,h,s){
+  const m=this.mem;
+  const prev=m.prev===undefined?s.str:m.prev;
+  m.prev=s.str;
+  const rate=(s.str-prev)*60;
+  m.flash=Math.max((m.flash||0)-0.03, Math.min(1,Math.abs(rate)/2.2));
+  const opp=Math.sign(rate)!==Math.sign(s.str)&&Math.abs(s.str)>0.12;
+  if(m.flash>0.05&&opp){
+    ctx.globalAlpha=m.flash*0.75;
+    ctx.beginPath(); ctx.arc(w/2,h/2-8,58,0,Math.PI*2);
+    ctx.strokeStyle=C.brk; ctx.lineWidth=3; ctx.stroke();
+    ctx.globalAlpha=1;
+  }
+  wheel(w/2,h/2-8,42,s.str*Math.PI*0.78,{color:opp?C.brk:C.str});
+  mono(11);
+  if(m.flash>0.05&&opp) txt("CATCH", w/2, h-12, C.brk);
+  else txt(DEG(s)+"\u00B0", w/2, h-12, C.label);
+});
+
+reg("steer","Smoothness meter","Rate of change scored live. Sawing pushes it red, clean input keeps it calm.",ALLK,["str"],200,110,function(w,h,s){
+  const m=this.mem;
+  const prev=m.prev===undefined?s.str:m.prev;
+  m.prev=s.str;
+  m.v=(m.v||0)*0.9+Math.abs(s.str-prev)*6;
+  const f=Math.min(1,m.v/1.6);
+  glass(14,h/2-12,w-28,24,5);
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(14,h/2-12,w-28,24,5); ctx.clip();
+  ctx.fillStyle=f>0.7?C.brk:f>0.4?C.clu:C.thr;
+  ctx.fillRect(14,h/2-12,(w-28)*f,24);
+  ctx.restore();
+  mono(11); txt(f>0.7?"RAGGED":f>0.4?"BUSY":"SMOOTH", w/2, h/2-22, C.label);
+  mono(10,500); txt("INPUT RATE", w/2, h/2+32, C.label);
+});
+
+reg("steer","Angle histogram","Where the wheel actually lives, accumulated over a session. Most people are surprised how skewed theirs is.",ALLK,["str"],240,120,function(w,h,s){
+  const m=this.mem;
+  m.bins=m.bins||new Float32Array(25);
+  const b=Math.max(0,Math.min(24,Math.round((s.str+1)/2*24)));
+  m.bins[b]+=1;
+  let max=1;
+  for(const v of m.bins) max=Math.max(max,v);
+  const bw=(w-24)/25;
+  for(let i=0;i<25;i++){
+    const bh=(h-36)*(m.bins[i]/max);
+    ctx.beginPath(); ctx.roundRect(12+i*bw, h-22-bh, bw-2, bh, 2);
+    ctx.fillStyle=i===b?C.clu:"rgba(100,181,255,0.55)"; ctx.fill();
+  }
+  ctx.beginPath(); ctx.moveTo(w/2,10); ctx.lineTo(w/2,h-20);
+  ctx.strokeStyle=C.faint; ctx.lineWidth=1; ctx.stroke();
+  mono(9,500); txt("L",14,h-6,C.label,"left"); txt("R",w-14,h-6,C.label,"right");
+});
+
+reg("steer","Horizon","An artificial-horizon tilt. Abstract, ambient, fills a wide frame without shouting.",ALLK,["str"],220,110,(w,h,s)=>{
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(10,10,w-20,h-20,10); ctx.clip();
+  ctx.translate(w/2,h/2); ctx.rotate(-s.str*0.42);
+  ctx.fillStyle="rgba(100,181,255,0.28)"; ctx.fillRect(-w,-h,w*2,h);
+  ctx.fillStyle="rgba(8,9,12,0.5)"; ctx.fillRect(-w,0,w*2,h);
+  ctx.beginPath(); ctx.moveTo(-w,0); ctx.lineTo(w,0);
+  ctx.strokeStyle=C.str; ctx.lineWidth=2; ctx.stroke();
+  ctx.restore();
+  ctx.beginPath(); ctx.moveTo(w/2-16,h/2); ctx.lineTo(w/2+16,h/2);
+  ctx.strokeStyle=C.gear; ctx.lineWidth=2; ctx.stroke();
+});
+
+reg("steer","Ribbon","History as a curving ribbon. Almost decorative, still readable.",ALLK,["str"],250,120,(w,h,s)=>{
+  const {d,n,start}=series("str",200);
+  if(n<2) return;
+  ctx.beginPath();
+  for(let i=0;i<n;i++) ctx.lineTo(10+(i/(n-1))*(w-20), h/2+d[start+i]*30-6);
+  for(let i=n-1;i>=0;i--) ctx.lineTo(10+(i/(n-1))*(w-20), h/2+d[start+i]*30+6);
+  ctx.closePath();
+  ctx.fillStyle=C.str; ctx.globalAlpha=0.7; ctx.fill(); ctx.globalAlpha=1;
+});
+
+reg("steer","Rudder scale","A marker sliding along a marked scale. Precise, unusual, and cheap to draw.",ALLK,["str"],240,90,(w,h,s)=>{
+  const x0=18, x1=w-18, y=h/2;
+  ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y);
+  ctx.strokeStyle=C.edge; ctx.lineWidth=2; ctx.stroke();
+  for(let i=0;i<=8;i++){
+    const x=x0+(x1-x0)*(i/8), big=i%2===0;
+    ctx.beginPath(); ctx.moveTo(x,y-(big?10:5)); ctx.lineTo(x,y+(big?10:5));
+    ctx.strokeStyle=C.faint; ctx.lineWidth=1.5; ctx.stroke();
+  }
+  const mx=x0+(x1-x0)*((s.str+1)/2);
+  ctx.beginPath(); ctx.moveTo(mx,y-16); ctx.lineTo(mx-7,y-26); ctx.lineTo(mx+7,y-26); ctx.closePath();
+  ctx.fillStyle=C.str; ctx.fill();
+  mono(11); txt(DEG(s)+"\u00B0", mx, y+26, C.str);
+});
+
+reg("steer","Ghost wheel","A recorded lap of your own steering behind the live rim. Recorded input, so still nothing from the game.",ALLK,["str"],180,155,function(w,h,s){
+  const m=this.mem;
+  m.ghost=m.ghost||Array.from({length:300},(_,i)=>Math.sin(i/300*Math.PI*4)*0.7);
+  const gi=Math.floor((clock.lapTime/LAP_SECONDS)*m.ghost.length)%m.ghost.length;
+  ctx.globalAlpha=0.28;
+  wheel(w/2,h/2-8,46,m.ghost[gi]*Math.PI*0.78,{color:C.gear,mark:false});
+  ctx.globalAlpha=1;
+  wheel(w/2,h/2-8,46,s.str*Math.PI*0.78);
+  const delta=Math.round((s.str-m.ghost[gi])*450);
+  mono(11); txt((delta>0?"+":"")+delta+"\u00B0", w/2, h-12, Math.abs(delta)>60?C.brk:C.thr);
+});
+
+/* ------------------------------------------------------------
+   COMBINED
+   ------------------------------------------------------------ */
+function pedalBars(x,y,bw,bh,gap,s){
+  [["clu",C.clu],["brk",C.brk],["thr",C.thr]].forEach((p,i)=>{
+    const px=x+i*(bw+gap), v=s[p[0]];
+    glass(px,y,bw,bh,4);
+    ctx.save();
+    ctx.beginPath(); ctx.roundRect(px,y,bw,bh,4); ctx.clip();
+    ctx.fillStyle=p[1]; ctx.fillRect(px,y+bh*(1-v),bw,bh*v);
+    ctx.restore();
+  });
+  return x+3*(bw+gap)-gap;
+}
+function revStrip(x,y,w2,h2,r){
+  const L=12, lit=Math.round(r*L);
+  for(let i=0;i<L;i++){
+    const col=i<L*0.55?C.thr:i<L*0.82?C.clu:C.brk;
+    ctx.beginPath(); ctx.roundRect(x+i*(w2/L), y, w2/L-3, h2, 2);
+    ctx.fillStyle=i<lit?col:"rgba(255,255,255,0.10)"; ctx.fill();
+  }
+}
+
+reg("combo","Input cluster","Gear, pedals and wheel with nothing borrowed from the game. The one you can ship today.",["H"],["thr","brk","clu","str","gear"],310,170,(w,h,s)=>{
+  glass(.5,.5,w-1,h-1,10);
+  oxa(54); txt(gearName(s.lever), w/2-6, h/2+18, C.gear);
+  mono(9,500); txt("GEAR", w/2-6, h/2+36, C.label);
+  pedalBars(18,28,15,h-56,7,s);
+  wheel(w-58, h/2-2, 36, s.str*Math.PI*0.78);
+});
+
+reg("combo","Gate strip","A lower third with a live H-gate in it. Fully direct, and no other stream has one.",["H"],["thr","brk","clu","str","gear"],350,96,(w,h,s)=>{
+  glass(.5,.5,w-1,h-1,8);
+  pedalBars(14,18,14,h-36,6,s);
+  const cx=142, cy=h/2, sx=22, sy=17;
+  drawGate(cx,cy,sx,sy,4);
+  drawKnob(cx,cy,sx,sy,6);
+  oxa(30); txt(gearName(s.lever), 224, h/2+11, C.gear);
+  wheel(w-44, h/2, 26, s.str*Math.PI*0.78);
+});
+
+reg("combo","Case column","Built tall for a vertical panel. Everything stacked, nothing cramped, nothing inferred.",["H"],["thr","brk","clu","str","gear"],158,300,(w,h,s)=>{
+  glass(.5,.5,w-1,h-1,10);
+  oxa(58); txt(gearName(s.lever), w/2, 76, C.gear);
+  mono(9,500); txt("GEAR", w/2, 94, C.label);
+  wheel(w/2, 150, 40, s.str*Math.PI*0.78);
+  pedalBars(w/2-42, 200, 24, 74, 12, s);
+  mono(9,500); txt("CLU    BRK    THR", w/2, h-14, C.label);
+});
+
+reg("combo","Corner card","Compact square for a screen corner. Everything present, nothing oversized.",["H"],["thr","brk","clu","str","gear"],170,170,(w,h,s)=>{
+  glass(.5,.5,w-1,h-1,9);
+  oxa(38); txt(gearName(s.lever), 46, 58, C.gear);
+  wheel(w-50, 46, 28, s.str*Math.PI*0.78);
+  pedalBars(26, 92, 30, 58, 13, s);
+});
+
+reg("combo","Unified trace","All four axes on one graph with a gear track underneath. The engineer's view, entirely from the rig.",["H"],["thr","brk","clu","str","gear"],300,150,(w,h,s)=>{
+  glass(.5,.5,w-1,h-1,8);
+  const gh=h-56;
+  line("thr",12,12,w-56,gh,240,C.thr,2);
+  line("brk",12,12,w-56,gh,240,C.brk,2);
+  line("clu",12,12,w-56,gh,240,C.clu,1.3);
+  line("str",12,12,w-56,gh,240,C.str,1.3,v=>(v+1)/2);
+  const {d,n,start}=series("gear",240);
+  if(n>1){
+    for(let i=0;i<n;i++){
+      ctx.fillStyle="rgba(231,227,218,"+(0.25+d[start+i]/12)+")";
+      ctx.fillRect(12+(i/(n-1))*(w-56), h-34, (w-56)/n+0.8, 10);
+    }
+  }
+  oxa(22); txt(gearName(s.lever), w-24, h-24, C.gear, "right");
+  mono(11); txt(pct(s.thr), w-24, 26, C.thr, "right");
+  mono(11); txt(pct(s.brk), w-24, 42, C.brk, "right");
+});
+
+reg("combo","Radial hub","Wheel outside, pedal arcs inside, gear at the core. One circle, all direct.",["H"],["thr","brk","clu","str","gear"],190,190,(w,h,s)=>{
+  const cx=w/2, cy=h/2;
+  const A0=Math.PI*0.72, A1=Math.PI*2.28;
+  for(const [k,r,col] of [["thr",58,C.thr],["brk",46,C.brk],["clu",34,C.clu]]){
+    ctx.beginPath(); ctx.arc(cx,cy,r,A0,A1);
+    ctx.strokeStyle=C.track; ctx.lineWidth=9; ctx.lineCap="round"; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx,cy,r,A0,A0+(A1-A0)*s[k]);
+    ctx.strokeStyle=col; ctx.lineWidth=7; ctx.stroke();
+  }
+  oxa(28); txt(gearName(s.lever), cx, cy+10, C.gear);
+  ctx.save(); ctx.translate(cx,cy); ctx.scale(1,1);
+  wheel(0,0,78,s.str*Math.PI*0.78,{color:"rgba(100,181,255,0.85)"});
+  ctx.restore();
+});
+
+reg("combo","Cockpit","Top-down driver - wheel, feet, hand on the lever. Fully diegetic and fully direct.",["H"],["thr","brk","clu","str","gear"],250,180,(w,h,s)=>{
+  glass(.5,.5,w-1,h-1,9);
+  wheel(78, 62, 40, s.str*Math.PI*0.78);
+  const cx=72, cy=136;
+  [["clu",-30,C.clu],["brk",0,C.brk],["thr",30,C.thr]].forEach(([k,dx,col])=>{
+    const v=s[k];
+    ctx.beginPath(); ctx.roundRect(cx+dx-11, cy-18+v*8, 22, 32, 4);
+    ctx.fillStyle=col; ctx.globalAlpha=0.20+v*0.7; ctx.fill(); ctx.globalAlpha=1;
+    ctx.strokeStyle=col; ctx.lineWidth=1.2; ctx.stroke();
+  });
+  const gx=196, gy=88, sx=24, sy=22;
+  drawGate(gx,gy,sx,sy,4);
+  drawKnob(gx,gy,sx,sy,7);
+  oxa(20); txt(gearName(s.lever), gx, h-18, C.gear);
+});
+
+reg("combo","HUD","Hairlines and numerals, like a projected display. The least intrusive full readout here.",["H"],["thr","brk","clu","str","gear"],300,110,(w,h,s)=>{
+  [["thr",C.thr,0],["brk",C.brk,10],["clu",C.clu,20]].forEach(([k,col,off])=>{
+    const y=h-46+off;
+    ctx.beginPath(); ctx.moveTo(14,y); ctx.lineTo(w-92,y);
+    ctx.strokeStyle="rgba(255,255,255,0.12)"; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(14,y); ctx.lineTo(14+(w-106)*s[k],y);
+    ctx.strokeStyle=col; ctx.lineWidth=2.5; ctx.stroke();
+  });
+  ctx.beginPath(); ctx.moveTo(14,26); ctx.lineTo(w-92,26);
+  ctx.strokeStyle="rgba(255,255,255,0.12)"; ctx.lineWidth=1.5; ctx.stroke();
+  const mx=14+(w-106)*((s.str+1)/2);
+  ctx.beginPath(); ctx.moveTo(mx,19); ctx.lineTo(mx,33);
+  ctx.strokeStyle=C.str; ctx.lineWidth=2.5; ctx.stroke();
+  oxa(44); txt(gearName(s.lever), w-44, h/2+16, C.gear);
+});
+
+reg("combo","Engineer view","Numbers with sparklines. Ugly on purpose, and the most information per pixel on this page.",["H"],["thr","brk","clu","str","gear"],280,155,(w,h,s)=>{
+  glass(.5,.5,w-1,h-1,5);
+  [["THR",pct(s.thr),C.thr,"thr",null],
+   ["BRK",pct(s.brk),C.brk,"brk",null],
+   ["CLU",pct(s.clu),C.clu,"clu",null],
+   ["STR",DEG(s)+"",C.str,"str",v=>(v+1)/2],
+   ["GEAR",gearName(s.lever),C.gear,"gear",v=>v/6]
+  ].forEach(([label,val,col,key,map],i)=>{
+    const y=20+i*25;
+    mono(10,500); txt(label, 14, y+10, C.label, "left");
+    mono(12);     txt(val,   66, y+10, col, "right");
+    line(key, 78, y, w-96, 16, 180, col, 1.4, map);
+  });
+});
+
+reg("combo","Ambient trio","Three glows and a gear. No bars, no numbers. Presence without clutter.",["H"],["thr","brk","clu","str","gear"],230,140,(w,h,s)=>{
+  [["clu",-66,C.clu],["brk",0,C.brk],["thr",66,C.thr]].forEach(([k,dx,col])=>{
+    const v=s[k];
+    ctx.save();
+    ctx.shadowColor=col; ctx.shadowBlur=6+v*30;
+    ctx.beginPath(); ctx.arc(w/2+dx, h/2+16, 15, 0, Math.PI*2);
+    ctx.fillStyle=col; ctx.globalAlpha=0.12+v*0.85; ctx.fill();
+    ctx.restore();
+  });
+  oxa(30); txt(gearName(s.lever), w/2, 46, C.gear);
+  ctx.beginPath(); ctx.arc(w/2+s.str*76, h-14, 3.5, 0, Math.PI*2);
+  ctx.fillStyle=C.str; ctx.fill();
+});
+
+reg("combo","Ticker","One scrolling ribbon carrying every channel. Fills a full-width strip and never needs resizing.",["H"],["thr","brk","clu","str","gear"],320,115,(w,h,s)=>{
+  [["thr",C.thr,28],["brk",C.brk,54],["clu",C.clu,74],["str",C.str,94]].forEach(([k,col,y])=>{
+    const {d,n,start}=series(k,260);
+    if(n<2) return;
+    const map=k==="str"?(v=>(v+1)/2):(v=>v);
+    ctx.beginPath();
+    for(let i=0;i<n;i++)      ctx.lineTo(10+(i/(n-1))*(w-70), y-map(d[start+i])*16);
+    for(let i=n-1;i>=0;i--)   ctx.lineTo(10+(i/(n-1))*(w-70), y+map(d[start+i])*3);
+    ctx.closePath();
+    ctx.fillStyle=col; ctx.globalAlpha=0.7; ctx.fill(); ctx.globalAlpha=1;
+  });
+  oxa(30); txt(gearName(s.lever), w-30, 64, C.gear, "right");
+});
+
+reg("combo","Minimal edge","Pedals as edge hairlines, wheel as a travelling dot, gear as a numeral. Nearly invisible until you look.",["H"],["thr","brk","str","gear"],300,110,(w,h,s)=>{
+  [["thr",C.thr,h-16],["brk",C.brk,h-9]].forEach(([k,col,y])=>{
+    ctx.beginPath(); ctx.moveTo(10,y); ctx.lineTo(10+(w-20)*s[k],y);
+    ctx.strokeStyle=col; ctx.lineWidth=3; ctx.lineCap="round"; ctx.stroke();
+  });
+  ctx.beginPath(); ctx.moveTo(10,18); ctx.lineTo(w-10,18);
+  ctx.strokeStyle="rgba(255,255,255,0.10)"; ctx.lineWidth=1; ctx.stroke();
+  ctx.beginPath(); ctx.arc(10+(w-20)*((s.str+1)/2), 18, 4, 0, Math.PI*2);
+  ctx.fillStyle=C.str; ctx.fill();
+  oxa(26); txt(gearName(s.lever), w/2, h/2+10, C.gear);
+});
+
+reg("combo","Dash cluster","The classic. Rev arc and gear centre, pedals and wheel around it - the arc needs the game.",["H"],["thr","brk","clu","str","gear","rpm"],310,170,(w,h,s,t)=>{
+  glass(.5,.5,w-1,h-1,10);
+  const cx=w/2-4, cy=h/2+10, r=46, A0=Math.PI*0.78, A1=Math.PI*2.22;
+  ctx.beginPath(); ctx.arc(cx,cy,r,A0,A1);
+  ctx.strokeStyle=C.track; ctx.lineWidth=11; ctx.lineCap="round"; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,r,A0,A0+(A1-A0)*t.rpm);
+  ctx.strokeStyle=revColor(t.rpm); ctx.lineWidth=9; ctx.stroke();
+  oxa(34); txt(gearName(s.lever), cx, cy+13, C.gear);
+  pedalBars(18,28,15,h-56,7,s);
+  wheel(w-52, cy-6, 32, s.str*Math.PI*0.78);
+});
+
+reg("combo","Broadcast tower","A vertical timing tower down the frame edge. The speed and rev rows need telemetry; the rest do not.",["H"],["thr","brk","clu","str","gear","rpm","spd"],150,290,(w,h,s,t)=>{
+  glass(.5,.5,w-1,h-1,6);
+  const row=(y,label,val,col,frac)=>{
+    ctx.fillStyle="rgba(255,255,255,0.05)"; ctx.fillRect(10,y,w-20,30);
+    ctx.fillStyle=col; ctx.globalAlpha=0.22; ctx.fillRect(10,y,(w-20)*frac,30); ctx.globalAlpha=1;
+    mono(9,500); txt(label, 16, y+19, C.label, "left");
+    mono(13);    txt(val, w-16, y+19, col, "right");
+  };
+  oxa(34); txt(gearName(s.lever), w/2, 48, C.gear);
+  revStrip(12, 60, w-24, 10, t.rpm);
+  row(84,  "THR", pct(s.thr), C.thr, s.thr);
+  row(118, "BRK", pct(s.brk), C.brk, s.brk);
+  row(152, "CLU", pct(s.clu), C.clu, s.clu);
+  row(186, "STR", DEG(s)+"\u00B0", C.str, (s.str+1)/2);
+  row(220, "SPD", Math.round(t.spd*2.2)+"", C.gear, t.spd/88);
+});
+
+reg("combo","Retro dash","Analogue tach, printed gate, wheel and pedals. Period character, one telemetry dependency.",["H"],["thr","brk","clu","str","gear","rpm"],290,160,(w,h,s,t)=>{
+  glass(.5,.5,w-1,h-1,9);
+  const cx=70, cy=h-36, r=48;
+  ctx.beginPath(); ctx.arc(cx,cy,r,Math.PI,0);
+  ctx.strokeStyle=C.track; ctx.lineWidth=8; ctx.stroke();
+  const na=Math.PI+Math.PI*t.rpm;
+  ctx.beginPath(); ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+Math.cos(na)*(r-8), cy+Math.sin(na)*(r-8));
+  ctx.strokeStyle=revColor(t.rpm); ctx.lineWidth=2.5; ctx.stroke();
+  mono(9,500); txt("RPM", cx, cy+14, C.label);
+  const gx=172, gy=h/2-8, sx=26, sy=22;
+  drawGate(gx,gy,sx,sy,3);
+  drawKnob(gx,gy,sx,sy,7);
+  wheel(248, 50, 28, s.str*Math.PI*0.78);
+  pedalBars(222, 100, 14, 44, 8, s);
+});
+
+/* ============================================================
+   5. UI
+   ============================================================ */
+const pickHint = document.getElementById("pickHint");
+let picks = 0;
+let directOnly = false;
+
+const chanTags = uses => uses
+  .map(u => '<span class="chan' + (TELE_CH.includes(u) ? " t" : "") + '">' + u + '</span>')
+  .join("");
+
+function buildGrid(setName){
+  const grid = document.getElementById("grid-" + setName);
+  SETS[setName].forEach((st, i) => {
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML =
+      '<div class="head">' +
+        '<span class="num">' + String(i + 1).padStart(2, "0") + '</span>' +
+        '<h2>' + st.name + '</h2>' +
+        '<span class="star">&#9733;</span>' +
+      '</div>' +
+      '<p class="note">' + st.note + '</p>' +
+      '<div class="meta"><span class="src" data-src></span>' + chanTags(st.uses) + '</div>' +
+      '<div class="stage' + (st.h > 220 ? " tall" : "") + '"></div>';
+
+    const cv = document.createElement("canvas");
+    cv.className = "ov";
+    const dpr = window.devicePixelRatio || 1;
+    cv.style.width = st.w + "px";
+    cv.style.height = st.h + "px";
+    cv.width = st.w * dpr;
+    cv.height = st.h * dpr;
+    const c2 = cv.getContext("2d");
+    c2.scale(dpr, dpr);
+
+    st.ctx = c2;
+    st.card = card;
+    st.srcEl = card.querySelector("[data-src]");
+    st.visible = true;
+
+    card.querySelector(".stage").appendChild(cv);
+    card.addEventListener("click", () => {
+      const on = card.classList.toggle("pick");
+      picks += on ? 1 : -1;
+      pickHint.textContent = "Shortlisted: " + picks;
+    });
+    grid.appendChild(card);
+  });
+  document.getElementById("c-" + setName).textContent = SETS[setName].length;
+}
+["shift", "steer", "combo"].forEach(buildGrid);
+
+const SRC_LABEL = { direct:"Direct", tele:"Telemetry" };
+
+function applyFilters(){
+  for (const setName in SETS){
+    let shown = 0;
+    for (const st of SETS[setName]){
+      const src = sourceOf(st);
+      st.srcEl.className = "src " + src;
+      st.srcEl.textContent = SRC_LABEL[src];
+
+      const failsSource = directOnly && src !== "direct";
+      const failsMode = (setName === "shift") && !st.kinds.includes(mode().id);
+      const show = !failsSource && !failsMode;
+
+      st.visible = show;
+      st.card.style.display = show ? "" : "none";
+      if (show) shown++;
+    }
+    document.getElementById("empty-" + setName).style.display = shown ? "none" : "";
+  }
+}
+
+let activeTab = "shift";
+document.querySelectorAll(".tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    activeTab = btn.dataset.tab;
+    document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", String(b === btn)));
+    document.querySelectorAll(".panel").forEach(p => p.classList.toggle("on", p.id === "panel-" + activeTab));
+    window.scrollTo({ top:0, behavior:"smooth" });
+  });
+});
+
+const playBtn   = document.getElementById("playBtn");
+const speedEl   = document.getElementById("speed");
+const speedVal  = document.getElementById("speedVal");
+const modeBtn   = document.getElementById("modeBtn");
+const bgBtn     = document.getElementById("bgBtn");
+const filterBtn = document.getElementById("filterBtn");
+
+playBtn.addEventListener("click", () => {
+  clock.playing = !clock.playing;
+  playBtn.textContent = clock.playing ? "Pause" : "Play";
+  playBtn.classList.toggle("on", clock.playing);
+});
+speedEl.addEventListener("input", () => {
+  clock.speed = parseFloat(speedEl.value);
+  speedVal.textContent = clock.speed.toFixed(2) + "x";
+});
+modeBtn.addEventListener("click", () => {
+  modeIdx = (modeIdx + 1) % MODES.length;
+  modeBtn.textContent = MODES[modeIdx].label;
+  applyFilters();
+});
+filterBtn.addEventListener("click", () => {
+  directOnly = !directOnly;
+  filterBtn.textContent = directOnly ? "Direct only" : "All sources";
+  filterBtn.classList.toggle("on", directOnly);
+  applyFilters();
+});
+const BGS = [["", "dark"], ["bg-light", "light"], ["bg-check", "checker"]];
+let bgI = 0;
+bgBtn.addEventListener("click", () => {
+  document.body.classList.remove("bg-light", "bg-check");
+  bgI = (bgI + 1) % BGS.length;
+  if (BGS[bgI][0]) document.body.classList.add(BGS[bgI][0]);
+  bgBtn.textContent = "Backdrop: " + BGS[bgI][1];
+});
+
+applyFilters();
+
+const readout = document.getElementById("readout");
+
+/* ============================================================
+   6. Loop
+   ============================================================ */
+let last = performance.now(), acc = 0;
+function frame(now){
+  const dt = Math.min(0.1, (now - last) / 1000);
+  last = now;
+  clock.t += dt;
+  tick(dt);
+
+  for (const st of SETS[activeTab]){
+    if (!st.visible) continue;
+    ctx = st.ctx;
+    ctx.clearRect(0, 0, st.w, st.h);
+    ctx.save();
+    st.draw.call(st, st.w, st.h, input, tel);
+    ctx.restore();
+  }
+
+  acc += dt;
+  if (acc > 0.1){
+    acc = 0;
+    readout.innerHTML =
+      '<span class="hd">DIRECT</span> thr <b>' + pct(input.thr) +
+      '</b>  brk <b>' + pct(input.brk) +
+      '</b>  clu <b>' + pct(input.clu) + '</b>' +
+      '<br><span class="hd"></span>wheel <b>' + DEG(input) +
+      '\u00B0</b>  lever <b>' + gearName(input.lever) + '</b>' +
+      '<br><span class="ht">TELEMETRY</span> rpm <b>' + pct(tel.rpm) +
+      '</b>  speed <b>' + Math.round(tel.spd * 2.2) + '</b>';
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
