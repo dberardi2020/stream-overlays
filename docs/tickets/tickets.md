@@ -43,12 +43,14 @@ Pre-public candidates not yet committed to the On-deck sequence.
 |---|---|---|---|
 | [SO-0004](#so-0004) | P2 | Feature | OBS gamepad fallback — interactive ladder (guidance already shipped) |
 | [SO-0025](#so-0025) | P2 | Chore | Site style kit — encode design tokens, point every page at it |
+| [SO-0028](#so-0028) | P3 | Idea | Light vs dark mode support |
 
 ### Engine & overlays
 
 | ID | Pri | Type | Title |
 |---|---|---|---|
 | [SO-0007](#so-0007) | P2 | Feature | Telemetry data source (rpm / spd / gear-from-sim) — deferred |
+| [SO-0027](#so-0027) | P2 | Chore | Ensure integration test coverage is sufficient across the repo |
 | [SO-0026](#so-0026) | P2 | Chore | Integration + browser test coverage for the live input path |
 | [SO-0005](#so-0005) | P3 | Chore | Collapse near-duplicate overlay families |
 | [SO-0011](#so-0011) | P3 | Idea | The builder — compose overlays from sub-visuals |
@@ -209,7 +211,17 @@ Every page (`index`/`gallery`/`setup`/`admin`) re-declares the same `:root` pale
 ### SO-0026 — Integration + browser test coverage for the live input path {#so-0026}
 **P2 · Chore · qa**
 
-Deepen coverage past today's layers. Node integration now mocks `navigator.getGamepads` + `localStorage` to run `poll()` end-to-end (`tests/live-reader.integration.test.mjs`), but two seams remain uncovered: (1) a **browser** pass that injects a **synthetic gamepad** (Playwright/CDP) to drive `overlay.html` / gallery Live and assert real paint — the closest automatable proxy for the real-wheel round-trip; (2) **DOM tests for the gear capture UI** once it exists (SO-0006). The real-G923 round-trip stays a manual hardware check. Fold the browser layer into the `qa/` acceptance harness.
+Deepen coverage past today's layers. Node integration now mocks `navigator.getGamepads` + `localStorage` to run `poll()` end-to-end (`tests/live-reader.integration.test.mjs`), but two seams remain uncovered: (1) a **browser** pass that injects a **synthetic gamepad** (Playwright/CDP) to drive `overlay.html` / gallery Live and assert real paint — the closest automatable proxy for the real-wheel round-trip; (2) **DOM tests for the gear capture UI** once it exists (SO-0006). The real-G923 round-trip stays a manual hardware check. Fold the browser layer into the `qa/` acceptance harness. Sits under the [SO-0027](#so-0027) coverage audit.
+
+### SO-0027 — Ensure integration test coverage is sufficient across the repo {#so-0027}
+**P2 · Chore · qa**
+
+The standing audit that integration coverage is sufficient across **every** surface, not just the live-input path — the gap between "units pass" and "the wired-together thing works." Walk each surface in the QA product map: the reader path (done — `tests/live-reader.integration.test.mjs`), the calibration **write→read round-trip**, the gallery/admin page flows, the demo-driver↔overlay contract, and the configure/URL path once it exists. [SO-0026](#so-0026) is the first concrete instance under this; this ticket keeps the question honest as new surfaces land. Output is a coverage map + the missing tests, not a one-off.
+
+### SO-0028 — Light vs dark mode support {#so-0028}
+**P3 · Idea · site**
+
+The site is dark-only today — each page hardcodes the `--asphalt`/`--ink` dark palette. Investigate a light theme + a toggle (or honour `prefers-color-scheme`). Rides directly on [SO-0025](#so-0025): once the palette is design tokens in one place, a theme is a second token set rather than a per-page rewrite — so the style kit comes first. Note the overlays render on a transparent canvas for OBS and are their own visual system (`draw-kit.js` `C`); light/dark is a **site-chrome** concern, most likely not the overlays themselves.
 
 ## Conventions
 

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Input Inspector (dev) — Stream Overlays</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --asphalt:#131418; --panel:#1b1d23; --panel-2:#22252d; --line:#2e323c; --line-2:#3a3f4a;
+  --ink:#eceae5; --mute:#8a909c;
+  --thr:#34d97a; --brk:#f2453d; --clu:#ffb020; --str:#64b5ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--asphalt);color:var(--ink);font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  font-size:13.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:860px;margin:0 auto;padding:24px 18px 100px}
+h1{font-family:Oxanium,monospace;font-weight:800;font-size:24px;margin:0 0 5px;display:flex;align-items:center;gap:10px}
+.lede{color:var(--mute);margin:0 0 18px;font-size:12.8px}
+a{color:var(--str);text-decoration:none} a:hover{text-decoration:underline}
+code{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px}
+.tag{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:4px;border:1px solid rgba(255,176,32,.5);color:var(--clu)}
+/* ---- shared site nav (mirrored from index.html) ---- */
+.sitenav{display:flex;align-items:center;gap:18px;padding:11px 20px;border-bottom:1px solid var(--line);background:rgba(19,20,24,.92);backdrop-filter:blur(9px)}
+.sitenav-brand{font-family:Oxanium,monospace;font-weight:800;font-size:15px;color:var(--ink);letter-spacing:.01em}
+.sitenav-brand:hover{text-decoration:none}
+.sitenav-brand span{color:var(--str)}
+.sitenav-links{display:flex;gap:6px;margin-left:auto}
+.sitenav-links a{font-size:12px;color:var(--mute);padding:5px 11px;border-radius:7px;border:1px solid transparent;transition:.13s}
+.sitenav-links a[data-dev]{color:var(--clu)}
+.sitenav-links a:hover{color:var(--ink);background:var(--panel-2);text-decoration:none}
+.sitenav-links a[aria-current]{color:var(--str);border-color:var(--line-2);background:var(--panel)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:14px 16px;margin-bottom:14px}
+.card h2{font-family:Oxanium,monospace;font-weight:600;font-size:14px;margin:0 0 10px;display:flex;align-items:center;gap:9px}
+.card h2 .sub{font-family:"IBM Plex Mono",monospace;font-weight:400;font-size:11px;color:var(--mute);text-transform:none;letter-spacing:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.grid2{grid-template-columns:1fr}}
+.conn{font-size:13px;color:var(--mute);font-variant-numeric:tabular-nums}
+.conn.on{color:var(--thr)}
+.hint{font-size:11.5px;color:var(--mute);margin:.4em 0 0}
+/* axes */
+.axis{display:grid;grid-template-columns:34px 66px 1fr;gap:10px;align-items:center;padding:3px 0}
+.axis .i{color:var(--mute);text-align:right;font-variant-numeric:tabular-nums}
+.axis .v{font-variant-numeric:tabular-nums;text-align:right}
+.axis .bar{position:relative;height:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:5px}
+.axis .bar .mid{position:absolute;top:-2px;bottom:-2px;left:50%;width:1px;background:var(--line-2)}
+.axis .bar .mk{position:absolute;top:-2px;bottom:-2px;width:4px;margin-left:-2px;border-radius:2px;background:var(--str);transition:left .04s linear}
+/* buttons */
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+.btn{min-width:30px;text-align:center;padding:5px 7px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);
+  color:var(--mute);font-variant-numeric:tabular-nums;font-size:12px;transition:.05s}
+.btn.on{background:var(--thr);border-color:var(--thr);color:#15171c;font-weight:600}
+.btn small{display:block;font-size:9px;opacity:.7;font-weight:400}
+.empty{color:var(--mute);font-size:12px}
+/* resolved state */
+.state{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px 16px}
+.kv{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent);padding:3px 0}
+.kv .k{color:var(--mute)} .kv .val{font-variant-numeric:tabular-nums}
+.kv .val.hot{color:var(--thr)}
+pre.map{background:var(--asphalt);border:1px solid var(--line);border-radius:8px;padding:11px 13px;margin:0;
+  overflow:auto;max-height:340px;font-size:11.5px;color:var(--ink);white-space:pre}
+.rowbtn{font:inherit;font-size:11px;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);
+  border-radius:6px;padding:2px 9px;cursor:pointer;margin-left:auto}
+.rowbtn:hover{border-color:var(--clu);color:var(--clu)}
+#notlocal{display:none;color:var(--clu);background:rgba(255,176,32,.09);border:1px solid rgba(255,176,32,.45);border-radius:8px;padding:13px 15px}
+#filewarn{display:none;color:var(--clu);background:rgba(255,176,32,.09);border:1px solid rgba(255,176,32,.45);border-radius:8px;padding:11px 13px;margin-bottom:14px}
+</style>
+</head>
+<body>
+<nav class="sitenav">
+  <a class="sitenav-brand" href="/">Stream<span>Overlays</span></a>
+  <div class="sitenav-links">
+    <a href="/">Home</a>
+    <a href="/pages/gallery.html">Gallery</a>
+    <a href="/pages/setup.html">Setup</a>
+    <a href="/pages/debug.html" data-dev aria-current="page">Debug</a>
+  </div>
+</nav>
+<div class="wrap">
+  <h1>Input Inspector <span class="tag">dev · localhost</span></h1>
+  <p class="lede">The raw hardware seam, laid bare — every axis and button the connected wheel/shifter reports, the
+    saved calibration, and the channel state the overlays actually read (through the real
+    <code>live-input</code> path). Use it to learn how the <b>H-shifter reports each gear</b> before calibrating,
+    and to diagnose anything live. Local-only; never linked on the public site.</p>
+
+  <div id="notlocal">
+    <b>Dev tool — localhost only.</b> This inspector is meant to run against your own wheel on your own machine.
+    Serve the repo with <code>npm run serve</code> and open <code>http://localhost:8000/pages/debug.html</code>.
+  </div>
+
+  <div id="tool">
+    <div id="filewarn"><b>Serve this over http.</b> From <code>file://</code> the browser blocks ES modules and the
+      Gamepad API. Run <code>npm run serve</code> and open <code>http://localhost:8000/pages/debug.html</code>.</div>
+
+    <div class="card">
+      <h2>Device</h2>
+      <div class="conn" id="conn">○ no device</div>
+      <p class="hint">The Gamepad API only wakes on a focused page after an input — <b>press any wheel button</b> if nothing shows.</p>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Axes <span class="sub">pedals + steering (raw −1…+1)</span></h2>
+        <div id="axes"><div class="empty">—</div></div>
+      </div>
+      <div class="card">
+        <h2>Buttons <span class="sub">shifter + wheel (pressed lit)</span></h2>
+        <div class="btns" id="buttons"><div class="empty">—</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Resolved state <span class="sub">what overlays read — via live-input poll()</span></h2>
+      <div class="state" id="state"></div>
+    </div>
+
+    <div class="card">
+      <h2>Calibration map <span class="sub">localStorage · this browser</span><button class="rowbtn" id="reload">Reload</button></h2>
+      <pre class="map" id="map">—</pre>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { getPad, pressedButtons, isButtonDown } from "../engine/gamepad.js";
+import { createInputReader, CALIBRATION_KEY } from "../engine/live-input.js";
+import { createState } from "../engine/state.js";
+
+const LOCAL = ["localhost", "127.0.0.1", "[::1]", ""].includes(location.hostname) || location.protocol === "file:";
+if (!LOCAL) {
+  document.getElementById("notlocal").style.display = "block";
+  document.getElementById("tool").style.display = "none";
+} else {
+  if (location.protocol === "file:") document.getElementById("filewarn").style.display = "block";
+
+  const connEl = document.getElementById("conn");
+  const axesEl = document.getElementById("axes");
+  const btnsEl = document.getElementById("buttons");
+  const stateEl = document.getElementById("state");
+  const mapEl = document.getElementById("map");
+
+  // The resolved state comes from the REAL read path, so this column shows exactly
+  // what a live overlay would see (not a re-implementation).
+  const state = createState();
+  const reader = createInputReader({ state });
+
+  function showMap() {
+    let raw;
+    try { raw = JSON.parse(localStorage.getItem(CALIBRATION_KEY) || "null"); } catch { raw = "«corrupt JSON»"; }
+    mapEl.textContent = raw ? JSON.stringify(raw, null, 2) : "«nothing calibrated in this browser»";
+  }
+  document.getElementById("reload").addEventListener("click", () => { reader.reload(); showMap(); });
+  window.addEventListener("focus", () => { reader.reload(); showMap(); });
+  showMap();
+
+  const fmtGear = g => g < 0 ? "R" : g === 0 ? "N" : String(g);
+  const num = (v, d = 2) => (v == null ? "—" : Number(v).toFixed(d));
+
+  let last = 0;
+  function frame(now) {
+    const dt = last ? Math.min((now - last) / 1000, 0.1) : 0;
+    last = now;
+    const pad = getPad();
+
+    connEl.textContent = pad ? "● " + pad.id : "○ no device";
+    connEl.classList.toggle("on", !!pad);
+
+    // ---- raw axes ----
+    if (!pad || !pad.axes.length) {
+      axesEl.innerHTML = '<div class="empty">no axes</div>';
+    } else {
+      axesEl.innerHTML = pad.axes.map((v, i) => {
+        const left = (50 + Math.max(-1, Math.min(1, v)) * 50);
+        return '<div class="axis"><span class="i">' + i + '</span><span class="v">' + v.toFixed(3) +
+          '</span><span class="bar"><span class="mid"></span><span class="mk" style="left:' + left + '%"></span></span></div>';
+      }).join("");
+    }
+
+    // ---- raw buttons ----
+    if (!pad || !pad.buttons.length) {
+      btnsEl.innerHTML = '<div class="empty">no buttons</div>';
+    } else {
+      const down = new Set(pressedButtons(pad));
+      btnsEl.innerHTML = pad.buttons.map((b, i) => {
+        const val = typeof b === "object" ? b.value : b;
+        const analog = typeof val === "number" && val > 0 && val < 1;
+        return '<div class="btn' + (down.has(i) ? " on" : "") + '">' + i +
+          (analog ? '<small>' + val.toFixed(2) + '</small>' : '') + '</div>';
+      }).join("");
+    }
+
+    // ---- resolved state (real read path) ----
+    reader.poll(dt);
+    const rows = [
+      ["thr", num(state.thr)], ["brk", num(state.brk)], ["clu", num(state.clu)], ["str", num(state.str)],
+      ["gear", fmtGear(state.gear)], ["lever", fmtGear(state.lever)],
+      ["shiftProg", num(state.shiftProg)], ["shiftDir", String(state.shiftDir)],
+      ["shiftCount", String(state.shiftCount)], ["real", String(state.real)]
+    ];
+    stateEl.innerHTML = rows.map(([k, v]) => {
+      const hot = (k === "real" && v === "true") || (["thr", "brk", "clu"].includes(k) && Number(v) > 0.02);
+      return '<div class="kv"><span class="k">' + k + '</span><span class="val' + (hot ? " hot" : "") + '">' + v + '</span></div>';
+    }).join("");
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>
