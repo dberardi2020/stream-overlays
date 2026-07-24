@@ -13,7 +13,7 @@ Rows are pointers; anything needing more than a sentence has a block in **Detail
 ## On deck
 
 The committed next few, in intended order. Remaining of the
-[ADR 0006](../decisions/0006-setup-surface-pure-overlay.md) binding overhaul, then hosting.
+[ADR 0006](../decisions/0006-setup-surface-pure-overlay.md) binding overhaul, then the configure page and hosting.
 **Input binding is a v0 requirement** — including the H-shifter/gear (SO-0006), which is direct HID,
 not telemetry. **Telemetry (SO-0007) is explicitly deferred** — a far-off goal — but the setup page
 and overlay are designed to leave a slot for it.
@@ -22,6 +22,7 @@ and overlay are designed to leave a slot for it.
 |---|---|---|---|
 | [SO-0018](#so-0018) | P1 | Feature | Gallery live-input control surface (Demo ⇄ Live) |
 | [SO-0006](#so-0006) | P1 | Feature | Shifter / gear live calibration + input (v0 input binding) |
+| [SO-0003](#so-0003) | P2 | Feature | Configure page → URL generator |
 | [SO-0008](#so-0008) | P1 | Chore | Hosting + deploy pipeline |
 
 ## Blocked
@@ -32,13 +33,11 @@ and overlay are designed to leave a slot for it.
 
 ### Road to a real hosted website
 
-The product work between this pilot and "a site streamers find, set up, and use."
+Pre-public candidates not yet committed to the On-deck sequence.
 
 | ID | Pri | Type | Title |
 |---|---|---|---|
-| [SO-0003](#so-0003) | P2 | Feature | Configure page → URL generator |
-| [SO-0004](#so-0004) | P2 | Feature | OBS gamepad fallback flow |
-| [SO-0010](#so-0010) | P3 | Feature | Wishlist / feedback form |
+| [SO-0004](#so-0004) | P2 | Feature | OBS gamepad fallback — interactive ladder (guidance already shipped) |
 
 ### Engine & overlays
 
@@ -49,6 +48,14 @@ The product work between this pilot and "a site streamers find, set up, and use.
 | [SO-0011](#so-0011) | P3 | Idea | The builder — compose overlays from sub-visuals |
 | [SO-0014](#so-0014) | P3 | Feature | Real-session recorder + demo-data library |
 | [SO-0016](#so-0016) | P3 | Idea | Racer view — reverse the data into a virtual driver |
+
+### After launch
+
+Post-public — not part of getting the site live.
+
+| ID | Pri | Type | Title |
+|---|---|---|---|
+| [SO-0010](#so-0010) | P3 | Feature | Wishlist / feedback form |
 
 ## Decisions to revisit (not tickets)
 
@@ -82,7 +89,9 @@ Pick style/scale/colours and emit the `?style=…&scale=…&bg=…` URL to paste
 ### SO-0004 — OBS gamepad fallback flow {#so-0004}
 **P2 · Feature · setup**
 
-The guided ladder from [ADR 0003](../decisions/0003-obs-gamepad-fallback.md): device-presence timeout, Interact prompt, Window-Capture path, optional local bridge. Per [ADR 0006](../decisions/0006-setup-surface-pure-overlay.md) this ladder now lives on the **setup page (SO-0017)**, not the overlay — the overlay is pure render and can't show fallback UI on a live scene. The **local bridge** is the Path B alternative if per-context calibration proves too clunky.
+The guided ladder from [ADR 0003](../decisions/0003-obs-gamepad-fallback.md): device-presence timeout, Interact prompt, Window-Capture path, optional local bridge. Per [ADR 0006](../decisions/0006-setup-surface-pure-overlay.md) this ladder lives on the **setup page (SO-0017)**, not the overlay — the overlay is pure render and can't show fallback UI on a live scene.
+
+**Not a launch blocker.** The launch-critical piece — the *written* guidance (Interact → Window Capture) — already shipped on the setup page (SO-0017, the `#obs` card). What remains here is the **interactive** version: auto-detect "no device after N seconds" and surface the ladder dynamically. A UX enhancement, hence backlog, not On-deck. The **local bridge** is the Path B alternative if per-context calibration proves too clunky.
 
 ### SO-0005 — Collapse near-duplicate overlay families {#so-0005}
 **P3 · Chore · catalogue**
