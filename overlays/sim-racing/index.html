@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stream Overlays — live sim-racing overlays for OBS</title>
+<meta name="description" content="Browser overlays that read your Logitech G923 and composite throttle, brake, clutch, and steering over your OBS scene. No install, no account — static files and a URL.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --asphalt:#131418; --panel:#1b1d23; --panel-2:#22252d; --line:#2e323c; --line-2:#3a3f4a;
+  --ink:#eceae5; --mute:#8a909c;
+  --thr:#34d97a; --brk:#f2453d; --clu:#ffb020; --str:#64b5ff; --gear:#e7e3da;
+  --live:#34d97a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--asphalt);color:var(--ink);
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:13.5px;line-height:1.6;
+  -webkit-font-smoothing:antialiased}
+a{color:var(--str);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ---- shared site nav (mirrored across pages) ---- */
+.sitenav{display:flex;align-items:center;gap:18px;padding:11px 20px;border-bottom:1px solid var(--line);
+  background:rgba(19,20,24,.92);backdrop-filter:blur(9px)}
+.sitenav-brand{font-family:Oxanium,monospace;font-weight:800;font-size:15px;color:var(--ink);letter-spacing:.01em}
+.sitenav-brand:hover{text-decoration:none}
+.sitenav-brand span{color:var(--str)}
+.sitenav-links{display:flex;gap:6px;margin-left:auto}
+.sitenav-links a{font-size:12px;color:var(--mute);padding:5px 11px;border-radius:7px;border:1px solid transparent;transition:.13s}
+.sitenav-links a:hover{color:var(--ink);background:var(--panel-2);text-decoration:none}
+.sitenav-links a[aria-current]{color:var(--str);border-color:var(--line-2);background:var(--panel)}
+
+.wrap{max-width:1080px;margin:0 auto;padding:32px 20px 96px}
+
+/* ---- hero ---- */
+.hero{display:grid;grid-template-columns:1.05fr 1fr;gap:38px;align-items:center;margin:22px 0 12px}
+.status-pill{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--mute);border:1px solid var(--line);border-radius:20px;padding:4px 11px}
+.status-pill b{width:6px;height:6px;border-radius:50%;background:var(--live);box-shadow:0 0 8px var(--live)}
+h1{font-family:Oxanium,monospace;font-weight:800;font-size:38px;line-height:1.08;margin:16px 0 12px;letter-spacing:-.01em}
+.sub{color:var(--mute);font-size:14px;max-width:52ch;margin:0 0 22px}
+.sub b{color:var(--ink);font-weight:500}
+.cta{display:flex;flex-wrap:wrap;gap:11px;margin-bottom:16px}
+.btn{font-family:Oxanium,monospace;font-weight:600;font-size:13.5px;letter-spacing:.01em;
+  color:var(--ink);background:var(--panel-2);border:1px solid var(--line-2);border-radius:9px;
+  padding:11px 18px;cursor:pointer;transition:.13s}
+.btn:hover{background:#2a2e37;border-color:#4a505c;text-decoration:none}
+.btn.primary{background:var(--str);border-color:var(--str);color:#0e1116}
+.btn.primary:hover{filter:brightness(1.07);background:var(--str);color:#0e1116}
+.fine{font-size:11.5px;color:var(--mute)}
+.fine code{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:11px}
+
+/* ---- hero live teaser ---- */
+.hero-stage{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.plate{position:relative;background:
+    linear-gradient(45deg,#191b21 25%,transparent 25%,transparent 75%,#191b21 75%),
+    linear-gradient(45deg,#191b21 25%,#15171c 25%,#15171c 75%,#191b21 75%);
+  background-size:16px 16px;background-position:0 0,8px 8px;
+  border:1px solid var(--line);border-radius:11px;padding:14px;min-height:118px;
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+.plate canvas{max-width:100%;height:auto;display:block}
+.plate .cap{position:absolute;left:9px;bottom:7px;font-size:9.5px;letter-spacing:.05em;
+  color:var(--mute);background:rgba(19,20,24,.72);border-radius:4px;padding:1px 6px}
+.plate .cap b{color:var(--ink);font-weight:500}
+
+/* ---- steps ---- */
+.steps{margin-top:52px}
+.steps h2{font-family:Oxanium,monospace;font-weight:800;font-size:19px;margin:0 0 4px;
+  padding-top:22px;border-top:1px solid var(--line)}
+.steps .lede{color:var(--mute);font-size:12.8px;margin:0 0 20px}
+.step-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 17px;
+  display:flex;flex-direction:column;gap:9px;transition:.14s}
+.step:hover{border-color:var(--line-2);background:#1e2027}
+.step .n{font-family:Oxanium,monospace;font-weight:800;font-size:12px;color:var(--str);
+  letter-spacing:.14em;text-transform:uppercase}
+.step h3{font-family:Oxanium,monospace;font-weight:600;font-size:16px;margin:0}
+.step p{color:var(--mute);font-size:12.4px;margin:0;flex:1}
+.step .go{font-size:12.5px;font-weight:500;color:var(--str);margin-top:2px}
+.step code{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:11.5px}
+
+/* ---- footer ---- */
+footer{margin-top:54px;padding-top:18px;border-top:1px solid var(--line);
+  display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;color:var(--mute);font-size:11.8px}
+footer .sep{opacity:.4}
+
+@media (max-width:820px){
+  .hero{grid-template-columns:1fr;gap:26px}
+  h1{font-size:32px}
+  .step-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<nav class="sitenav">
+  <a class="sitenav-brand" href="/">Stream<span>Overlays</span></a>
+  <div class="sitenav-links">
+    <a href="/" aria-current="page">Home</a>
+    <a href="/pages/gallery.html">Gallery</a>
+    <a href="/pages/setup.html">Setup</a>
+  </div>
+</nav>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="hero-copy">
+      <span class="status-pill"><b></b>Early · Sim racing</span>
+      <h1>Your wheel, live on your stream.</h1>
+      <p class="sub">Browser overlays that read your <b>Logitech G923</b> in the browser and composite
+        <b>throttle, brake, clutch, and steering</b> over your OBS scene. No install, no account —
+        just static files and a URL.</p>
+      <div class="cta">
+        <a class="btn primary" href="/pages/gallery.html">Browse the gallery →</a>
+        <a class="btn" href="/pages/setup.html">Set up your wheel</a>
+      </div>
+      <p class="fine">Static files · settings ride in the <code>?style=</code> URL · your calibration stays on your machine</p>
+    </div>
+    <div class="hero-stage" id="stage"><!-- live overlay teaser injected here --></div>
+  </section>
+
+  <section class="steps">
+    <h2>Find, set up, use.</h2>
+    <p class="lede">Three surfaces, one flow — no configuration files, no companion app.</p>
+    <div class="step-grid">
+      <a class="step" href="/pages/gallery.html">
+        <span class="n">1 · Find</span>
+        <h3>Browse the gallery</h3>
+        <p>68 overlays animating live over a synthetic demo lap. Filter by input, search, and judge a
+          look before a wheel is ever connected.</p>
+        <span class="go">Open the gallery →</span>
+      </a>
+      <a class="step" href="/pages/setup.html">
+        <span class="n">2 · Set up</span>
+        <h3>Calibrate your wheel</h3>
+        <p>One pass in the browser learns your pedals and steering. Calibration saves locally to this
+          browser — it never rides on your stream.</p>
+        <span class="go">Open setup →</span>
+      </a>
+      <a class="step" href="/pages/setup.html#obs">
+        <span class="n">3 · Use</span>
+        <h3>Add it in OBS</h3>
+        <p>Add the overlay's <code>?style=</code> URL as a Browser Source. OBS's browser needs one nudge
+          to see your wheel — a short, guided fallback walks you through it.</p>
+        <span class="go">OBS &amp; gamepad notes →</span>
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    <span>Stream Overlays</span><span class="sep">·</span>
+    <span>MIT licensed</span><span class="sep">·</span>
+    <a href="https://github.com/dberardi2020/stream-overlays">Source on GitHub</a><span class="sep">·</span>
+    <span>Early — sim racing is the first vertical.</span>
+  </footer>
+</main>
+
+<script type="module">
+import { createDemoDriver } from "./engine/demo-driver.js";
+
+// A curated teaser spanning all four overlay sets. Same shared-driver + module-import
+// loop the gallery uses — one driver, one clock, each plate imports its overlay lazily.
+const HEROES = [
+  { id: "filled-trace",    set: "pedals"  },
+  { id: "rotation-ring",   set: "wheel"   },
+  { id: "gate-with-trail", set: "shifter" },
+  { id: "arc-cluster",     set: "combo"   }
+];
+
+const stage = document.getElementById("stage");
+const dpr = window.devicePixelRatio || 1;
+const catalogue = await fetch("./catalogue.json").then(r => r.json()).catch(() => []);
+const byId = Object.fromEntries(catalogue.map(e => [e.id, e]));
+
+const tiles = [];
+for (const hero of HEROES) {
+  const e = byId[hero.id];
+  if (!e) continue;
+  const plate = document.createElement("div");
+  plate.className = "plate";
+  const cv = document.createElement("canvas");
+  cv.style.width = e.size.w + "px";
+  cv.width = e.size.w * dpr; cv.height = e.size.h * dpr;
+  const ctx = cv.getContext("2d");
+  ctx.scale(dpr, dpr);
+  plate.appendChild(cv);
+  const cap = document.createElement("span");
+  cap.className = "cap";
+  cap.innerHTML = '<b>' + e.name + '</b> · ' + hero.set;
+  plate.appendChild(cap);
+  stage.appendChild(plate);
+  tiles.push({ e, ctx, mem: {} });
+}
+
+const driver = createDemoDriver();
+driver.reset();
+
+await document.fonts.ready;
+const modules = new Map();
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  driver.tick(dt);
+  for (const t of tiles) {
+    let mod = modules.get(t.e.id);
+    if (mod === undefined) {
+      modules.set(t.e.id, null);
+      import(`./overlays/${t.e.id}.js`)
+        .then(m => modules.set(t.e.id, m))
+        .catch(err => { modules.set(t.e.id, false); console.error(t.e.id, err); });
+      continue;
+    }
+    if (!mod) continue;
+    t.ctx.clearRect(0, 0, t.e.size.w, t.e.size.h);
+    try { mod.draw(t.ctx, t.e.size.w, t.e.size.h, driver.state, t.mem); }
+    catch (err) { console.error(t.e.id, err); }
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

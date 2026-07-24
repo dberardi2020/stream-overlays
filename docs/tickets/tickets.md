@@ -38,7 +38,6 @@ The product work between this pilot and "a site streamers find, set up, and use.
 |---|---|---|---|
 | [SO-0003](#so-0003) | P2 | Feature | Configure page → URL generator |
 | [SO-0004](#so-0004) | P2 | Feature | OBS gamepad fallback flow |
-| [SO-0009](#so-0009) | P2 | Feature | Discovery / landing front door |
 | [SO-0010](#so-0010) | P3 | Feature | Wishlist / feedback form |
 
 ### Engine & overlays
@@ -64,6 +63,7 @@ are in the docs.*
 
 | ID | Title | Closed |
 |---|---|---|
+| SO-0009 | **Discovery / landing front door** (`index.html`, served at `/`) — the streamer-facing entry: hero (what this is, in the README's terms), a **live teaser** of four hero overlays animating over the shared demo driver (one per set), and the **find → set up → use** path into gallery / setup / OBS. The "use" step is honest about the [ADR 0003](../decisions/0003-obs-gamepad-fallback.md) OBS gamepad-focus gotcha and links to the setup page's guided fallback (`setup.html#obs`). Also added a **slim shared site nav** (`.sitenav`: Home · Gallery · Setup) to index + gallery + setup + admin, stitching the loose pages into one navigable site. Verified in browser (teaser animates, nav + active states, links); 78 node + 221 pytest green. | 2026-07-23 |
 | SO-0013 | **Overlay page → pure renderer** ([ADR 0006](../decisions/0006-setup-surface-pure-overlay.md)) — `pages/overlay.html` stripped of all setup chrome: it reads calibration from `localStorage` via the new DOM-free `engine/live-input.js` + live input, draws, and rests at zero uncalibrated. No panel, no "press c", no error UI on a live scene — the structural fix for the mid-stream-chrome risk. Config-time-only messages (bad `?style=`, `file://`) remain. Verified headless: pure (no `#setup`/`#calmount`), transparent, paints, unit-tested mapping. | 2026-07-23 |
 | SO-0017 | **Dedicated setup page (`pages/setup.html`)** ([ADR 0006](../decisions/0006-setup-surface-pure-overlay.md)) — the calibration surface extracted from the overlay: mounts the (unchanged, known-good) `calibration.js` panel, adds a live thr/brk/clu/steering readout, the [ADR 0003](../decisions/0003-obs-gamepad-fallback.md) OBS fallback guidance, the per-browser-context flow, and design slots for the deferred shifter (SO-0006) + telemetry (SO-0007). Writes the same `localStorage` key the overlay/gallery read. *(Shifter wiring itself is SO-0006.)* | 2026-07-23 |
 | SO-0015 | **Admin view (`pages/admin.html`)** — the write/curate view over `catalogue.json`, rebuilt on the repo's module architecture (the gallery's live-preview engine + an edit layer) rather than porting the prototype's duplicate engine. Per-overlay stage (live/draft/experimental/excluded), hidden toggle, and editable note; edits persist in localStorage and **Export** downloads a new `catalogue.json` to commit (static-first — no backend). Shows all 72 entries incl. the 4 module-less ones (as "no module"). Verified headless: 68/68 previews paint, edit→dirty→export→revert all correct, valid JSON out. Supersedes the prototype's `catalogue.html`. | 2026-07-23 |
@@ -109,11 +109,6 @@ Get it live over HTTPS (which the Gamepad API requires) with a deploy from `main
 **Decided sequence:** (1) **GitHub Pages** first — free, static, HTTPS; link the Pages URL from the README. (2) **Vercel** only when server routes are actually needed (the `/configure` generator, later telemetry) — the static export runs on both unchanged, so it's not a rewrite. (3) A **real domain**, pointed at whichever host is current.
 
 Route everything through the domain from the moment there is one — **never hard-code a `*.github.io` / `*.vercel.app` URL**, because the domain outlives the host choice. The OBS URL contract (`?style=<id>`) rides on top of whatever host is current: **a host migration must not change a single `?style=` URL** — which is *why* ids are immutable and host-independent. See [ADR 0002](../decisions/0002-static-first-hosting.md).
-
-### SO-0009 — Discovery / landing front door {#so-0009}
-**P2 · Feature · site**
-
-The streamer-facing entry: what this is, the overlay gallery, and the path into configure. The "find it" half of "find, set up, use."
 
 ### SO-0010 — Wishlist / feedback form {#so-0010}
 **P3 · Feature · site**

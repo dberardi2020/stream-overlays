@@ -24,6 +24,15 @@ h1{font-family:Oxanium,monospace;font-weight:800;font-size:24px;margin:0 0 5px}
 .lede b{color:var(--ink)}
 a{color:var(--str);text-decoration:none}
 a:hover{text-decoration:underline}
+/* ---- shared site nav (mirrored from index.html) ---- */
+.sitenav{display:flex;align-items:center;gap:18px;padding:11px 20px;border-bottom:1px solid var(--line);background:rgba(19,20,24,.92);backdrop-filter:blur(9px)}
+.sitenav-brand{font-family:Oxanium,monospace;font-weight:800;font-size:15px;color:var(--ink);letter-spacing:.01em}
+.sitenav-brand:hover{text-decoration:none}
+.sitenav-brand span{color:var(--str)}
+.sitenav-links{display:flex;gap:6px;margin-left:auto}
+.sitenav-links a{font-size:12px;color:var(--mute);padding:5px 11px;border-radius:7px;border:1px solid transparent;transition:.13s}
+.sitenav-links a:hover{color:var(--ink);background:var(--panel-2);text-decoration:none}
+.sitenav-links a[aria-current]{color:var(--str);border-color:var(--line-2);background:var(--panel)}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:15px 16px;margin-bottom:16px}
 .card h2{font-family:Oxanium,monospace;font-weight:600;font-size:15px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
 .card p{color:var(--mute);font-size:12.3px;margin:.3em 0}
@@ -39,6 +48,14 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
 </style>
 </head>
 <body>
+<nav class="sitenav">
+  <a class="sitenav-brand" href="/">Stream<span>Overlays</span></a>
+  <div class="sitenav-links">
+    <a href="/">Home</a>
+    <a href="/pages/gallery.html">Gallery</a>
+    <a href="/pages/setup.html" aria-current="page">Setup</a>
+  </div>
+</nav>
 <div class="wrap">
   <h1>Wheel Setup</h1>
   <p class="lede">Calibrate your wheel once, here. Calibration is saved in <b>this browser</b> (it's intrinsic to your
@@ -76,7 +93,7 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
       later milestone (SO-0007); telemetry overlays run on demo data until a sim feed exists.</p>
   </div>
 
-  <div class="card">
+  <div class="card" id="obs">
     <h2>Using it in OBS</h2>
     <p class="hint">Overlays are a separate, pure page (<code>overlay.html?style=&lt;id&gt;</code>) — see the
       <a href="../../../docs/product/user-guide.md">user guide</a>. Because calibration is per-browser, OBS's built-in
