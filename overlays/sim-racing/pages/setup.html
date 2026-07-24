@@ -31,6 +31,7 @@ a:hover{text-decoration:underline}
 .sitenav-brand span{color:var(--str)}
 .sitenav-links{display:flex;gap:6px;margin-left:auto}
 .sitenav-links a{font-size:12px;color:var(--mute);padding:5px 11px;border-radius:7px;border:1px solid transparent;transition:.13s}
+.sitenav-links a[data-dev]{color:var(--clu)}
 .sitenav-links a:hover{color:var(--ink);background:var(--panel-2);text-decoration:none}
 .sitenav-links a[aria-current]{color:var(--str);border-color:var(--line-2);background:var(--panel)}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:15px 16px;margin-bottom:16px}
@@ -56,6 +57,7 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
     <a href="/pages/setup.html" aria-current="page">Setup</a>
   </div>
 </nav>
+<script type="module" src="/pages/dev-nav.js"></script>
 <div class="wrap">
   <h1>Wheel Setup</h1>
   <p class="lede">Calibrate your wheel once, here. Calibration is saved in <b>this browser</b> (it's intrinsic to your

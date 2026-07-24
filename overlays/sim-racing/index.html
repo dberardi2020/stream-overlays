@@ -105,19 +105,7 @@ footer .sep{opacity:.4}
     <a href="/pages/setup.html">Setup</a>
   </div>
 </nav>
-<script>
-  // Dev-only: surface the local tools (Admin curation, Debug input inspector) in
-  // the nav when running locally. On a real (public) domain this check fails, so
-  // the links never appear.
-  if (["localhost", "127.0.0.1", "[::1]", ""].includes(location.hostname) || location.protocol === "file:") {
-    const nav = document.getElementById("navlinks");
-    for (const [href, label] of [["/pages/admin.html", "Admin"], ["/pages/debug.html", "Debug"]]) {
-      const a = document.createElement("a");
-      a.href = href; a.textContent = label; a.dataset.dev = "1";
-      nav.appendChild(a);
-    }
-  }
-</script>
+<script type="module" src="/pages/dev-nav.js"></script>
 
 <main class="wrap">
   <section class="hero">
