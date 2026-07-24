@@ -43,6 +43,7 @@ Pre-public candidates not yet committed to the On-deck sequence.
 |---|---|---|---|
 | [SO-0004](#so-0004) | P2 | Feature | OBS gamepad fallback — interactive ladder (guidance already shipped) |
 | [SO-0025](#so-0025) | P2 | Chore | Site style kit — encode design tokens, point every page at it |
+| [SO-0029](#so-0029) | P2 | Feature | Setup surface v2 — per-component boxes + live overlay previews |
 | [SO-0028](#so-0028) | P3 | Idea | Light vs dark mode support |
 
 ### Engine & overlays
@@ -52,6 +53,7 @@ Pre-public candidates not yet committed to the On-deck sequence.
 | [SO-0007](#so-0007) | P2 | Feature | Telemetry data source (rpm / spd / gear-from-sim) — deferred |
 | [SO-0027](#so-0027) | P2 | Chore | Ensure integration test coverage is sufficient across the repo |
 | [SO-0026](#so-0026) | P2 | Chore | Integration + browser test coverage for the live input path |
+| [SO-0030](#so-0030) | P3 | Chore | Sequential shifter input — confirm HID model + where it groups |
 | [SO-0005](#so-0005) | P3 | Chore | Collapse near-duplicate overlay families |
 | [SO-0011](#so-0011) | P3 | Idea | The builder — compose overlays from sub-visuals |
 | [SO-0014](#so-0014) | P3 | Feature | Real-session recorder + demo-data library |
@@ -198,6 +200,8 @@ Some overlays need input the viewer may not have wired, and nothing checks it �
 
 Model it on data already present: each entry has `uses` (`thr/brk/clu/str/gear/rpm/spd`) + `telemetry`. Extend that into a **capability requirement** the setup can test against what's calibrated — e.g. split `gear` into "absolute gear (needs H-shifter)" vs "shift events (paddles OK)" — then surface fit ("needs an H-shifter", badged/greyed) in the gallery + configure page rather than letting someone pick an overlay that can't run for them. Pairs with SO-0006 (defines the shifter capabilities), feeds [SO-0003](#so-0003) (configure) and SO-0018 (gallery Live).
 
+**Also redefine "needed" vs "optional" (which today is a crude global rule).** The calibration engine flips `state.real` — "we have live input" — only when all **three pedals** are calibrated, and labels steering "optional." That baseline is arbitrary: a wheel overlay needs steering and not the clutch; a throttle-only overlay needs neither brake nor clutch. Nothing is *globally* required. Under this model "needed" becomes **contextual** — a channel is needed only for the overlays the viewer wants to run — and the setup marks channels needed/optional against that, instead of the hardcoded "3 pedals = real" gate in `live-input.js`/`calibration.js`.
+
 ### SO-0024 — Dev/debug input inspector page (localhost-only) {#so-0024}
 **P2 · Chore · tooling**
 
@@ -222,6 +226,21 @@ The standing audit that integration coverage is sufficient across **every** surf
 **P3 · Idea · site**
 
 The site is dark-only today — each page hardcodes the `--asphalt`/`--ink` dark palette. Investigate a light theme + a toggle (or honour `prefers-color-scheme`). Rides directly on [SO-0025](#so-0025): once the palette is design tokens in one place, a theme is a second token set rather than a per-page rewrite — so the style kit comes first. Note the overlays render on a transparent canvas for OBS and are their own visual system (`draw-kit.js` `C`); light/dark is a **site-chrome** concern, most likely not the overlays themselves.
+
+### SO-0029 — Setup surface v2: per-component boxes + live overlay previews {#so-0029}
+**P2 · Feature · setup**
+
+Restructure the calibration surface from one monolithic panel into **per-component boxes** — Pedals, Wheel, Shifter, Telemetry — each its own card, the way Telemetry already is. Two payoffs:
+
+- **Clearer grouping, by function not physical location.** Steering → the Wheel box; **all** gear selection (H-shifter + paddles/sequential) → the Shifter box; pedals → the Pedals box. (Paddles live *on* the wheel but are functionally a shifter — group by what they do.)
+- **Each box previews its real overlay reacting to live input.** Reuse the overlay modules the gallery already renders live over a `state` object (same `createInputReader` + `draw()` path) — so setup shows the actual product responding to your pedals/wheel/shifter, in the same visual language as the gallery. Cheap because the pattern already exists.
+
+Pairs with [SO-0023](#so-0023) (per-component "needed" instead of the global rule) and [SO-0030](#so-0030) (where sequential shifters fit). The H-pattern gate from SO-0006 becomes the Shifter box's visual.
+
+### SO-0030 — Sequential shifter input: confirm HID model + grouping {#so-0030}
+**P3 · Chore · input**
+
+A sequential shifter (an aftermarket lever, or a wheel's sequential mode) — does it register as two momentary **up/down buttons** (the same HID model as paddles) or as an axis/rocker? Best guess: **up/down buttons**, i.e. identical to the paddle model, so it would ride SO-0006's existing "Paddles" (sequential) capture path and group with the **Shifter**, not the wheel — an absolute H-shifter is the odd one out (one button per position). Confirm on real hardware (none on hand — untestable now), then finalise the label (likely "Paddles / sequential") and the grouping in [SO-0029](#so-0029). Blocks nothing; a correctness + labelling check on SO-0006's sequential path.
 
 ## Conventions
 
