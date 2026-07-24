@@ -1,29 +1,40 @@
-/* Dev-only nav links, on every page — Layer (site chrome).
+/* Dev-only nav links + accent, one shared source — site chrome.
 
    Surfaces the local tools (Admin curation, Debug input inspector) in the shared
-   site nav whenever the site is running locally, so they're reachable from any
-   page, not just Home. On a real (public) domain the host check fails and nothing
-   is added, so the links never ship. Idempotent: it skips any link the page
-   already renders (e.g. the Debug page's own current-page link), so including it
-   everywhere is safe.
+   site nav when running locally, so they're reachable from any page. Three things
+   it deliberately does:
 
-   One source for all pages (mirrors the per-page localhost gate). When the site
-   style kit lands (SO-0025) this is a natural thing to fold into a shared nav
-   include alongside the markup. */
-const DEV_LINKS = [
-  { href: "/pages/admin.html", label: "Admin" },
-  { href: "/pages/debug.html", label: "Debug" }
-];
-const LOCAL = ["localhost", "127.0.0.1", "[::1]", ""].includes(location.hostname) || location.protocol === "file:";
+   - Runs SYNCHRONOUSLY (a classic script, included right after the <nav>), so it
+     mutates the nav before first paint — no post-load flicker. (As a deferred
+     module it appended after paint, which flickered on every navigation.)
+   - Appends BOTH links in a FIXED order on every page and sets aria-current
+     itself, so the nav order never depends on which page rendered it — no reorder
+     when you land on Debug/Admin.
+   - Injects the `data-dev` accent rule once, from here, so the colour lives in a
+     single place instead of being copied into every page's <style>.
 
-if (LOCAL) {
-  const nav = document.querySelector(".sitenav-links");
-  if (nav) {
-    for (const { href, label } of DEV_LINKS) {
-      if (nav.querySelector(`a[href="${href}"]`)) continue;   // page already links it
-      const a = document.createElement("a");
-      a.href = href; a.textContent = label; a.dataset.dev = "1";
-      nav.appendChild(a);
-    }
+   On a real (public) domain the host check fails and nothing is added, so the
+   links never ship. (Fuller nav/style consolidation is SO-0025.) */
+(function () {
+  var LOCAL = ["localhost", "127.0.0.1", "[::1]", ""].indexOf(location.hostname) >= 0 || location.protocol === "file:";
+  if (!LOCAL) return;
+
+  if (!document.getElementById("dev-nav-style")) {
+    var st = document.createElement("style");
+    st.id = "dev-nav-style";
+    st.textContent = ".sitenav-links a[data-dev]{color:var(--clu)}";
+    document.head.appendChild(st);
   }
-}
+
+  var nav = document.querySelector(".sitenav-links");
+  if (!nav) return;
+
+  var here = location.pathname.replace(/\/index\.html$/, "/");
+  [["/pages/admin.html", "Admin"], ["/pages/debug.html", "Debug"]].forEach(function (d) {
+    if (nav.querySelector('a[href="' + d[0] + '"]')) return;   // page already links it
+    var a = document.createElement("a");
+    a.href = d[0]; a.textContent = d[1]; a.dataset.dev = "1";
+    if (here === d[0]) a.setAttribute("aria-current", "page");
+    nav.appendChild(a);
+  });
+})();
