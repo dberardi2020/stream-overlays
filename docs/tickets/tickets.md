@@ -23,7 +23,9 @@ behind input binding + the configure page** — still committed, just no longer 
 | ID | Pri | Type | Title |
 |---|---|---|---|
 | [SO-0006](#so-0006) | P1 | Feature | Shifter / gear live calibration + input (v0 input binding) |
+| [SO-0024](#so-0024) | P2 | Chore | Dev/debug input inspector page (localhost-only) |
 | [SO-0003](#so-0003) | P2 | Feature | Configure page → URL generator |
+| [SO-0023](#so-0023) | P2 | Feature | Overlay capability requirements + setup-fit checks |
 | [SO-0019](#so-0019) | P1 | Chore | Overlay quality pass — cull half-baked, upgrade the rough |
 | [SO-0008](#so-0008) | P1 | Chore | Hosting + deploy pipeline |
 
@@ -40,12 +42,14 @@ Pre-public candidates not yet committed to the On-deck sequence.
 | ID | Pri | Type | Title |
 |---|---|---|---|
 | [SO-0004](#so-0004) | P2 | Feature | OBS gamepad fallback — interactive ladder (guidance already shipped) |
+| [SO-0025](#so-0025) | P2 | Chore | Site style kit — encode design tokens, point every page at it |
 
 ### Engine & overlays
 
 | ID | Pri | Type | Title |
 |---|---|---|---|
 | [SO-0007](#so-0007) | P2 | Feature | Telemetry data source (rpm / spd / gear-from-sim) — deferred |
+| [SO-0026](#so-0026) | P2 | Chore | Integration + browser test coverage for the live input path |
 | [SO-0005](#so-0005) | P3 | Chore | Collapse near-duplicate overlay families |
 | [SO-0011](#so-0011) | P3 | Idea | The builder — compose overlays from sub-visuals |
 | [SO-0014](#so-0014) | P3 | Feature | Real-session recorder + demo-data library |
@@ -184,6 +188,28 @@ Then fix the render bugs triage surfaced: `split-panel` / `lower-third` read rpm
 The current `demo-lap.js` reads robotic. The visible tells: a hard 30-second **seam** (it snaps from the last corner back to the full-throttle start), and **dead-centre steering on straights** so every steering / wheel overlay sits frozen at 0° in previews. Make the loop clean (state at t=30s flows into t=0) and give steering a touch of low-frequency noise so it's never perfectly dead — but keep it *simple*. Full throttle on straights is correct (the fast line), not a bug.
 
 Deliberately minimal placeholder work: this data is superseded by real rig recordings ([SO-0014](#so-0014)), so it isn't worth a physics simulator. (A research pass explored quasi-steady-state lap synthesis — parked as overkill for interim needs.)
+
+### SO-0023 — Overlay capability requirements + setup-fit checks {#so-0023}
+**P2 · Feature · catalogue/setup**
+
+Some overlays need input the viewer may not have wired, and nothing checks it — the gallery filters by set/stage only. The sharpest case (from [SO-0006](#so-0006)): an **absolute-gear** overlay (draws *which* gear you're in) needs an **H-shifter**; **paddles** only yield up/down *events*, not an absolute position, so paddle-only users can run shift-direction overlays but not absolute-gear ones.
+
+Model it on data already present: each entry has `uses` (`thr/brk/clu/str/gear/rpm/spd`) + `telemetry`. Extend that into a **capability requirement** the setup can test against what's calibrated — e.g. split `gear` into "absolute gear (needs H-shifter)" vs "shift events (paddles OK)" — then surface fit ("needs an H-shifter", badged/greyed) in the gallery + configure page rather than letting someone pick an overlay that can't run for them. Pairs with SO-0006 (defines the shifter capabilities), feeds [SO-0003](#so-0003) (configure) and SO-0018 (gallery Live).
+
+### SO-0024 — Dev/debug input inspector page (localhost-only) {#so-0024}
+**P2 · Chore · tooling**
+
+A local-only diagnostic page for the hardware seam: live raw **axes** + **buttons** (indices + values), the loaded calibration map, and the resolved channel state (thr/brk/clu/str + gear/lever/shiftProg). Makes wheel/shifter issues *visible* instead of guessed — directly de-risks the SO-0006 unknown (how the G923 shifter actually reports gears) and is the tool for the **hardware handoff** (a PC-side agent working live issues). Gate visibility on `localhost`, like the admin link; not shipped to end users.
+
+### SO-0025 — Site style kit — encode design tokens, point every page at it {#so-0025}
+**P2 · Chore · site**
+
+Every page (`index`/`gallery`/`setup`/`admin`) re-declares the same `:root` palette (`--asphalt`, `--ink`, channel colours…), `.sitenav`, buttons, and cards inline. Define the design tokens + shared components **once** (single source — CSS custom properties / a shared stylesheet), encode it, and repoint every page at it, so a colour or nav tweak is one edit, not five. Best done **before** more UI proliferates (the debug page, configure) so they inherit the kit instead of copying more chrome. The overlay draw palette (`draw-kit.js` `C`) is a separate canvas-side concern — decide whether the two share a source of truth.
+
+### SO-0026 — Integration + browser test coverage for the live input path {#so-0026}
+**P2 · Chore · qa**
+
+Deepen coverage past today's layers. Node integration now mocks `navigator.getGamepads` + `localStorage` to run `poll()` end-to-end (`tests/live-reader.integration.test.mjs`), but two seams remain uncovered: (1) a **browser** pass that injects a **synthetic gamepad** (Playwright/CDP) to drive `overlay.html` / gallery Live and assert real paint — the closest automatable proxy for the real-wheel round-trip; (2) **DOM tests for the gear capture UI** once it exists (SO-0006). The real-G923 round-trip stays a manual hardware check. Fold the browser layer into the `qa/` acceptance harness.
 
 ## Conventions
 
