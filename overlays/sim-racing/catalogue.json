@@ -140,6 +140,26 @@
     "note": "Sweeping needles over a 180 degree scale. Analogue character, reads slower than a bar."
   },
   {
+    "id": "pedal-blocks",
+    "name": "Pedal Blocks",
+    "aliases": [],
+    "set": "pedals",
+    "stage": "live",
+    "hidden": false,
+    "size": {
+      "w": 180,
+      "h": 130
+    },
+    "uses": [
+      "brk",
+      "clu",
+      "thr"
+    ],
+    "telemetry": [],
+    "origin": "derived",
+    "note": "The pedals from Cockpit, broken out: three blocks that depress and light up. Diegetic, no numbers."
+  },
+  {
     "id": "numerals",
     "name": "Numerals",
     "aliases": [],
