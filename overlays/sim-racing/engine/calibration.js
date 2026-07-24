@@ -30,8 +30,8 @@
      complete press->release (or sweep->center) cycle, so releasing one control
      can never be mistaken for the next. */
 
-import { mapPedal, mapWheel } from "./calibration-math.js";
-import { getPad } from "./gamepad.js";
+import { mapPedal, mapWheel, resolveShifterGear, GEAR_LABELS } from "./calibration-math.js";
+import { getPad, isButtonDown, pressedButtons } from "./gamepad.js";
 
 const CHANNELS = [
   { key: "throttle", name: "Throttle", short: "thr", mode: "pedal", color: "#34d97a" },
@@ -87,6 +87,25 @@ const CSS = `
 .g923cal-actions{display:flex;gap:8px;align-items:center;margin-top:12px;border-top:1px solid var(--cal-line);padding-top:11px}
 .g923cal-msg{color:var(--cal-mute);font-size:11px;margin-left:auto;text-align:right}
 .g923cal [hidden]{display:none!important}
+/* ---- shifter / gear section (SO-0006) ---- */
+.g923cal-gear{margin-top:13px;border-top:1px solid var(--cal-line);padding-top:12px}
+.g923cal-gear-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}
+.g923cal-gear-title{font-weight:600;letter-spacing:.04em}
+.g923cal-gear-title .opt{font-weight:400;color:var(--cal-mute);font-size:11px;margin-left:5px}
+.g923cal-gnow{font-size:11px;color:var(--cal-mute);font-variant-numeric:tabular-nums;white-space:nowrap}
+.g923cal-gnow.on{color:var(--cal-on)}
+.g923cal-gnow b{color:var(--cal-fg);font-weight:600}
+.g923cal-seg{display:inline-flex;border:1px solid var(--cal-line);border-radius:6px;overflow:hidden;margin-bottom:9px}
+.g923cal-seg button{border:0;border-radius:0;background:var(--cal-panel);color:var(--cal-mute);padding:4px 12px}
+.g923cal-seg button + button{border-left:1px solid var(--cal-line)}
+.g923cal-seg button.on{background:var(--cal-accent);color:#15171c;font-weight:600}
+.g923cal-seg button.on:hover{color:#15171c}
+.g923cal-gstatus{font-size:11.5px;color:var(--cal-mute);margin-bottom:2px}
+.g923cal-gstatus .ok{color:var(--cal-on)}
+.g923cal-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.g923cal-chip{font-size:10.5px;min-width:20px;text-align:center;padding:2px 6px;border-radius:4px;border:1px solid var(--cal-line);color:var(--cal-mute);font-variant-numeric:tabular-nums}
+.g923cal-chip.set{border-color:var(--cal-accent);color:var(--cal-fg)}
+.g923cal-chip.live{background:var(--cal-on);border-color:var(--cal-on);color:#15171c;font-weight:600}
 `;
 
 function injectCSS() {
@@ -139,6 +158,31 @@ export function createCalibration(opts) {
       '<button class="g923cal-primary" data-cal-all>Calibrate all</button>' +
       '<button data-clear>Clear</button>' +
       '<span class="g923cal-msg" data-msg></span>' +
+    '</div>' +
+    // ---- shifter / gear (SO-0006): buttons, not axes — its own capture flow ----
+    '<div class="g923cal-gear" data-gearsec>' +
+      '<div class="g923cal-gear-top">' +
+        '<span class="g923cal-gear-title">Shifter<span class="opt">optional</span></span>' +
+        '<span class="g923cal-gnow" data-gnow>—</span>' +
+      '</div>' +
+      '<div class="g923cal-seg" data-gseg>' +
+        '<button data-gmode="shifter">H-shifter</button>' +
+        '<button data-gmode="paddles">Paddles</button>' +
+      '</div>' +
+      '<div class="g923cal-gstatus" data-gstatus></div>' +
+      '<div class="g923cal-chips" data-gchips></div>' +
+      '<div class="g923cal-active" data-gactive hidden>' +
+        '<div class="g923cal-prompt" data-gprompt></div>' +
+        '<div class="g923cal-btns">' +
+          '<button data-gskip hidden>Skip</button>' +
+          '<button data-gcancel>Cancel</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="g923cal-actions" data-gactions>' +
+        '<button class="g923cal-primary" data-gcal>Calibrate shifter</button>' +
+        '<button data-gclear-gear>Clear</button>' +
+        '<span class="g923cal-msg" data-gmsg></span>' +
+      '</div>' +
     '</div>';
   opts.mount.appendChild(el);
 
@@ -219,6 +263,7 @@ export function createCalibration(opts) {
 
   /* ---------- flow ---------- */
   function startQueue(keys) {
+    resetGearCapture();          // one capture flow at a time — stop any gear capture
     S.queue = keys.slice();
     S.cand = null;
     S.used = CHANNELS.filter(c => !keys.includes(c.key) && S.map[c.key]).map(c => S.map[c.key].axis);
@@ -303,8 +348,155 @@ export function createCalibration(opts) {
   q("[data-clear]").addEventListener("click", () => {
     S.map = {}; if (storeKey) localStorage.removeItem(storeKey);
     state.real = false; fireLive();
-    renderRows(); setMsg("Cleared.");
+    renderRows(); renderGearStatus(); setMsg("Cleared.");
   });
+
+  /* ---------- shifter / gear capture (SO-0006) ----------
+     The shifter reports as BUTTONS, so this is a separate flow from the axis
+     capture above (its own `G` state, never entangled with `S`). Two modes:
+     H-shifter (walk R,1..6, capture the button each engages) and paddles
+     (capture upshift + downshift). Writes S.map.gear under the same storeKey
+     live-input.js reads. Guided auto-capture, mirroring the pedal press/release
+     rhythm: hold the gear -> we grab the newly-pressed button -> release -> next. */
+  const gnowEl = q("[data-gnow]"), gstatusEl = q("[data-gstatus]"), gchipsEl = q("[data-gchips]");
+  const gactiveEl = q("[data-gactive]"), gactionsEl = q("[data-gactions]");
+  const gpromptEl = q("[data-gprompt]"), gmsgEl = q("[data-gmsg]");
+  const gcalBtn = q("[data-gcal]"), gskipBtn = q("[data-gskip]"), gcancelBtn = q("[data-gcancel]");
+  const gsegBtns = [...el.querySelectorAll("[data-gmode]")];
+
+  const persist = () => { if (storeKey) localStorage.setItem(storeKey, JSON.stringify(S.map)); };
+
+  const G = {
+    mode: (S.map.gear && S.map.gear.mode) || "shifter",   // which flow to calibrate next
+    phase: "idle", queue: [], captured: {}, baseline: [], waiting: null, lastLive: NaN
+  };
+  const GLABEL = { R: "Reverse", up: "the upshift paddle", down: "the downshift paddle" };
+  const gLabelOf = l => G.mode === "paddles" ? GLABEL[l] : (l === "R" ? "Reverse" : "gear " + l);
+  const gSetMsg = t => { gmsgEl.textContent = t || ""; };
+
+  function gStoredSummary() {
+    const g = S.map.gear; if (!g) return null;
+    if (g.mode === "paddles") {
+      const p = []; if (g.up != null) p.push("up→" + g.up); if (g.down != null) p.push("down→" + g.down);
+      return "Paddles · " + (p.length ? p.join(", ") : "none");
+    }
+    const keys = Object.keys(g.buttons || {});
+    return "H-shifter · " + (keys.length ? keys.join(",") + " mapped" : "none");
+  }
+  function renderGearChips(liveGear) {
+    const g = S.map.gear;
+    if (G.mode === "paddles") {
+      gchipsEl.innerHTML = ["up", "down"].map(k => {
+        const set = g && g.mode === "paddles" && g[k] != null;
+        return '<span class="g923cal-chip' + (set ? " set" : "") + '">' + k + (set ? " " + g[k] : "") + '</span>';
+      }).join("");
+      return;
+    }
+    gchipsEl.innerHTML = GEAR_LABELS.map(l => {
+      const set = g && g.mode === "shifter" && g.buttons && g.buttons[l] != null;
+      const live = liveGear != null && liveGear !== 0 && (l === "R" ? liveGear === -1 : Number(l) === liveGear);
+      return '<span class="g923cal-chip' + (set ? " set" : "") + (live ? " live" : "") + '">' + l + '</span>';
+    }).join("");
+  }
+  function renderGearStatus() {
+    gsegBtns.forEach(b => b.classList.toggle("on", b.dataset.gmode === G.mode));
+    gcalBtn.textContent = G.mode === "paddles" ? "Calibrate paddles" : "Calibrate shifter";
+    const sum = gStoredSummary();
+    gstatusEl.innerHTML = sum ? '<span class="ok">✓</span> ' + sum
+      : "Not calibrated — optional, needed only for shifter overlays.";
+    renderGearChips(null);
+    G.lastLive = NaN;                    // force the next live poll to re-highlight
+  }
+
+  function resetGearCapture() {
+    G.phase = "idle"; G.queue = []; G.waiting = null;
+    gactiveEl.hidden = true; gactionsEl.hidden = false;
+  }
+  // Stop the axis flow if it's mid-capture — only one capture runs at a time.
+  function cancelAxis() {
+    if (S.phase === "idle") return;
+    S.phase = "idle"; S.cand = null; S.queue = [];
+    activeEl.hidden = true; actionsEl.hidden = false;
+    state.real = hasAllPedals(); fireLive(); renderRows();
+  }
+
+  function startGear() {
+    const pad = getPad();
+    if (!pad) { gSetMsg("No device — connect the wheel and press a button."); return; }
+    cancelAxis();
+    G.queue = G.mode === "paddles" ? ["up", "down"] : GEAR_LABELS.slice();
+    G.captured = {}; G.baseline = pressedButtons(pad); G.waiting = null; G.phase = "capture";
+    gactiveEl.hidden = false; gactionsEl.hidden = true;
+    gPromptCapture(); gSetMsg("");
+  }
+  function gPromptCapture() {
+    gpromptEl.innerHTML = "Shift into <b>" + gLabelOf(G.queue[0]) + "</b> and hold.";
+    gskipBtn.hidden = false;
+  }
+  function gAdvance() {
+    G.queue.shift(); G.waiting = null;
+    if (!G.queue.length) gFinish();
+    else { G.phase = "capture"; gPromptCapture(); }
+  }
+  function gFinish() {
+    const caps = G.captured, has = Object.keys(caps).length > 0;
+    G.phase = "idle"; G.queue = [];
+    if (has) {
+      S.map.gear = G.mode === "paddles"
+        ? { mode: "paddles", up: caps.up, down: caps.down }
+        : { mode: "shifter", buttons: caps };
+    } else {
+      delete S.map.gear;                 // captured nothing — leave it uncalibrated
+    }
+    persist();
+    gactiveEl.hidden = true; gactionsEl.hidden = false;
+    renderGearStatus();
+    gSetMsg(has ? "Shifter saved ✓" : "Nothing captured.");
+  }
+
+  gcalBtn.addEventListener("click", startGear);
+  gskipBtn.addEventListener("click", () => { if (G.phase !== "idle") gAdvance(); });
+  gcancelBtn.addEventListener("click", () => { resetGearCapture(); renderGearStatus(); gSetMsg("Cancelled."); });
+  q("[data-gclear-gear]").addEventListener("click", () => {
+    delete S.map.gear; persist(); renderGearStatus(); gSetMsg("Cleared.");
+  });
+  gsegBtns.forEach(b => b.addEventListener("click", () => {
+    if (G.phase !== "idle") resetGearCapture();
+    G.mode = b.dataset.gmode; renderGearStatus(); gSetMsg("");
+  }));
+
+  // Live gear readout when idle; button auto-capture while a flow runs.
+  function pollGear(pad) {
+    if (G.phase === "idle") {
+      const g = S.map.gear;
+      if (pad && g && g.mode === "shifter") {
+        const gear = resolveShifterGear(g.buttons, i => isButtonDown(pad, i));
+        gnowEl.innerHTML = "now <b>" + (gear < 0 ? "R" : gear === 0 ? "N" : gear) + "</b>";
+        gnowEl.classList.toggle("on", gear !== 0);
+        if (gear !== G.lastLive) { renderGearChips(gear); G.lastLive = gear; }   // only on change
+      } else if (pad && g && g.mode === "paddles") {
+        const up = g.up != null && isButtonDown(pad, g.up), down = g.down != null && isButtonDown(pad, g.down);
+        gnowEl.innerHTML = up ? "▲ up" : down ? "▼ down" : "—";
+        gnowEl.classList.toggle("on", up || down);
+      } else {
+        gnowEl.textContent = "—"; gnowEl.classList.remove("on");
+      }
+      return;
+    }
+    if (!pad) return;
+    if (G.phase === "capture") {
+      const taken = Object.values(G.captured);
+      const fresh = pressedButtons(pad).filter(i => !G.baseline.includes(i) && !taken.includes(i));
+      if (fresh.length) {
+        const idx = fresh[0];
+        G.captured[G.queue[0]] = idx; G.waiting = idx; G.phase = "release";
+        gpromptEl.innerHTML = "Got <b>" + gLabelOf(G.queue[0]) + "</b> = button " + idx + " — release to neutral.";
+        renderGearChips(null);
+      }
+    } else if (G.phase === "release") {
+      if (!isButtonDown(pad, G.waiting)) gAdvance();
+    }
+  }
 
   /* ---------- per-frame ---------- */
   function applyLive(pad) {
@@ -362,6 +554,7 @@ export function createCalibration(opts) {
 
     if (state.real && pad) applyLive(pad);
     updateRowStatus();
+    pollGear(pad);
 
     if (autoHide) el.style.display = (state.real && S.phase === "idle") ? "none" : "";
   }
@@ -369,6 +562,7 @@ export function createCalibration(opts) {
   function show() { el.style.display = ""; }
 
   renderRows();
+  renderGearStatus();
   setMsg(hasAllPedals() ? "Calibration loaded." : "Not calibrated yet.");
 
   return {
