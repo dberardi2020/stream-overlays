@@ -19,14 +19,21 @@
    identically whether it's fed live buttons or the demo lap. */
 import { mapPedal, mapWheel, resolveShifterGear, stepSequentialGear } from "./calibration-math.js";
 import { getPad, isButtonDown } from "./gamepad.js";
-import { tel, shiftLog, shiftTimes, gateUse, clock, mode, setMode, MODES } from "./draw-kit.js";
+import { tel, shiftLog, shiftTimes, gateUse, clock, MODES } from "./draw-kit.js";
 
 export const CALIBRATION_KEY = "g923.calibration.v2";
 const FRAME_DT = 1 / 60;   // fallback when a caller doesn't pass a real delta
 const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
 
-const H_IDX      = MODES.findIndex(m => m.id === "H");
-const PADDLE_IDX = MODES.findIndex(m => m.id === "PADDLE");
+/* The shift-behaviour params (throw duration, absolute vs. sequential) for a
+   calibrated shifter type. Read LOCALLY here rather than via draw-kit's global
+   `mode()`/`setMode()`: that global belongs to the gallery's (demo-only) Mode
+   control and is read by throw-timer, so the live path must not mutate it — live
+   and demo derive their shift animation independently. H-shifter → the absolute
+   H-pattern throw; paddles → the sequential paddle throw. */
+const H_MODE      = MODES.find(m => m.id === "H");
+const PADDLE_MODE = MODES.find(m => m.id === "PADDLE");
+const gearShiftMode = gearMap => (gearMap && gearMap.mode === "paddles") ? PADDLE_MODE : H_MODE;
 
 /* The saved map is keyed by calibration.js's channel keys — the LONG names
    (`throttle`/`brake`/`clutch`/`steering`), not the short channel-state fields
@@ -76,7 +83,6 @@ export function readGear(state, gearMap, pad, mem) {
    (shiftProg) and the gate-animated lever, accumulate gate dwell. Exported so
    the bookkeeping is unit-testable without a live pad. */
 export function applyGear(state, gearMap, pad, dt, mem) {
-  if (gearMap) setMode(gearMap.mode === "paddles" ? PADDLE_IDX : H_IDX);
   const gear = readGear(state, gearMap, pad, mem);
 
   if (gear !== state.gear) {
@@ -93,7 +99,7 @@ export function applyGear(state, gearMap, pad, dt, mem) {
     state.shiftAge += dt;
   }
 
-  const m = mode();
+  const m = gearShiftMode(gearMap);
   state.shiftProg = clamp01(m.throw ? state.shiftAge / m.throw : 1);
   state.lever = (m.absolute && state.shiftProg < 1) ? 0 : state.gear;
   if (state.lever > 0) gateUse[state.lever] += dt;   // reverse (-1) never accrues gate dwell
@@ -142,9 +148,14 @@ export function createInputReader(opts) {
         state.real = false;
         state.thr = 0; state.brk = 0; state.clu = 0; state.str = 0;
       }
-      if (hasGear()) applyGear(state, map.gear, pad, d, paddleMem);
-      else restGear();
-      clock.t += d;   // wall-time for shiftTimes stamps — advanced last, as demo-driver does
+      if (hasGear()) {
+        applyGear(state, map.gear, pad, d, paddleMem);
+        clock.t += d;   // wall-time for shiftTimes stamps — advanced last, as demo-driver does.
+                        // Scoped to a calibrated shifter so a pedals-only live setup keeps the
+                        // frozen clock it had before SO-0006 (no behaviour change without a shifter).
+      } else {
+        restGear();
+      }
       return state.real;
     }
   };

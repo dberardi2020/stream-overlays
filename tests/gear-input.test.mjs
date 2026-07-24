@@ -20,7 +20,7 @@ import {
 } from "../overlays/sim-racing/engine/calibration-math.js";
 import { readGear, applyGear } from "../overlays/sim-racing/engine/live-input.js";
 import { createState } from "../overlays/sim-racing/engine/state.js";
-import { shiftLog, shiftTimes, gateUse, clock, tel, mode } from "../overlays/sim-racing/engine/draw-kit.js";
+import { shiftLog, shiftTimes, gateUse, clock, tel, mode, setMode, MODES } from "../overlays/sim-racing/engine/draw-kit.js";
 
 const EPS = 1e-9;
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) <= EPS, `${msg}: ${a} vs ${b}`);
@@ -131,7 +131,6 @@ test("applyGear logs a shift and sets the throw on gear change (H-pattern)", () 
   assert.equal(s.shiftDir, 1);
   assert.equal(s.shiftCount, 1);
   near(s.shiftAge, 0, "shiftAge resets on change");
-  assert.equal(mode().id, "H");            // shifter map selects the H-pattern mode
   near(s.shiftProg, 0, "throw starts at 0");
   assert.equal(s.lever, 0, "lever is mid-throw (neutral) in H-pattern until the throw completes");
   assert.equal(shiftLog.length, 1);
@@ -163,8 +162,20 @@ test("applyGear (paddles) settles the lever immediately — no absolute throw", 
 
   applyGear(s, gearMap, padWith([4]), 1 / 60, mem);   // upshift 0 -> 1
   assert.equal(s.gear, 1);
-  assert.equal(mode().id, "PADDLE");
-  assert.equal(s.lever, 1, "sequential lever is never held at neutral mid-throw");
+  assert.equal(s.lever, 1, "sequential lever is never held at neutral mid-throw (paddles aren't absolute)");
+});
+
+test("applyGear never mutates the global draw-kit mode (live must not clobber the demo control)", () => {
+  resetSingletons();
+  setMode(MODES.findIndex(m => m.id === "SEQ"));   // stand in for the gallery's demo-only Mode control
+  const before = mode().id;
+  const s = createState();
+  const mem = { up: false, down: false };
+
+  applyGear(s, { mode: "paddles", up: 4, down: 5 }, padWith([4]), 1 / 60, mem);
+
+  assert.equal(mode().id, before, "live gear read left the global mode untouched");
+  assert.equal(s.lever, 1, "yet it still animated as sequential from its own local mode lookup");
 });
 
 test("applyGear puts reverse at -1 and never accrues gate dwell for it", () => {
