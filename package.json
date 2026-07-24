@@ -8,7 +8,7 @@
   "scripts": {
     "test": "node --test tests/*.test.mjs",
     "qa": "node qa/acceptance.mjs",
-    "serve": "python3 -m http.server --directory overlays/sim-racing"
+    "serve": "python3 scripts/dev-server.py"
   },
   "devDependencies": {
     "pixelmatch": "^7.2.0",
