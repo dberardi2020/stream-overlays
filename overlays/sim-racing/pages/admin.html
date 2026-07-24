@@ -120,7 +120,13 @@ h2 .c{color:var(--mute);font-size:12px;font-weight:400;font-family:"IBM Plex Mon
 .sbtn.on[data-stage=excluded]{color:var(--exc);border-color:var(--exc);background:rgba(242,69,61,.14)}
 .hbtn.on{color:var(--exp);border-color:var(--exp);background:rgba(199,125,255,.14)}
 .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto}
-.foot .use{font-size:11.5px;letter-spacing:.03em}
+.foot .acts{display:flex;gap:7px}
+.foot .use{font-family:inherit;font-size:11.5px;letter-spacing:.03em;color:var(--str);
+  background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:4px 9px;cursor:pointer;transition:.12s}
+.foot .use:hover{border-color:var(--str);background:rgba(100,181,255,.12)}
+.foot .use.ghost{color:var(--mute)}
+.foot .use.ghost:hover{color:var(--ink);border-color:var(--line-2);background:#2a2e37}
+.foot .use.ok{color:var(--live);border-color:var(--live);background:rgba(52,217,122,.13)}
 .empty{color:var(--mute);padding:40px 0;text-align:center}
 #err{color:var(--brk);background:rgba(242,69,61,.08);border:1px solid rgba(242,69,61,.4);border-radius:8px;padding:10px 12px;margin-bottom:16px;display:none}
 #file-warning{display:none;color:var(--clu);background:rgba(255,176,32,.09);border:1px solid rgba(255,176,32,.45);border-radius:8px;padding:11px 13px;margin-bottom:16px;line-height:1.6}
@@ -228,6 +234,17 @@ for (const e of manifest) {
 const driver = createDemoDriver();
 driver.reset();
 
+/* copy-to-clipboard with a transient "Copied!" on the button itself */
+function wireCopy(btn, text, label) {
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(text); btn.textContent = "Copied!"; btn.classList.add("ok"); }
+    catch { btn.textContent = "Press ⌘C"; }
+    clearTimeout(btn._t);
+    btn._t = setTimeout(() => { btn.textContent = label; btn.classList.remove("ok"); }, 1100);
+  });
+}
+
 /* ---- build cards (ALL entries — admin sees excluded + hidden too) ---- */
 const groups = document.getElementById("groups");
 const tiles = [];
@@ -274,7 +291,10 @@ for (const set of SET_ORDER) {
         '<span class="lbl">Stage</span>' + stageBtns +
         '<button class="sbtn hbtn" title="hidden — down but not archived">Hidden</button>' +
       "</div>" +
-      '<div class="foot"><a class="use" href="overlay.html?style=' + e.id + '">Open in OBS →</a></div>';
+      '<div class="foot"><div class="acts">' +
+        '<button class="use" data-act="obs">Copy OBS link</button>' +
+        '<button class="use ghost" data-act="name">Copy name</button>' +
+      "</div></div>";
 
     const plate = card.querySelector(".stage-plate");
     const cv = document.createElement("canvas");
@@ -282,6 +302,10 @@ for (const set of SET_ORDER) {
     cv.width = e.size.w * dpr; cv.height = e.size.h * dpr;
     const ctx = cv.getContext("2d"); ctx.scale(dpr, dpr);
     plate.appendChild(cv);
+
+    const obsUrl = new URL("overlay.html?style=" + e.id, location.href).href;
+    wireCopy(card.querySelector('[data-act="obs"]'), obsUrl, "Copy OBS link");
+    wireCopy(card.querySelector('[data-act="name"]'), e.name, "Copy name");
 
     grid.appendChild(card);
     const tile = { e, card, ctx, plate, mem: {}, visible: true, module: undefined, placeheld: false };
