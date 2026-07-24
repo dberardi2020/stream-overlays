@@ -43,7 +43,6 @@ Pre-public candidates not yet committed to the On-deck sequence.
 |---|---|---|---|
 | [SO-0004](#so-0004) | P2 | Feature | OBS gamepad fallback — interactive ladder (guidance already shipped) |
 | [SO-0025](#so-0025) | P2 | Chore | Site style kit — encode design tokens, point every page at it |
-| [SO-0029](#so-0029) | P2 | Feature | Setup surface v2 — per-component boxes + live overlay previews |
 | [SO-0028](#so-0028) | P3 | Idea | Light vs dark mode support |
 
 ### Engine & overlays
@@ -81,6 +80,7 @@ are in the docs.*
 
 | ID | Title | Closed |
 |---|---|---|
+| SO-0029 | **Setup surface v2** — the calibration surface split from one monolithic panel into **per-component boxes** (Pedals · Wheel · Shifter · Telemetry, each its own card). `createCalibration` became a multi-mount engine (`mounts:{pedals,wheel,shifter,status}`) with the shared axis state machine unchanged — only the DOM re-homed, routed to the active box. Functional grouping (steering→Wheel, H-shifter+paddles→Shifter). Each box embeds its **real overlay as a live preview** (Pedals→pedal-blocks, Wheel→wheel, Shifter→its H-gate), driven by the same state the engine updates — resting at zero until a channel is calibrated + a wheel is connected. Live application decoupled per-channel (meters/previews react as soon as their own channel binds, not on all-pedals). Verified in-browser; 95 node tests green. Per-capability needed/optional tracked in SO-0023; sequential-shifter grouping in SO-0030. | 2026-07-24 |
 | SO-0022 | **Overlay & setup polish** — new `pedal-blocks` pedals overlay (the cockpit pedals broken out: diegetic light-up depressing blocks); `gate-with-trail` upgraded to carry gate-map's gear numbers + NEUTRAL/GEAR callout on top of its knob trail (stale golden retired); and the setup **calibration panel** restyled from a bolted-on widget into one cohesive, host-themed component (transparent, full-width, tokenised, live meters in-row). | 2026-07-23 |
 | SO-0021 | **Data-driven hero + curation/admin tooling** — the landing hero is curated in data, not code: a `hero` flag on catalogue entries, toggled in admin via a **★ Hero** control (capped at 4, enforced by a pytest), auto-arranged onto the grid's diagonals; index reads the flag. Admin also gains **Save to file** (File System Access API — writes catalogue.json directly, re-baselines dirty state), and gallery/admin cards gain **Copy OBS link** + **Copy name**. A **local-only Admin link** shows in the nav on localhost. 79 node + 225 pytest green. | 2026-07-23 |
 | SO-0018 | **Gallery Demo ⇄ Live toggle** ([ADR 0006](../decisions/0006-setup-surface-pure-overlay.md)) — an Input: Demo/Live control on the gallery. Demo keeps the synthetic lap; Live swaps in the real calibrated G923 (via the same `createInputReader` + `pushHistory` path the pure overlay uses) so the whole catalogue responds to one binding at once. Pedals + steering live; telemetry (SO-0007) and shifter (SO-0006) rest — no rig source yet. Demo-only controls dim in Live; a status line reports readiness with a Setup link. Live UI verified headless; the wheel-driven path needs a real G923 to confirm end-to-end. | 2026-07-23 |
@@ -227,20 +227,10 @@ The standing audit that integration coverage is sufficient across **every** surf
 
 The site is dark-only today — each page hardcodes the `--asphalt`/`--ink` dark palette. Investigate a light theme + a toggle (or honour `prefers-color-scheme`). Rides directly on [SO-0025](#so-0025): once the palette is design tokens in one place, a theme is a second token set rather than a per-page rewrite — so the style kit comes first. Note the overlays render on a transparent canvas for OBS and are their own visual system (`draw-kit.js` `C`); light/dark is a **site-chrome** concern, most likely not the overlays themselves.
 
-### SO-0029 — Setup surface v2: per-component boxes + live overlay previews {#so-0029}
-**P2 · Feature · setup**
-
-Restructure the calibration surface from one monolithic panel into **per-component boxes** — Pedals, Wheel, Shifter, Telemetry — each its own card, the way Telemetry already is. Two payoffs:
-
-- **Clearer grouping, by function not physical location.** Steering → the Wheel box; **all** gear selection (H-shifter + paddles/sequential) → the Shifter box; pedals → the Pedals box. (Paddles live *on* the wheel but are functionally a shifter — group by what they do.)
-- **Each box previews its real overlay reacting to live input.** Reuse the overlay modules the gallery already renders live over a `state` object (same `createInputReader` + `draw()` path) — so setup shows the actual product responding to your pedals/wheel/shifter, in the same visual language as the gallery. Cheap because the pattern already exists.
-
-Pairs with [SO-0023](#so-0023) (per-component "needed" instead of the global rule) and [SO-0030](#so-0030) (where sequential shifters fit). The H-pattern gate from SO-0006 becomes the Shifter box's visual.
-
 ### SO-0030 — Sequential shifter input: confirm HID model + grouping {#so-0030}
 **P3 · Chore · input**
 
-A sequential shifter (an aftermarket lever, or a wheel's sequential mode) — does it register as two momentary **up/down buttons** (the same HID model as paddles) or as an axis/rocker? Best guess: **up/down buttons**, i.e. identical to the paddle model, so it would ride SO-0006's existing "Paddles" (sequential) capture path and group with the **Shifter**, not the wheel — an absolute H-shifter is the odd one out (one button per position). Confirm on real hardware (none on hand — untestable now), then finalise the label (likely "Paddles / sequential") and the grouping in [SO-0029](#so-0029). Blocks nothing; a correctness + labelling check on SO-0006's sequential path.
+A sequential shifter (an aftermarket lever, or a wheel's sequential mode) — does it register as two momentary **up/down buttons** (the same HID model as paddles) or as an axis/rocker? Best guess: **up/down buttons**, i.e. identical to the paddle model, so it would ride SO-0006's existing "Paddles" (sequential) capture path and group with the **Shifter**, not the wheel — an absolute H-shifter is the odd one out (one button per position). Confirm on real hardware (none on hand — untestable now), then finalise the label (likely "Paddles / sequential") and the grouping (SO-0029, done). Blocks nothing; a correctness + labelling check on SO-0006's sequential path.
 
 ## Conventions
 
