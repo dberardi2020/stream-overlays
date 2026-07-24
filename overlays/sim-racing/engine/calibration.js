@@ -46,31 +46,46 @@ const WHEEL_SWEEP     = 0.30; // each side must move at least this far to count
 
 const chOf = key => CHANNELS.find(c => c.key === key);
 
+/* The panel inherits its palette from the host page via CSS variables (with
+   fallbacks to the standalone defaults), and is transparent + full-width so it
+   sits flush inside whatever card mounts it — no card-in-a-card, no stranded
+   fixed-width column. Live meters live in the rows themselves, so a host never
+   needs a second, redundant readout of the same channels. */
 const CSS = `
-.g923cal{font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,monospace;font-size:12px;
-  color:#eceae5;background:#15171c;border:1px solid #2e323c;border-radius:10px;
-  padding:12px 14px;width:340px;max-width:92vw;line-height:1.4}
-.g923cal-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.g923cal{
+  --cal-fg:var(--ink,#eceae5); --cal-mute:var(--mute,#878d9a); --cal-line:var(--line,#2e323c);
+  --cal-panel:var(--panel-2,#22252d); --cal-accent:var(--clu,#ffb020); --cal-on:var(--thr,#34d97a);
+  --cal-thr:var(--thr,#34d97a); --cal-brk:var(--brk,#f2453d); --cal-clu:var(--clu,#ffb020); --cal-str:var(--str,#64b5ff);
+  font:inherit;font-size:12px;color:var(--cal-fg);width:100%;line-height:1.45}
+.g923cal-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}
 .g923cal-title{font-weight:600;letter-spacing:.04em}
-.g923cal-conn{font-size:11px;color:#878d9a;white-space:nowrap}
-.g923cal-conn.on{color:#34d97a}
-.g923cal-rows{display:flex;flex-direction:column;gap:2px}
-.g923cal-row{display:grid;grid-template-columns:12px 70px 54px 1fr auto;gap:8px;align-items:center;padding:3px 0}
-.g923cal-row .dot{width:10px;height:10px;border-radius:50%}
-.g923cal-row .ax{color:#878d9a;font-size:11px}
-.g923cal-row .st{text-align:right;font-variant-numeric:tabular-nums}
-.g923cal .muted{color:#5f6672}
-.g923cal .warn{color:#ffb020}
-.g923cal button{font:inherit;font-size:11px;letter-spacing:.02em;background:#22252d;color:#eceae5;
-  border:1px solid #2e323c;border-radius:6px;padding:4px 9px;cursor:pointer;transition:border-color .12s,color .12s}
-.g923cal button:hover{border-color:#ffb020;color:#ffb020}
-.g923cal-row button{padding:2px 8px}
-.g923cal-active{margin-top:10px;border-top:1px solid #2e323c;padding-top:10px}
+.g923cal-conn{font-size:11px;color:var(--cal-mute);white-space:nowrap;font-variant-numeric:tabular-nums}
+.g923cal-conn.on{color:var(--cal-on)}
+.g923cal-rows{display:flex;flex-direction:column}
+.g923cal-row{display:grid;grid-template-columns:11px 58px 1fr auto auto;gap:11px;align-items:center;padding:6px 0}
+.g923cal-row + .g923cal-row{border-top:1px solid color-mix(in srgb,var(--cal-line) 55%,transparent)}
+.g923cal-row .dot{width:9px;height:9px;border-radius:50%;transition:background .15s}
+.g923cal-row .nm{white-space:nowrap}
+.g923cal-row .meter{position:relative;height:9px;background:var(--cal-panel);border:1px solid var(--cal-line);border-radius:5px;overflow:hidden;transition:opacity .15s}
+.g923cal-row.unset .meter{opacity:.4}
+.g923cal-row .meter i{position:absolute;top:0;bottom:0;left:0;width:0;border-radius:5px;transition:width .05s linear}
+.g923cal-row .meter b{position:absolute;top:-1px;bottom:-1px;left:50%;width:4px;margin-left:-2px;border-radius:2px;background:var(--cal-str);transition:left .05s linear}
+.g923cal-row .val{min-width:54px;text-align:right;font-variant-numeric:tabular-nums;color:var(--cal-fg)}
+.g923cal-row .val[data-idle]{color:var(--cal-mute)}
+.g923cal .muted{color:var(--cal-mute)}
+.g923cal button{font:inherit;font-size:11px;letter-spacing:.02em;background:var(--cal-panel);color:var(--cal-fg);
+  border:1px solid var(--cal-line);border-radius:6px;padding:3px 10px;cursor:pointer;transition:border-color .12s,color .12s,background .12s}
+.g923cal button:hover{border-color:var(--cal-accent);color:var(--cal-accent)}
+.g923cal button:focus-visible{outline:2px solid var(--cal-accent);outline-offset:1px}
+.g923cal-row button{padding:2px 9px}
+.g923cal button.g923cal-primary{background:var(--cal-accent);border-color:var(--cal-accent);color:#15171c;font-weight:600}
+.g923cal button.g923cal-primary:hover{background:var(--cal-accent);color:#15171c;filter:brightness(1.08)}
+.g923cal-active{margin-top:11px;border-top:1px solid var(--cal-line);padding-top:11px}
 .g923cal-prompt{margin-bottom:9px}
-.g923cal-prompt b{color:#ffb020;font-weight:600}
+.g923cal-prompt b{color:var(--cal-accent);font-weight:600}
 .g923cal-btns{display:flex;gap:6px;flex-wrap:wrap}
-.g923cal-actions{display:flex;gap:8px;align-items:center;margin-top:11px;border-top:1px solid #2e323c;padding-top:10px}
-.g923cal-msg{color:#878d9a;font-size:11px;margin-left:auto;text-align:right}
+.g923cal-actions{display:flex;gap:8px;align-items:center;margin-top:12px;border-top:1px solid var(--cal-line);padding-top:11px}
+.g923cal-msg{color:var(--cal-mute);font-size:11px;margin-left:auto;text-align:right}
 .g923cal [hidden]{display:none!important}
 `;
 
@@ -121,7 +136,7 @@ export function createCalibration(opts) {
       '</div>' +
     '</div>' +
     '<div class="g923cal-actions" data-actions>' +
-      '<button data-cal-all>Calibrate all</button>' +
+      '<button class="g923cal-primary" data-cal-all>Calibrate all</button>' +
       '<button data-clear>Clear</button>' +
       '<span class="g923cal-msg" data-msg></span>' +
     '</div>';
@@ -148,15 +163,25 @@ export function createCalibration(opts) {
       const m = S.map[c.key];
       const row = document.createElement("div");
       row.className = "g923cal-row";
+      // Pedals fill from the left; the wheel rides a center-anchored marker.
+      const meter = c.mode === "wheel"
+        ? '<div class="meter"><b></b></div>'
+        : '<div class="meter"><i style="background:' + c.color + '"></i></div>';
       row.innerHTML =
-        '<span class="dot" style="background:' + (m ? c.color : "#3a3e46") + '"></span>' +
+        '<span class="dot" style="background:' + (m ? c.color : "var(--cal-line)") + '"></span>' +
         '<span class="nm">' + c.name + '</span>' +
-        '<span class="ax">' + (m ? "axis " + m.axis : "—") + '</span>' +
-        '<span class="st"></span>' +
+        meter +
+        '<span class="val" data-idle></span>' +
         '<button>' + (m ? "Redo" : "Set") + '</button>';
       row.querySelector("button").addEventListener("click", () => startQueue([c.key]));
       rowsEl.appendChild(row);
-      rowRefs[c.key] = { st: row.querySelector(".st"), dot: row.querySelector(".dot"), ax: row.querySelector(".ax") };
+      rowRefs[c.key] = {
+        row,
+        dot:   row.querySelector(".dot"),
+        fill:  row.querySelector(".meter i"),
+        mark:  row.querySelector(".meter b"),
+        val:   row.querySelector(".val")
+      };
     }
     updateRowStatus();
   }
@@ -164,13 +189,30 @@ export function createCalibration(opts) {
     for (const c of CHANNELS) {
       const ref = rowRefs[c.key], m = S.map[c.key];
       if (!ref) continue;
-      if (!m) {
-        ref.st.innerHTML = c.optional ? '<span class="muted">optional</span>' : '<span class="warn">needed</span>';
-      } else if (state.real) {
-        const p = c.mode === "pedal" ? Math.round(state[c.short] * 100) : Math.round(state.str * 100);
-        ref.st.textContent = p + "%";
-      } else {
-        ref.st.innerHTML = "✓";
+      if (!m) {                              // unbound — faint empty track, intent in the status column
+        ref.row.classList.add("unset");
+        ref.val.setAttribute("data-idle", "");
+        ref.val.textContent = c.optional ? "optional" : "needed";
+        if (c.mode === "pedal") ref.fill.style.width = "0%";
+        else ref.mark.style.left = "50%";
+      } else if (state.real) {               // bound + a live device — drive the meter
+        ref.row.classList.remove("unset");
+        ref.val.removeAttribute("data-idle");
+        if (c.mode === "pedal") {
+          const v = Math.max(0, Math.min(1, state[c.short] || 0));
+          ref.fill.style.width = (v * 100) + "%";
+          ref.val.textContent = Math.round(v * 100) + "%";
+        } else {
+          const s = Math.max(-1, Math.min(1, state.str || 0));
+          ref.mark.style.left = (50 + s * 50) + "%";
+          ref.val.textContent = (s > 0 ? "+" : "") + Math.round(s * 100);
+        }
+      } else {                               // bound but resting (no live device)
+        ref.row.classList.remove("unset");
+        ref.val.setAttribute("data-idle", "");
+        if (c.mode === "pedal") ref.fill.style.width = "0%";
+        else ref.mark.style.left = "50%";
+        ref.val.textContent = "✓";
       }
     }
   }

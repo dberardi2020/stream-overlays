@@ -30,17 +30,6 @@ a:hover{text-decoration:underline}
 .card.soon{opacity:.72}
 .tag{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;border:1px solid var(--line);color:var(--mute)}
 .tag.later{color:var(--clu);border-color:rgba(255,176,32,.5)}
-/* live readout */
-.readout{display:flex;flex-direction:column;gap:7px;margin-top:10px}
-.rrow{display:flex;align-items:center;gap:9px}
-.rrow .lbl{font-size:10px;letter-spacing:.08em;color:var(--mute);width:34px;text-transform:uppercase}
-.bar{flex:1;height:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;overflow:hidden}
-.bar span{display:block;height:100%;width:0;border-radius:6px;transition:width .04s linear}
-.bar.thr span{background:var(--thr)} .bar.brk span{background:var(--brk)} .bar.clu span{background:var(--clu)}
-.rval{font-family:Oxanium,monospace;font-size:12px;width:38px;text-align:right;color:var(--ink)}
-.wheel{display:flex;align-items:center;gap:9px}
-.wheel .track{flex:1;height:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;position:relative}
-.wheel .track b{position:absolute;top:1px;bottom:1px;left:50%;width:5px;margin-left:-2.5px;background:var(--str);border-radius:3px;transition:left .04s linear}
 .hint{font-size:11.5px;color:var(--mute);line-height:1.55}
 .hint b{color:var(--ink)}
 ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font-size:12.3px}
@@ -73,12 +62,6 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
     <p>Connect your wheel and press any button so the browser sees it, then <b>Calibrate all</b> — release everything for
       Neutral, then press each pedal fully. Steering is optional.</p>
     <div id="calmount"></div>
-    <div class="readout">
-      <div class="rrow"><span class="lbl">Thr</span><div class="bar thr"><span id="b-thr"></span></div><span class="rval" id="v-thr">0</span></div>
-      <div class="rrow"><span class="lbl">Brk</span><div class="bar brk"><span id="b-brk"></span></div><span class="rval" id="v-brk">0</span></div>
-      <div class="rrow"><span class="lbl">Clu</span><div class="bar clu"><span id="b-clu"></span></div><span class="rval" id="v-clu">0</span></div>
-      <div class="rrow"><span class="lbl">Str</span><div class="wheel"><div class="track"><b id="b-str"></b></div></div><span class="rval" id="v-str">0</span></div>
-    </div>
   </div>
 
   <div class="card soon">
@@ -122,23 +105,9 @@ const cal = createCalibration({
   autoHideWhenLive: false        // this is the setup surface — keep the panel up
 });
 
-const bars = {
-  thr: [document.getElementById("b-thr"), document.getElementById("v-thr")],
-  brk: [document.getElementById("b-brk"), document.getElementById("v-brk")],
-  clu: [document.getElementById("b-clu"), document.getElementById("v-clu")]
-};
-const strBar = document.getElementById("b-str"), strVal = document.getElementById("v-str");
-
+// The panel now owns its own live meters — the host just needs to poll it.
 function frame() {
   cal.poll();
-  for (const k of ["thr", "brk", "clu"]) {
-    const v = Math.max(0, Math.min(1, state[k] || 0));
-    bars[k][0].style.width = (v * 100) + "%";
-    bars[k][1].textContent = Math.round(v * 100);
-  }
-  const s = Math.max(-1, Math.min(1, state.str || 0));
-  strBar.style.left = (50 + s * 50) + "%";
-  strVal.textContent = (s > 0 ? "+" : "") + Math.round(s * 100);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
