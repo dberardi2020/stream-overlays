@@ -126,6 +126,7 @@
     "set": "pedals",
     "stage": "live",
     "hidden": false,
+    "hero": true,
     "size": {
       "w": 240,
       "h": 110
@@ -146,6 +147,7 @@
     "set": "pedals",
     "stage": "live",
     "hidden": false,
+    "hero": true,
     "size": {
       "w": 180,
       "h": 130
@@ -730,6 +732,7 @@
     "set": "shifter",
     "stage": "live",
     "hidden": false,
+    "hero": true,
     "size": {
       "w": 200,
       "h": 150
@@ -802,6 +805,7 @@
     "set": "shifter",
     "stage": "live",
     "hidden": false,
+    "hero": true,
     "size": {
       "w": 170,
       "h": 150

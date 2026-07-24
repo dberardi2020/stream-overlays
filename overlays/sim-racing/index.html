@@ -161,24 +161,28 @@ footer .sep{opacity:.4}
 <script type="module">
 import { createDemoDriver } from "./engine/demo-driver.js";
 
-// A curated teaser spanning all four overlay sets. Same shared-driver + module-import
-// loop the gallery uses — one driver, one clock, each plate imports its overlay lazily.
-const HEROES = [
-  { id: "pedal-blocks",    set: "pedals"  },
-  { id: "needle-gauges",   set: "pedals"  },
-  { id: "gate-with-trail", set: "shifter" },
-  { id: "lever-position",  set: "shifter" }
-];
-
+// Heroes are curated in the catalogue (hero:true) and in admin.html — not hardcoded here.
+// Same shared-driver + module-import loop the gallery uses: one driver, one clock, each
+// plate imports its overlay lazily.
 const stage = document.getElementById("stage");
 const dpr = window.devicePixelRatio || 1;
 const catalogue = await fetch("./catalogue.json").then(r => r.json()).catch(() => []);
-const byId = Object.fromEntries(catalogue.map(e => [e.id, e]));
+
+// For a 2-column grid, put matching sets on opposite diagonals ([X,Y,Y,X]) when the
+// selection is a clean 2-of-each-of-two-sets; otherwise keep catalogue order.
+function arrangeForDiagonal(items) {
+  if (items.length !== 4) return items;
+  const sets = [...new Set(items.map(e => e.set))];
+  if (sets.length !== 2) return items;
+  const a = items.filter(e => e.set === sets[0]);
+  const b = items.filter(e => e.set === sets[1]);
+  return (a.length === 2 && b.length === 2) ? [a[0], b[0], b[1], a[1]] : items;
+}
+
+const heroes = arrangeForDiagonal(catalogue.filter(e => e.hero && e.stage !== "excluded"));
 
 const tiles = [];
-for (const hero of HEROES) {
-  const e = byId[hero.id];
-  if (!e) continue;
+for (const e of heroes) {
   const plate = document.createElement("div");
   plate.className = "plate";
   const cv = document.createElement("canvas");
@@ -189,7 +193,7 @@ for (const hero of HEROES) {
   plate.appendChild(cv);
   const cap = document.createElement("span");
   cap.className = "cap";
-  cap.innerHTML = '<b>' + e.name + '</b> · ' + hero.set;
+  cap.innerHTML = '<b>' + e.name + '</b> · ' + e.set;
   plate.appendChild(cap);
   stage.appendChild(plate);
   tiles.push({ e, ctx, mem: {} });

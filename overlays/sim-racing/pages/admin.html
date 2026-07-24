@@ -92,6 +92,8 @@ h2 .c{color:var(--mute);font-size:12px;font-weight:400;font-family:"IBM Plex Mon
 .tag.id{color:var(--mute)}
 .tag.tel{color:var(--clu);border-color:rgba(255,176,32,.5)}
 .tag.hiddenflag{color:var(--exp);border-color:rgba(199,125,255,.5)}
+.tag.heroflag{color:var(--clu);border-color:rgba(255,176,32,.5)}
+.herobtn.on{color:var(--clu);border-color:var(--clu);background:rgba(255,176,32,.14)}
 .chans{display:flex;flex-wrap:wrap;gap:4px}
 .ch{font-size:9.5px;font-weight:600;letter-spacing:.05em;padding:1px 5px;border-radius:3px;background:rgba(255,255,255,.05)}
 .ch-thr{color:var(--thr)} .ch-brk{color:var(--brk)} .ch-clu{color:var(--clu)}
@@ -148,7 +150,8 @@ h2 .c{color:var(--mute);font-size:12px;font-weight:400;font-family:"IBM Plex Mon
   <h1>Catalogue Admin</h1>
   <p class="lede">The write/curate view over <code>catalogue.json</code> — the same source of truth the public
     <a href="gallery.html">gallery</a> reads. Set each overlay's <b>stage</b> (live / draft / experimental / excluded),
-    toggle <b>hidden</b>, and tweak its <b>note</b>. This is a static tool with no backend: edits live in your browser
+    toggle <b>hidden</b>, mark <b>★ hero</b> to feature it on the landing teaser, and tweak its <b>note</b>. This is a
+    static tool with no backend: edits live in your browser
     (localStorage), and <b>Export</b> downloads a new <code>catalogue.json</code> for you to drop into the repo and commit.</p>
 
   <div id="err"></div>
@@ -217,8 +220,8 @@ try {
 
 // disk snapshot of the editable fields, so "dirty" = differs from what's committed
 const disk = {};
-for (const e of manifest) disk[e.id] = { stage: e.stage, hidden: !!e.hidden, note: e.note || "" };
-const isDirty = e => e.stage !== disk[e.id].stage || !!e.hidden !== disk[e.id].hidden || (e.note || "") !== disk[e.id].note;
+for (const e of manifest) disk[e.id] = { stage: e.stage, hidden: !!e.hidden, hero: !!e.hero, note: e.note || "" };
+const isDirty = e => e.stage !== disk[e.id].stage || !!e.hidden !== disk[e.id].hidden || !!e.hero !== disk[e.id].hero || (e.note || "") !== disk[e.id].note;
 
 // apply any locally-persisted (uncommitted) edits over the manifest, in place
 let edits = {};
@@ -228,6 +231,7 @@ for (const e of manifest) {
   if (!ed) continue;
   if (ed.stage !== undefined) e.stage = ed.stage;
   if (ed.hidden !== undefined) e.hidden = ed.hidden;
+  if (ed.hero !== undefined) { if (ed.hero) e.hero = true; else delete e.hero; }
   if (ed.note !== undefined) e.note = ed.note;
 }
 
@@ -283,6 +287,7 @@ for (const set of SET_ORDER) {
         '<span class="tag id">' + e.id + "</span>" +
         (e.telemetry && e.telemetry.length ? '<span class="tag tel">tel: ' + e.telemetry.join(",") + "</span>" : "") +
         '<span class="tag hiddenflag" style="display:none">hidden</span>' +
+        '<span class="tag heroflag" style="display:none">★ hero</span>' +
       "</div>" +
       '<div class="chans">' + chans + "</div>" +
       '<div class="stage-plate"><div class="scene"></div></div>' +
@@ -290,6 +295,7 @@ for (const set of SET_ORDER) {
       '<div class="edit">' +
         '<span class="lbl">Stage</span>' + stageBtns +
         '<button class="sbtn hbtn" title="hidden — down but not archived">Hidden</button>' +
+        '<button class="sbtn herobtn" title="feature on the landing hero teaser">★ Hero</button>' +
       "</div>" +
       '<div class="foot"><div class="acts">' +
         '<button class="use" data-act="obs">Copy OBS link</button>' +
@@ -321,7 +327,7 @@ const savebar = document.getElementById("savebar");
 const revertBtn = document.getElementById("revert");
 
 function recordEdit(e) {
-  if (isDirty(e)) edits[e.id] = { stage: e.stage, hidden: !!e.hidden, note: e.note || "" };
+  if (isDirty(e)) edits[e.id] = { stage: e.stage, hidden: !!e.hidden, hero: !!e.hero, note: e.note || "" };
   else delete edits[e.id];
   try { localStorage.setItem(STORE_KEY, JSON.stringify(edits)); } catch {}
   updateDirty();
@@ -340,6 +346,8 @@ function paintCard(t) {
   c.querySelectorAll(".sbtn[data-stage]").forEach(b => b.classList.toggle("on", b.dataset.stage === e.stage));
   const hb = c.querySelector(".hbtn"); hb.classList.toggle("on", !!e.hidden);
   c.querySelector(".hiddenflag").style.display = e.hidden ? "" : "none";
+  const heb = c.querySelector(".herobtn"); heb.classList.toggle("on", !!e.hero);
+  c.querySelector(".heroflag").style.display = e.hero ? "" : "none";
 }
 
 function wireCard(t) {
@@ -348,6 +356,7 @@ function wireCard(t) {
     e.stage = b.dataset.stage; recordEdit(e); paintCard(t); refresh();
   });
   c.querySelector(".hbtn").onclick = () => { e.hidden = !e.hidden; recordEdit(e); paintCard(t); };
+  c.querySelector(".herobtn").onclick = () => { if (e.hero) delete e.hero; else e.hero = true; recordEdit(e); paintCard(t); };
   const note = c.querySelector(".note");
   note.addEventListener("blur", () => { e.note = note.textContent.trim(); recordEdit(e); paintCard(t); });
 }
