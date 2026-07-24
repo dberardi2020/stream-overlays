@@ -95,9 +95,8 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
 
   <div class="card" id="obs">
     <h2>Using it in OBS</h2>
-    <p class="hint">Overlays are a separate, pure page (<code>overlay.html?style=&lt;id&gt;</code>) — see the
-      <a href="../../../docs/product/user-guide.md">user guide</a>. Because calibration is per-browser, OBS's built-in
-      browser needs its own one-time calibration:</p>
+    <p class="hint">Overlays are a separate, pure page (<code>overlay.html?style=&lt;id&gt;</code>). Because
+      calibration is per-browser, OBS's built-in browser needs its own one-time calibration:</p>
     <ol>
       <li>Add <b>this setup page</b> as a temporary OBS Browser Source.</li>
       <li>Right-click it → <b>Interact</b>, press a wheel button, and calibrate here.</li>
@@ -105,7 +104,7 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
     </ol>
     <p class="hint"><b>No device showing?</b> The Gamepad API only wakes on a focused page — that's what the Interact
       window gives you. If it still won't appear, run the overlay in a real Chrome window and use OBS <b>Window Capture</b>
-      instead (see <a href="../../../docs/decisions/0003-obs-gamepad-fallback.md">ADR 0003</a>).</p>
+      instead.</p>
   </div>
 </div>
 
