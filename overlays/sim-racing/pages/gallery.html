@@ -58,6 +58,11 @@ input.search:focus{border-color:var(--str)}
 input[type=range]{width:104px;accent-color:var(--str)}
 .tally{margin-left:auto;font-size:11.5px;color:var(--mute);flex:0 0 auto}
 .tally b{font-family:Oxanium,monospace;font-size:14px;color:var(--ink)}
+/* Demo⇄Live (SO-0018): live status line + dimmed demo-only controls */
+.livestat{font-size:11.5px;color:var(--mute);white-space:nowrap}
+.livestat.ok{color:var(--live)}
+.livestat a{color:var(--clu)}
+.grp.demo-only.off{opacity:.38;pointer-events:none}
 
 /* ---- groups + cards ---- */
 h2{font-family:Oxanium,monospace;font-weight:800;font-size:17px;margin:26px 0 11px;
@@ -167,9 +172,14 @@ input[type=color]::-webkit-color-swatch-wrapper{padding:0}
       <div class="grp grow"><input id="q" class="search" type="search" placeholder="Search name or description…"></div>
     </div>
     <div class="row">
-      <div class="grp"><button id="play" class="btn on">Pause</button></div>
-      <div class="grp"><span class="lbl">Speed</span><input id="speed" type="range" min="0.25" max="2" step="0.25" value="1"><span id="speedV" class="lbl">1×</span></div>
-      <div class="grp"><span class="lbl">Shift</span><button id="mode" class="btn">Mode: H</button></div>
+      <div class="grp"><span class="lbl">Input</span><span id="srcBtns" class="segmented">
+        <button class="btn on" data-src="demo">Demo</button>
+        <button class="btn" data-src="live">Live</button>
+      </span></div>
+      <span id="liveStatus" class="livestat" style="display:none"></span>
+      <div class="grp demo-only"><button id="play" class="btn on">Pause</button></div>
+      <div class="grp demo-only"><span class="lbl">Speed</span><input id="speed" type="range" min="0.25" max="2" step="0.25" value="1"><span id="speedV" class="lbl">1×</span></div>
+      <div class="grp demo-only"><span class="lbl">Shift</span><button id="mode" class="btn">Mode: H</button></div>
       <div class="tally"><b id="visN">0</b> shown</div>
     </div>
     <div class="row">
@@ -184,8 +194,11 @@ input[type=color]::-webkit-color-swatch-wrapper{padding:0}
 </div>
 
 <script type="module">
-import { setMode, MODES } from "../engine/draw-kit.js";
+import { setMode, MODES, pushHistory, tel, hist, gateUse, shiftLog, shiftTimes } from "../engine/draw-kit.js";
 import { createDemoDriver } from "../engine/demo-driver.js";
+import { createState } from "../engine/state.js";
+import { createInputReader } from "../engine/live-input.js";
+import { getPad } from "../engine/gamepad.js";
 
 const errEl = document.getElementById("err");
 const fail = msg => { errEl.style.display = "block"; errEl.innerHTML = msg; };
@@ -211,6 +224,24 @@ const entries = manifest
 /* ---- one shared driver + clock for the whole page (as the prototype does) ---- */
 const driver = createDemoDriver();
 driver.reset();
+
+/* ---- SO-0018: live input source. Demo drives synthetic data; Live swaps in the
+   real calibrated wheel so the whole catalogue responds to one binding at once.
+   Same localStorage contract setup.html writes. Pedals + steering are live;
+   telemetry (rpm/spd, SO-0007) and the H-shifter (gear, SO-0006) have no rig
+   source yet, so those channels rest. ---- */
+const liveState = Object.assign(createState(),
+  { gear: 0, lever: 0, prevGear: 0, shiftDir: 0, shiftAge: 0, shiftProg: 0 });
+const liveInput = createInputReader({ state: liveState });
+let source = "demo";                       // "demo" | "live"
+
+function resetLiveSingletons() {
+  // Entering Live: wipe the demo lap's shared telemetry/history so nothing stale lingers.
+  tel.rpm = 0; tel.spd = 0;
+  for (const k of Object.keys(hist)) hist[k].length = 0;
+  shiftLog.length = 0; shiftTimes.length = 0;
+  for (const g in gateUse) gateUse[g] = 0;
+}
 
 /* copy-to-clipboard with a transient "Copied!" on the button itself */
 function wireCopy(btn, text, label) {
@@ -303,7 +334,18 @@ let last = performance.now();
 function loop(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
-  driver.tick(dt);
+
+  let state;
+  if (source === "live") {
+    liveInput.poll();          // real wheel → liveState.thr/brk/clu/str (or rest at zero)
+    pushHistory(liveState);    // feed trace/history overlays from live values
+    tel.rpm = 0; tel.spd = 0;  // no telemetry source yet (SO-0007)
+    state = liveState;
+    updateLiveStatus();
+  } else {
+    driver.tick(dt);
+    state = driver.state;
+  }
 
   for (const t of tiles) {
     if (!t.visible || t.card.classList.contains("hide")) continue;
@@ -318,7 +360,7 @@ function loop(now) {
     if (!mod) continue;                       // still loading (null) or failed (false)
     t.ctx.clearRect(0, 0, t.e.size.w, t.e.size.h);
     try {
-      mod.draw(t.ctx, t.e.size.w, t.e.size.h, driver.state, t.mem);
+      mod.draw(t.ctx, t.e.size.w, t.e.size.h, state, t.mem);
     } catch (err) {
       t.ctx.fillStyle = "#f2453d"; t.ctx.font = "11px monospace";
       t.ctx.fillText("draw error: " + err.message, 8, 18);
@@ -385,6 +427,36 @@ let modeIdx = 0;
 const modeBtn = document.getElementById("mode");
 modeBtn.onclick = () => { modeIdx = (modeIdx + 1) % MODES.length; setMode(modeIdx); modeBtn.textContent = "Mode: " + MODES[modeIdx].id; };
 document.getElementById("q").oninput = e => { query = e.target.value; refresh(); };
+
+/* ---- SO-0018: Demo ⇄ Live source toggle ---- */
+const srcBtns = document.getElementById("srcBtns");
+const liveStatus = document.getElementById("liveStatus");
+const demoOnly = [...document.querySelectorAll(".grp.demo-only")];
+let lastLiveKey = "";
+
+function setSource(next) {
+  if (next === source) return;
+  source = next;
+  if (source === "live") { resetLiveSingletons(); liveInput.reload(); lastLiveKey = ""; }
+  srcBtns.querySelectorAll("[data-src]").forEach(b => b.classList.toggle("on", b.dataset.src === source));
+  demoOnly.forEach(g => g.classList.toggle("off", source === "live"));
+  liveStatus.style.display = source === "live" ? "" : "none";
+}
+srcBtns.querySelectorAll("[data-src]").forEach(b => b.onclick = () => setSource(b.dataset.src));
+
+// Reflect readiness (updated each live frame, DOM only touched on change).
+function updateLiveStatus() {
+  const pad = getPad();
+  const key = pad && liveInput.hasCalibration() ? "ok" : pad ? "uncal" : "nopad";
+  if (key === lastLiveKey) return;
+  lastLiveKey = key;
+  if (key === "ok") { liveStatus.className = "livestat ok"; liveStatus.textContent = "● Live — your wheel drives every overlay"; }
+  else if (key === "uncal") { liveStatus.className = "livestat"; liveStatus.innerHTML = 'Wheel seen, not calibrated — <a href="setup.html">calibrate →</a>'; }
+  else { liveStatus.className = "livestat"; liveStatus.innerHTML = 'No wheel yet — press a button on it, then <a href="setup.html">calibrate →</a>'; }
+}
+
+// Returning from the Setup tab re-reads a freshly-saved calibration.
+window.addEventListener("focus", () => { if (source === "live") { liveInput.reload(); lastLiveKey = ""; } });
 
 /* Backdrop builder: the contrast-test scene behind every preview is a colour +
    opacity composited over a permanent transparency checker. Presets are just
