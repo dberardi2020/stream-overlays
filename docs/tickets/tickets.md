@@ -8,11 +8,7 @@ Rows are pointers; anything needing more than a sentence has a block in **Detail
 
 ## In progress
 
-Lifting the overlay catalogue's quality — the bones are solid (pedals + shifter sets, live overlays), but the wheel primitive and several combos are half-baked.
-
-| ID | Pri | Type | Title |
-|---|---|---|---|
-| [SO-0019](#so-0019) | P1 | Chore | Overlay quality pass — cull half-baked, upgrade the rough |
+*(none)*
 
 ## On deck
 
@@ -20,12 +16,15 @@ The committed next few, in intended order. Remaining of the
 [ADR 0006](../decisions/0006-setup-surface-pure-overlay.md) binding overhaul, then the configure page and hosting.
 **Input binding is a v0 requirement** — including the H-shifter/gear (SO-0006), which is direct HID,
 not telemetry. **Telemetry (SO-0007) is explicitly deferred** — a far-off goal — but the setup page
-and overlay are designed to leave a slot for it.
+and overlay are designed to leave a slot for it. The overlay quality pass (SO-0019) is **shelved
+behind input binding + the configure page** — still committed, just no longer the active focus
+(it's polish, not a launch blocker).
 
 | ID | Pri | Type | Title |
 |---|---|---|---|
 | [SO-0006](#so-0006) | P1 | Feature | Shifter / gear live calibration + input (v0 input binding) |
 | [SO-0003](#so-0003) | P2 | Feature | Configure page → URL generator |
+| [SO-0019](#so-0019) | P1 | Chore | Overlay quality pass — cull half-baked, upgrade the rough |
 | [SO-0008](#so-0008) | P1 | Chore | Hosting + deploy pipeline |
 
 ## Blocked
