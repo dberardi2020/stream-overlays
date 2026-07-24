@@ -20,6 +20,8 @@ body{background:var(--asphalt);color:var(--ink);font-family:"IBM Plex Mono",ui-m
 .wrap{max-width:720px;margin:0 auto;padding:24px 18px 100px}
 h1{font-family:Oxanium,monospace;font-weight:800;font-size:24px;margin:0 0 5px}
 .lede{color:var(--mute);margin:0 0 18px;font-size:12.8px}
+.devstatus{font-size:12.5px;color:var(--mute);margin:0 0 16px;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.devstatus.on{color:var(--thr)}
 .lede code,.card code{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px}
 .lede b{color:var(--ink)}
 a{color:var(--str);text-decoration:none}
@@ -75,13 +77,26 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
   }
   </script>
 
+  <p class="devstatus" id="devstatus">○ no wheel detected</p>
+
   <div class="card">
-    <h2>Calibrate</h2>
-    <p>Connect your wheel and press any button so the browser sees it, then <b>Calibrate all</b> — release everything for
-      Neutral, then press each pedal fully. Steering is optional. The <b>Shifter</b> section below the pedals binds an
-      <b>H-shifter</b> (shift into each gear) or <b>paddles</b> (pull each paddle) — optional, and only needed for the
-      shifter overlays.</p>
-    <div id="calmount"></div>
+    <h2>Pedals</h2>
+    <p>Press any wheel button first so the browser sees the device. Then release everything for neutral and press each
+      pedal fully — travel scales to your hardware.</p>
+    <div id="mount-pedals"></div>
+  </div>
+
+  <div class="card">
+    <h2>Wheel</h2>
+    <p>Sweep <b>fully left</b>, then <b>fully right</b>, then re-centre. Only steering / wheel overlays need it.</p>
+    <div id="mount-wheel"></div>
+  </div>
+
+  <div class="card">
+    <h2>Shifter <span class="tag">optional</span></h2>
+    <p>Bind an <b>H-shifter</b> (shift into each gear) or <b>paddles</b> (pull each paddle) — only the shifter overlays
+      need it.</p>
+    <div id="mount-shifter"></div>
   </div>
 
   <div class="card soon">
@@ -113,9 +128,14 @@ import { CALIBRATION_KEY } from "../engine/live-input.js";
 const state = createState();
 const cal = createCalibration({
   state,
-  mount: document.getElementById("calmount"),
+  mounts: {
+    pedals:  document.getElementById("mount-pedals"),
+    wheel:   document.getElementById("mount-wheel"),
+    shifter: document.getElementById("mount-shifter"),
+    status:  document.getElementById("devstatus")   // single shared device indicator
+  },
   storeKey: CALIBRATION_KEY,     // same key the overlay + gallery read
-  autoHideWhenLive: false        // this is the setup surface — keep the panel up
+  autoHideWhenLive: false        // this is the setup surface — keep the boxes up
 });
 
 // The panel now owns its own live meters — the host just needs to poll it.

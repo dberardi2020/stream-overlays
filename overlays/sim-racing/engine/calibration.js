@@ -1,43 +1,45 @@
-/* Calibration engine + status panel — Layer 2.
+/* Calibration engine — Layer 2.
 
    const cal = createCalibration({
-     state,                            // shared { thr, brk, clu, str, real }
-     mount: element,                   // where the panel renders
+     state,                            // shared { thr, brk, clu, str, real, gear... }
+     mounts: {                         // one element per component box
+       pedals:  element,               // throttle / brake / clutch rows
+       wheel:   element,               // steering row
+       shifter: element,               // H-shifter / paddles (SO-0006)
+       status:  element                // optional: single device (●/○) indicator
+     },
      storeKey: "g923.calibration.v2",  // localStorage key, or null to disable
-     autoHideWhenLive: true,           // overlay: hide panel while streaming
+     autoHideWhenLive: false,          // hide the boxes while live (overlay only)
      onLiveChange: live => {}          // optional callback
    });
 
    Each animation frame the host calls:  cal.poll()
    Host queries:  cal.isCalibrating(), cal.isLive(), cal.hasCalibration()
-   Host actions:  cal.calibrateAll(), cal.show()
 
-   Extracted from the single-file prototype: the state machine and panel DOM are
-   verbatim; the only changes are that the axis→channel maths now comes from the
-   pure `calibration-math.js` layer and the wheel read comes from `gamepad.js`,
-   so both are independently testable.
+   The axis capture state machine is one shared engine (S) — so axis arbitration
+   (never assign one axis to two channels) and the per-run neutral baseline still
+   hold across boxes — but its DOM is split into per-component boxes, each with its
+   own rows + capture prompt + actions. The gear/shifter flow (G) is a separate
+   button-capture machine in its own box.
 
    Calibration model
    -----------------
-   - Neutral first: user releases pedals + centers the wheel so we capture a
-     clean rest baseline (no false triggers from a held pedal).
-   - Pedals are a unipolar stroke: press fully, release. We record rest + the
-     real full-press extreme, so live values scale to actual travel (bars reach
-     100% only at full press).
-   - Steering is bipolar: sweep full-left, full-right, re-center. We record rest
-     + min + max and map to -1..+1.
+   - Neutral first: release pedals + centre the wheel so we capture a clean rest
+     baseline (no false triggers from a held pedal).
+   - Pedals are a unipolar stroke: press fully, release. We record rest + the real
+     full-press extreme, so live values scale to actual travel.
+   - Steering is bipolar: sweep full-left, full-right, re-centre → rest + min + max.
    - Axes already assigned to other channels are excluded, and each capture is a
-     complete press->release (or sweep->center) cycle, so releasing one control
-     can never be mistaken for the next. */
+     complete press->release (or sweep->centre) cycle. */
 
 import { mapPedal, mapWheel, resolveShifterGear, GEAR_LABELS } from "./calibration-math.js";
 import { getPad, isButtonDown, pressedButtons } from "./gamepad.js";
 
 const CHANNELS = [
-  { key: "throttle", name: "Throttle", short: "thr", mode: "pedal", color: "#34d97a" },
-  { key: "brake",    name: "Brake",    short: "brk", mode: "pedal", color: "#f2453d" },
-  { key: "clutch",   name: "Clutch",   short: "clu", mode: "pedal", color: "#ffb020" },
-  { key: "steering", name: "Steering", short: "str", mode: "wheel", color: "#64b5ff", optional: true }
+  { key: "throttle", name: "Throttle", short: "thr", mode: "pedal", color: "#34d97a", group: "pedals" },
+  { key: "brake",    name: "Brake",    short: "brk", mode: "pedal", color: "#f2453d", group: "pedals" },
+  { key: "clutch",   name: "Clutch",   short: "clu", mode: "pedal", color: "#ffb020", group: "pedals" },
+  { key: "steering", name: "Steering", short: "str", mode: "wheel", color: "#64b5ff", group: "wheel", optional: true }
 ];
 const PEDAL_KEYS = ["throttle", "brake", "clutch"];
 const PRESS_THRESHOLD = 0.35; // deviation from rest that counts as "moved"
@@ -46,21 +48,15 @@ const WHEEL_SWEEP     = 0.30; // each side must move at least this far to count
 
 const chOf = key => CHANNELS.find(c => c.key === key);
 
-/* The panel inherits its palette from the host page via CSS variables (with
+/* Each box inherits its palette from the host page via CSS variables (with
    fallbacks to the standalone defaults), and is transparent + full-width so it
-   sits flush inside whatever card mounts it — no card-in-a-card, no stranded
-   fixed-width column. Live meters live in the rows themselves, so a host never
-   needs a second, redundant readout of the same channels. */
+   sits flush inside whatever card mounts it. */
 const CSS = `
 .g923cal{
   --cal-fg:var(--ink,#eceae5); --cal-mute:var(--mute,#878d9a); --cal-line:var(--line,#2e323c);
   --cal-panel:var(--panel-2,#22252d); --cal-accent:var(--clu,#ffb020); --cal-on:var(--thr,#34d97a);
   --cal-thr:var(--thr,#34d97a); --cal-brk:var(--brk,#f2453d); --cal-clu:var(--clu,#ffb020); --cal-str:var(--str,#64b5ff);
   font:inherit;font-size:12px;color:var(--cal-fg);width:100%;line-height:1.45}
-.g923cal-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}
-.g923cal-title{font-weight:600;letter-spacing:.04em}
-.g923cal-conn{font-size:11px;color:var(--cal-mute);white-space:nowrap;font-variant-numeric:tabular-nums}
-.g923cal-conn.on{color:var(--cal-on)}
 .g923cal-rows{display:flex;flex-direction:column}
 .g923cal-row{display:grid;grid-template-columns:11px 58px 1fr auto auto;gap:11px;align-items:center;padding:6px 0}
 .g923cal-row + .g923cal-row{border-top:1px solid color-mix(in srgb,var(--cal-line) 55%,transparent)}
@@ -72,7 +68,6 @@ const CSS = `
 .g923cal-row .meter b{position:absolute;top:-1px;bottom:-1px;left:50%;width:4px;margin-left:-2px;border-radius:2px;background:var(--cal-str);transition:left .05s linear}
 .g923cal-row .val{min-width:54px;text-align:right;font-variant-numeric:tabular-nums;color:var(--cal-fg)}
 .g923cal-row .val[data-idle]{color:var(--cal-mute)}
-.g923cal .muted{color:var(--cal-mute)}
 .g923cal button{font:inherit;font-size:11px;letter-spacing:.02em;background:var(--cal-panel);color:var(--cal-fg);
   border:1px solid var(--cal-line);border-radius:6px;padding:3px 10px;cursor:pointer;transition:border-color .12s,color .12s,background .12s}
 .g923cal button:hover{border-color:var(--cal-accent);color:var(--cal-accent)}
@@ -84,21 +79,18 @@ const CSS = `
 .g923cal-prompt{margin-bottom:9px}
 .g923cal-prompt b{color:var(--cal-accent);font-weight:600}
 .g923cal-btns{display:flex;gap:6px;flex-wrap:wrap}
-.g923cal-actions{display:flex;gap:8px;align-items:center;margin-top:12px;border-top:1px solid var(--cal-line);padding-top:11px}
+.g923cal-actions{display:flex;gap:8px;align-items:center;margin-top:12px}
 .g923cal-msg{color:var(--cal-mute);font-size:11px;margin-left:auto;text-align:right}
 .g923cal [hidden]{display:none!important}
-/* ---- shifter / gear section (SO-0006) ---- */
-.g923cal-gear{margin-top:13px;border-top:1px solid var(--cal-line);padding-top:12px}
-.g923cal-gear-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.g923cal-gear-title{font-weight:600;letter-spacing:.04em}
-.g923cal-gear-title .opt{font-weight:400;color:var(--cal-mute);font-size:11px;margin-left:6px}
+/* ---- shifter / gear section (SO-0006) — its own box ---- */
+.g923cal-gear-top{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-bottom:2px}
 .g923cal-seg{display:inline-flex;border:1px solid var(--cal-line);border-radius:6px;overflow:hidden}
 .g923cal-seg button{border:0;border-radius:0;background:var(--cal-panel);color:var(--cal-mute);padding:4px 12px;font-size:11px}
 .g923cal-seg button + button{border-left:1px solid var(--cal-line)}
 .g923cal-seg button.on{background:var(--cal-accent);color:#15171c;font-weight:600}
 .g923cal-seg button.on:hover{color:#15171c;filter:brightness(1.05)}
 /* H-pattern gate — the product's own gate language */
-.g923cal-gate{display:flex;align-items:center;gap:20px;margin:13px 0 5px;min-height:66px}
+.g923cal-gate{display:flex;align-items:center;gap:20px;margin:6px 0 5px;min-height:66px}
 .gate-cols{display:flex;gap:17px;position:relative}
 .gate-cols::before{content:"";position:absolute;left:2px;right:2px;top:50%;height:2px;background:var(--cal-line);transform:translateY(-1px)}
 .gate-col{display:flex;flex-direction:column;gap:15px;position:relative}
@@ -143,10 +135,11 @@ export function createCalibration(opts) {
   const storeKey = opts.storeKey || null;
   const autoHide = !!opts.autoHideWhenLive;
   const fireLive = () => { if (opts.onLiveChange) opts.onLiveChange(!!state.real); };
+  const mounts   = opts.mounts || {};
+  const statusEl = mounts.status || null;
 
-  // engine state
+  // engine state (shared axis machine)
   const S = { map: {}, queue: [], phase: "idle", baseline: null, cand: null, used: [] };
-
   if (storeKey) {
     try {
       const saved = JSON.parse(localStorage.getItem(storeKey) || "null");
@@ -157,77 +150,74 @@ export function createCalibration(opts) {
   const hasAllPedals = () => PEDAL_KEYS.every(k => S.map[k]);
   const current = () => S.queue[0];
 
-  /* ---------- panel DOM ---------- */
-  const el = document.createElement("div");
-  el.className = "g923cal";
-  el.innerHTML =
-    '<div class="g923cal-top">' +
-      '<span class="g923cal-title">G923 calibration</span>' +
-      '<span class="g923cal-conn" data-conn>○ no device</span>' +
-    '</div>' +
-    '<div class="g923cal-rows" data-rows></div>' +
-    '<div class="g923cal-active" data-active hidden>' +
-      '<div class="g923cal-prompt" data-prompt></div>' +
-      '<div class="g923cal-btns">' +
-        '<button data-confirm>Confirm</button>' +
-        '<button data-redo hidden>Redo</button>' +
-        '<button data-skip hidden>Skip</button>' +
-        '<button data-cancel>Cancel</button>' +
-      '</div>' +
-    '</div>' +
-    '<div class="g923cal-actions" data-actions>' +
-      '<button class="g923cal-primary" data-cal-all>Calibrate all</button>' +
-      '<button data-clear>Clear</button>' +
-      '<span class="g923cal-msg" data-msg></span>' +
-    '</div>' +
-    // ---- shifter / gear (SO-0006): buttons, not axes — its own capture flow ----
-    '<div class="g923cal-gear" data-gearsec>' +
-      '<div class="g923cal-gear-top">' +
-        '<span class="g923cal-gear-title">Shifter<span class="opt">optional</span></span>' +
-        '<div class="g923cal-seg" data-gseg>' +
-          '<button data-gmode="shifter">H-shifter</button>' +
-          '<button data-gmode="paddles">Paddles</button>' +
-        '</div>' +
-      '</div>' +
-      '<div class="g923cal-gate" data-ggate></div>' +
-      '<div class="g923cal-gear-foot">' +
-        '<span class="g923cal-greadout" data-greadout></span>' +
-        '<span class="g923cal-gstatus" data-gstatus></span>' +
-      '</div>' +
-      '<div class="g923cal-active" data-gactive hidden>' +
-        '<div class="g923cal-prompt" data-gprompt></div>' +
+  /* ---------- capture groups (pedals, wheel) ---------- */
+  let cur = null;   // the group currently mid-capture
+
+  function buildGroup(calLabel) {
+    const root = document.createElement("div");
+    root.className = "g923cal";
+    root.innerHTML =
+      '<div class="g923cal-rows" data-rows></div>' +
+      '<div class="g923cal-active" data-active hidden>' +
+        '<div class="g923cal-prompt" data-prompt></div>' +
         '<div class="g923cal-btns">' +
-          '<button data-gskip hidden>Skip</button>' +
-          '<button data-gcancel>Cancel</button>' +
+          '<button data-confirm>Confirm</button>' +
+          '<button data-redo hidden>Redo</button>' +
+          '<button data-skip hidden>Skip</button>' +
+          '<button data-cancel>Cancel</button>' +
         '</div>' +
       '</div>' +
-      '<div class="g923cal-actions" data-gactions>' +
-        '<button class="g923cal-primary" data-gcal>Calibrate shifter</button>' +
-        '<button data-gclear-gear>Clear</button>' +
-        '<span class="g923cal-msg" data-gmsg></span>' +
-      '</div>' +
-    '</div>';
-  opts.mount.appendChild(el);
+      '<div class="g923cal-actions" data-actions>' +
+        '<button class="g923cal-primary" data-cal>' + calLabel + '</button>' +
+        '<button data-clear>Clear</button>' +
+        '<span class="g923cal-msg" data-msg></span>' +
+      '</div>';
+    const s = sel => root.querySelector(sel);
+    const g = {
+      root, rowsEl: s("[data-rows]"), activeEl: s("[data-active]"), actionsEl: s("[data-actions]"),
+      promptEl: s("[data-prompt]"), msgEl: s("[data-msg]"),
+      confirmBtn: s("[data-confirm]"), redoBtn: s("[data-redo]"),
+      skipBtn: s("[data-skip]"), cancelBtn: s("[data-cancel]"),
+      calBtn: s("[data-cal]"), clearBtn: s("[data-clear]")
+    };
+    g.confirmBtn.addEventListener("click", onConfirm);
+    g.redoBtn.addEventListener("click", onRedo);
+    g.skipBtn.addEventListener("click", onSkip);
+    g.cancelBtn.addEventListener("click", onCancel);
+    return g;
+  }
 
-  const q = sel => el.querySelector(sel);
-  const rowsEl = q("[data-rows]"), connEl = q("[data-conn]");
-  const activeEl = q("[data-active]"), actionsEl = q("[data-actions]");
-  const promptEl = q("[data-prompt]"), msgEl = q("[data-msg]");
-  const confirmBtn = q("[data-confirm]"), redoBtn = q("[data-redo]");
-  const skipBtn = q("[data-skip]"), cancelBtn = q("[data-cancel]");
+  const groups = { pedals: buildGroup("Calibrate pedals"), wheel: buildGroup("Calibrate steering") };
+  groups.pedals.calBtn.addEventListener("click", () => startQueue(PEDAL_KEYS, groups.pedals));
+  groups.wheel.calBtn.addEventListener("click", () => startQueue(["steering"], groups.wheel));
+  groups.pedals.clearBtn.addEventListener("click", () => clearGroup(groups.pedals, PEDAL_KEYS));
+  groups.wheel.clearBtn.addEventListener("click", () => clearGroup(groups.wheel, ["steering"]));
+  (mounts.pedals || document.body).appendChild(groups.pedals.root);
+  (mounts.wheel  || document.body).appendChild(groups.wheel.root);
 
-  const setPrompt = html => { promptEl.innerHTML = html; };
-  const setMsg = t => { msgEl.textContent = t || ""; };
+  const groupOf = key => chOf(key).group === "wheel" ? groups.wheel : groups.pedals;
+
+  const setPrompt = html => { if (cur) cur.promptEl.innerHTML = html; };
   function stepButtons(o) {
-    confirmBtn.hidden = !o.confirm; redoBtn.hidden = !o.redo;
-    skipBtn.hidden = !o.skip; cancelBtn.hidden = !o.cancel;
+    if (!cur) return;
+    cur.confirmBtn.hidden = !o.confirm; cur.redoBtn.hidden = !o.redo;
+    cur.skipBtn.hidden = !o.skip; cur.cancelBtn.hidden = !o.cancel;
+  }
+  const groupStatus = g => g === groups.pedals
+    ? (hasAllPedals() ? "✓ calibrated" : "throttle · brake · clutch")
+    : (S.map.steering ? "✓ calibrated" : "optional");
+  function refreshStatus() {
+    for (const key of ["pedals", "wheel"]) {
+      const g = groups[key];
+      if (!g.actionsEl.hidden) g.msgEl.textContent = groupStatus(g);   // only when idle (actions shown)
+    }
   }
 
   const rowRefs = {};
   function renderRows() {
-    rowsEl.innerHTML = "";
+    groups.pedals.rowsEl.innerHTML = ""; groups.wheel.rowsEl.innerHTML = "";
     for (const c of CHANNELS) {
-      const m = S.map[c.key];
+      const g = groupOf(c.key), m = S.map[c.key];
       const row = document.createElement("div");
       row.className = "g923cal-row";
       // Pedals fill from the left; the wheel rides a center-anchored marker.
@@ -240,14 +230,14 @@ export function createCalibration(opts) {
         meter +
         '<span class="val" data-idle></span>' +
         '<button>' + (m ? "Redo" : "Set") + '</button>';
-      row.querySelector("button").addEventListener("click", () => startQueue([c.key]));
-      rowsEl.appendChild(row);
+      row.querySelector("button").addEventListener("click", () => startQueue([c.key], g));
+      g.rowsEl.appendChild(row);
       rowRefs[c.key] = {
         row,
-        dot:   row.querySelector(".dot"),
-        fill:  row.querySelector(".meter i"),
-        mark:  row.querySelector(".meter b"),
-        val:   row.querySelector(".val")
+        dot:  row.querySelector(".dot"),
+        fill: row.querySelector(".meter i"),
+        mark: row.querySelector(".meter b"),
+        val:  row.querySelector(".val")
       };
     }
     updateRowStatus();
@@ -284,28 +274,30 @@ export function createCalibration(opts) {
     }
   }
 
-  /* ---------- flow ---------- */
-  function startQueue(keys) {
+  /* ---------- axis flow (shared machine, routed to `cur`) ---------- */
+  function startQueue(keys, group) {
     resetGearCapture();          // one capture flow at a time — stop any gear capture
+    cur = group || groupOf(keys[0]);
     S.queue = keys.slice();
     S.cand = null;
     S.used = CHANNELS.filter(c => !keys.includes(c.key) && S.map[c.key]).map(c => S.map[c.key].axis);
     state.real = false; fireLive();
-    show();
     S.phase = "neutral";
-    activeEl.hidden = false; actionsEl.hidden = true;
-    setPrompt("Release all pedals and <b>center the wheel</b>, then click <b>Confirm neutral</b>.");
-    confirmBtn.textContent = "Confirm neutral";
+    cur.activeEl.hidden = false; cur.actionsEl.hidden = true;
+    setPrompt(cur === groups.wheel
+      ? "Centre the wheel and release the pedals, then click <b>Confirm neutral</b>."
+      : "Release all pedals and <b>centre the wheel</b>, then click <b>Confirm neutral</b>.");
+    cur.confirmBtn.textContent = "Confirm neutral";
     stepButtons({ confirm: true, cancel: true });
-    setMsg("");
+    cur.msgEl.textContent = "";
   }
 
   function promptCapture() {
     const c = chOf(current());
-    confirmBtn.textContent = "Confirm";
+    cur.confirmBtn.textContent = "Confirm";
     setPrompt(c.mode === "pedal"
       ? 'Press and hold <b>' + c.name + '</b> all the way down, then release it.'
-      : 'Turn the <b>wheel fully left</b>, then <b>fully right</b>, then re-center.');
+      : 'Turn the <b>wheel fully left</b>, then <b>fully right</b>, then re-centre.');
     stepButtons({ skip: !!c.optional, cancel: true });
   }
 
@@ -340,16 +332,15 @@ export function createCalibration(opts) {
   function finish() {
     S.phase = "idle"; S.cand = null; S.queue = [];
     if (storeKey) localStorage.setItem(storeKey, JSON.stringify(S.map));
-    activeEl.hidden = true; actionsEl.hidden = false;
+    if (cur) { cur.activeEl.hidden = true; cur.actionsEl.hidden = false; }
     state.real = hasAllPedals(); fireLive();
-    renderRows();
-    setMsg(hasAllPedals() ? "Calibrated ✓" : "Throttle, brake, clutch still needed.");
+    renderRows(); refreshStatus();
+    cur = null;
   }
 
-  /* ---------- buttons ---------- */
-  confirmBtn.addEventListener("click", () => {
+  function onConfirm() {
     const pad = getPad();
-    if (!pad) { setMsg("No device — press a wheel button."); return; }
+    if (!pad) { if (cur) cur.msgEl.textContent = "no device — press a wheel button"; return; }
     if (S.phase === "neutral") {
       S.baseline = Array.from(pad.axes);
       S.phase = "capture"; S.cand = null;
@@ -358,34 +349,63 @@ export function createCalibration(opts) {
       storeCand();
       advance();
     }
-  });
-  redoBtn.addEventListener("click", () => { S.cand = null; S.phase = "capture"; promptCapture(); });
-  skipBtn.addEventListener("click", () => { advance(); });
-  cancelBtn.addEventListener("click", () => {
+  }
+  function onRedo() { S.cand = null; S.phase = "capture"; promptCapture(); }
+  function onSkip() { advance(); }
+  function onCancel() {
     S.phase = "idle"; S.cand = null; S.queue = [];
-    activeEl.hidden = true; actionsEl.hidden = false;
+    if (cur) { cur.activeEl.hidden = true; cur.actionsEl.hidden = false; }
     state.real = hasAllPedals(); fireLive();
-    renderRows(); setMsg("Cancelled.");
-  });
-  q("[data-cal-all]").addEventListener("click", () => startQueue(CHANNELS.map(c => c.key)));
-  q("[data-clear]").addEventListener("click", () => {
-    S.map = {}; if (storeKey) localStorage.removeItem(storeKey);
-    state.real = false; fireLive();
-    renderRows(); renderGearStatus(); setMsg("Cleared.");
-  });
+    renderRows(); refreshStatus(); cur = null;
+  }
+  function clearGroup(g, keys) {
+    for (const k of keys) delete S.map[k];
+    if (storeKey) localStorage.setItem(storeKey, JSON.stringify(S.map));
+    state.real = hasAllPedals(); fireLive();
+    renderRows(); refreshStatus(); g.msgEl.textContent = "cleared";
+  }
 
-  /* ---------- shifter / gear capture (SO-0006) ----------
+  /* ---------- shifter / gear capture (SO-0006) — its own box ----------
      The shifter reports as BUTTONS, so this is a separate flow from the axis
-     capture above (its own `G` state, never entangled with `S`). Two modes:
-     H-shifter (walk R,1..6, capture the button each engages) and paddles
-     (capture upshift + downshift). Writes S.map.gear under the same storeKey
-     live-input.js reads. Guided auto-capture, mirroring the pedal press/release
-     rhythm: hold the gear -> we grab the newly-pressed button -> release -> next. */
-  const ggateEl = q("[data-ggate]"), greadoutEl = q("[data-greadout]"), gstatusEl = q("[data-gstatus]");
-  const gactiveEl = q("[data-gactive]"), gactionsEl = q("[data-gactions]");
-  const gpromptEl = q("[data-gprompt]"), gmsgEl = q("[data-gmsg]");
-  const gcalBtn = q("[data-gcal]"), gskipBtn = q("[data-gskip]"), gcancelBtn = q("[data-gcancel]");
-  const gsegBtns = [...el.querySelectorAll("[data-gmode]")];
+     capture (its own `G` state, never entangled with `S`). Two modes: H-shifter
+     (walk R,1..6, capture the button each engages) and paddles (capture upshift +
+     downshift). Writes S.map.gear under the same storeKey live-input.js reads. */
+  const shifterRoot = document.createElement("div");
+  shifterRoot.className = "g923cal";
+  shifterRoot.innerHTML =
+    '<div class="g923cal-gear" data-gearsec>' +
+      '<div class="g923cal-gear-top">' +
+        '<div class="g923cal-seg" data-gseg>' +
+          '<button data-gmode="shifter">H-shifter</button>' +
+          '<button data-gmode="paddles">Paddles</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="g923cal-gate" data-ggate></div>' +
+      '<div class="g923cal-gear-foot">' +
+        '<span class="g923cal-greadout" data-greadout></span>' +
+        '<span class="g923cal-gstatus" data-gstatus></span>' +
+      '</div>' +
+      '<div class="g923cal-active" data-gactive hidden>' +
+        '<div class="g923cal-prompt" data-gprompt></div>' +
+        '<div class="g923cal-btns">' +
+          '<button data-gskip hidden>Skip</button>' +
+          '<button data-gcancel>Cancel</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="g923cal-actions" data-gactions>' +
+        '<button class="g923cal-primary" data-gcal>Calibrate shifter</button>' +
+        '<button data-gclear-gear>Clear</button>' +
+        '<span class="g923cal-msg" data-gmsg></span>' +
+      '</div>' +
+    '</div>';
+  (mounts.shifter || document.body).appendChild(shifterRoot);
+
+  const gq = sel => shifterRoot.querySelector(sel);
+  const ggateEl = gq("[data-ggate]"), greadoutEl = gq("[data-greadout]"), gstatusEl = gq("[data-gstatus]");
+  const gactiveEl = gq("[data-gactive]"), gactionsEl = gq("[data-gactions]");
+  const gpromptEl = gq("[data-gprompt]"), gmsgEl = gq("[data-gmsg]");
+  const gcalBtn = gq("[data-gcal]"), gskipBtn = gq("[data-gskip]"), gcancelBtn = gq("[data-gcancel]");
+  const gsegBtns = [...shifterRoot.querySelectorAll("[data-gmode]")];
 
   const persist = () => { if (storeKey) localStorage.setItem(storeKey, JSON.stringify(S.map)); };
 
@@ -408,10 +428,10 @@ export function createCalibration(opts) {
     return n ? "H-shifter · " + n + "/7 gears" : null;
   }
 
-  /* The gate (or paddle pair) — the product's own H-pattern language, not a row of
-     boxes. Cells carry `set` (calibrated) and `target` (the gear being captured);
-     the live/engaged gear is toggled separately each frame (applyLiveHighlight), so
-     this only rebuilds on a structural change (calibrate / mode switch / capture). */
+  /* The gate (or paddle pair) — the product's own H-pattern language. Cells carry
+     `set` (calibrated) and `target` (the gear being captured); the live/engaged
+     gear is toggled separately each frame (applyLiveHighlight), so this only
+     rebuilds on a structural change (calibrate / mode switch / capture step). */
   const gTarget = () => G.phase !== "idle" ? G.queue[0] : null;
   function gCell(label) {
     const g = S.map.gear;
@@ -454,8 +474,8 @@ export function createCalibration(opts) {
   function cancelAxis() {
     if (S.phase === "idle") return;
     S.phase = "idle"; S.cand = null; S.queue = [];
-    activeEl.hidden = true; actionsEl.hidden = false;
-    state.real = hasAllPedals(); fireLive(); renderRows();
+    if (cur) { cur.activeEl.hidden = true; cur.actionsEl.hidden = false; }
+    state.real = hasAllPedals(); fireLive(); renderRows(); refreshStatus(); cur = null;
   }
 
   function startGear() {
@@ -496,7 +516,7 @@ export function createCalibration(opts) {
   gcalBtn.addEventListener("click", startGear);
   gskipBtn.addEventListener("click", () => { if (G.phase !== "idle") gAdvance(); });
   gcancelBtn.addEventListener("click", () => { resetGearCapture(); renderGearStatus(); gSetMsg("Cancelled."); });
-  q("[data-gclear-gear]").addEventListener("click", () => {
+  gq("[data-gclear-gear]").addEventListener("click", () => {
     delete S.map.gear; persist(); renderGearStatus(); gSetMsg("Cleared.");
   });
   gsegBtns.forEach(b => b.addEventListener("click", () => {
@@ -553,19 +573,18 @@ export function createCalibration(opts) {
     for (const c of CHANNELS) {
       const m = S.map[c.key]; if (!m) continue;
       const a = pad.axes[m.axis]; if (a == null) continue;
-      if (c.mode === "pedal") {
-        state[c.short] = mapPedal(a, m.rest, m.full);
-      } else {
-        state.str = mapWheel(a, m.rest, m.min, m.max);
-      }
+      if (c.mode === "pedal") state[c.short] = mapPedal(a, m.rest, m.full);
+      else state.str = mapWheel(a, m.rest, m.min, m.max);
     }
     if (!S.map.steering) state.str = 0; // don't freeze a stale wheel angle
   }
 
   function poll() {
     const pad = getPad();
-    connEl.textContent = pad ? "● " + pad.id.replace(/\s*\(.*$/, "").slice(0, 26) : "○ no device";
-    connEl.classList.toggle("on", !!pad);
+    if (statusEl) {
+      statusEl.textContent = pad ? "● " + pad.id.replace(/\s*\(.*$/, "").slice(0, 42) : "○ no wheel detected";
+      statusEl.classList.toggle("on", !!pad);
+    }
 
     // Saved calibration + a live pad + not busy -> go live automatically.
     if (pad && S.phase === "idle" && hasAllPedals() && !state.real) { state.real = true; fireLive(); }
@@ -585,7 +604,7 @@ export function createCalibration(opts) {
             : { axis: best, rest: S.baseline[best], min: pad.axes[best], max: pad.axes[best] };
           setPrompt(c.mode === "pedal"
             ? 'Holding <b>' + c.name + '</b> — now <b>release</b> it fully.'
-            : 'Good — sweep <b>fully left</b> and <b>fully right</b>, then re-center.');
+            : 'Good — sweep <b>fully left</b> and <b>fully right</b>, then re-centre.');
         }
       } else {
         const a = pad.axes[S.cand.axis];
@@ -606,21 +625,27 @@ export function createCalibration(opts) {
     updateRowStatus();
     pollGear(pad);
 
-    if (autoHide) el.style.display = (state.real && S.phase === "idle") ? "none" : "";
+    if (autoHide) {
+      const hide = state.real && S.phase === "idle" && G.phase === "idle";
+      groups.pedals.root.style.display = hide ? "none" : "";
+      groups.wheel.root.style.display  = hide ? "none" : "";
+      shifterRoot.style.display        = hide ? "none" : "";
+    }
   }
 
-  function show() { el.style.display = ""; }
+  function showAll() {
+    groups.pedals.root.style.display = ""; groups.wheel.root.style.display = ""; shifterRoot.style.display = "";
+  }
 
   renderRows();
   renderGearStatus();
-  setMsg(hasAllPedals() ? "Calibration loaded." : "Not calibrated yet.");
+  refreshStatus();
 
   return {
     poll,
-    isCalibrating: () => S.phase !== "idle",
+    isCalibrating: () => S.phase !== "idle" || G.phase !== "idle",
     isLive: () => !!state.real,
     hasCalibration: hasAllPedals,
-    calibrateAll: () => startQueue(CHANNELS.map(c => c.key)),
-    show
+    show: showAll
   };
 }
