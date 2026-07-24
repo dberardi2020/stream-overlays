@@ -15,9 +15,8 @@ Rows are pointers; anything needing more than a sentence has a block in **Detail
 The committed next few, in intended order. Remaining of the
 [ADR 0006](../decisions/0006-setup-surface-pure-overlay.md) binding overhaul, then hosting.
 **Input binding is a v0 requirement** — including the H-shifter/gear (SO-0006), which is direct HID,
-not telemetry. **Telemetry (SO-0007) is explicitly deferred** — a **Input binding is a v0 requirement** — including the H-shifter/gear
-(SO-0006), which is direct HID, not telemetry. **Telemetry (SO-0007) is explicitly deferred** — a
-far-off goal — but the setup page and overlay are designed to leave a slot for it.
+not telemetry. **Telemetry (SO-0007) is explicitly deferred** — a far-off goal — but the setup page
+and overlay are designed to leave a slot for it.
 
 | ID | Pri | Type | Title |
 |---|---|---|---|
