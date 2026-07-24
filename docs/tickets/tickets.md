@@ -8,7 +8,11 @@ Rows are pointers; anything needing more than a sentence has a block in **Detail
 
 ## In progress
 
-*(none — the ADR 0006 structural split is done: overlay is a pure renderer (SO-0013) and calibration lives on the new setup page (SO-0017). Remaining binding work: gallery Live mode (SO-0018) and the shifter capture (SO-0006, needs a real-G923 round-trip), then hosting.)*
+Lifting the overlay catalogue's quality — the bones are solid (pedals + shifter sets, live overlays), but the wheel primitive and several combos are half-baked.
+
+| ID | Pri | Type | Title |
+|---|---|---|---|
+| [SO-0019](#so-0019) | P1 | Chore | Overlay quality pass — cull half-baked, upgrade the rough |
 
 ## On deck
 
@@ -20,7 +24,6 @@ and overlay are designed to leave a slot for it.
 
 | ID | Pri | Type | Title |
 |---|---|---|---|
-| [SO-0018](#so-0018) | P1 | Feature | Gallery live-input control surface (Demo ⇄ Live) |
 | [SO-0006](#so-0006) | P1 | Feature | Shifter / gear live calibration + input (v0 input binding) |
 | [SO-0003](#so-0003) | P2 | Feature | Configure page → URL generator |
 | [SO-0008](#so-0008) | P1 | Chore | Hosting + deploy pipeline |
@@ -47,6 +50,7 @@ Pre-public candidates not yet committed to the On-deck sequence.
 | [SO-0005](#so-0005) | P3 | Chore | Collapse near-duplicate overlay families |
 | [SO-0011](#so-0011) | P3 | Idea | The builder — compose overlays from sub-visuals |
 | [SO-0014](#so-0014) | P3 | Feature | Real-session recorder + demo-data library |
+| [SO-0020](#so-0020) | P3 | Chore | Interim believable-enough demo lap (clean loop; superseded by SO-0014) |
 | [SO-0016](#so-0016) | P3 | Idea | Racer view — reverse the data into a virtual driver |
 
 ### After launch
@@ -70,6 +74,9 @@ are in the docs.*
 
 | ID | Title | Closed |
 |---|---|---|
+| SO-0022 | **Overlay & setup polish** — new `pedal-blocks` pedals overlay (the cockpit pedals broken out: diegetic light-up depressing blocks); `gate-with-trail` upgraded to carry gate-map's gear numbers + NEUTRAL/GEAR callout on top of its knob trail (stale golden retired); and the setup **calibration panel** restyled from a bolted-on widget into one cohesive, host-themed component (transparent, full-width, tokenised, live meters in-row). | 2026-07-23 |
+| SO-0021 | **Data-driven hero + curation/admin tooling** — the landing hero is curated in data, not code: a `hero` flag on catalogue entries, toggled in admin via a **★ Hero** control (capped at 4, enforced by a pytest), auto-arranged onto the grid's diagonals; index reads the flag. Admin also gains **Save to file** (File System Access API — writes catalogue.json directly, re-baselines dirty state), and gallery/admin cards gain **Copy OBS link** + **Copy name**. A **local-only Admin link** shows in the nav on localhost. 79 node + 225 pytest green. | 2026-07-23 |
+| SO-0018 | **Gallery Demo ⇄ Live toggle** ([ADR 0006](../decisions/0006-setup-surface-pure-overlay.md)) — an Input: Demo/Live control on the gallery. Demo keeps the synthetic lap; Live swaps in the real calibrated G923 (via the same `createInputReader` + `pushHistory` path the pure overlay uses) so the whole catalogue responds to one binding at once. Pedals + steering live; telemetry (SO-0007) and shifter (SO-0006) rest — no rig source yet. Demo-only controls dim in Live; a status line reports readiness with a Setup link. Live UI verified headless; the wheel-driven path needs a real G923 to confirm end-to-end. | 2026-07-23 |
 | SO-0009 | **Discovery / landing front door** (`index.html`, served at `/`) — the streamer-facing entry: hero (what this is, in the README's terms), a **live teaser** of four hero overlays animating over the shared demo driver (one per set), and the **find → set up → use** path into gallery / setup / OBS. The "use" step is honest about the [ADR 0003](../decisions/0003-obs-gamepad-fallback.md) OBS gamepad-focus gotcha and links to the setup page's guided fallback (`setup.html#obs`). Also added a **slim shared site nav** (`.sitenav`: Home · Gallery · Setup) to index + gallery + setup + admin, stitching the loose pages into one navigable site. Verified in browser (teaser animates, nav + active states, links); 78 node + 221 pytest green. | 2026-07-23 |
 | SO-0013 | **Overlay page → pure renderer** ([ADR 0006](../decisions/0006-setup-surface-pure-overlay.md)) — `pages/overlay.html` stripped of all setup chrome: it reads calibration from `localStorage` via the new DOM-free `engine/live-input.js` + live input, draws, and rests at zero uncalibrated. No panel, no "press c", no error UI on a live scene — the structural fix for the mid-stream-chrome risk. Config-time-only messages (bad `?style=`, `file://`) remain. Verified headless: pure (no `#setup`/`#calmount`), transparent, paints, unit-tested mapping. | 2026-07-23 |
 | SO-0017 | **Dedicated setup page (`pages/setup.html`)** ([ADR 0006](../decisions/0006-setup-surface-pure-overlay.md)) — the calibration surface extracted from the overlay: mounts the (unchanged, known-good) `calibration.js` panel, adds a live thr/brk/clu/steering readout, the [ADR 0003](../decisions/0003-obs-gamepad-fallback.md) OBS fallback guidance, the per-browser-context flow, and design slots for the deferred shifter (SO-0006) + telemetry (SO-0007). Writes the same `localStorage` key the overlay/gallery read. *(Shifter wiring itself is SO-0006.)* | 2026-07-23 |
@@ -161,6 +168,23 @@ Documents the per-context flow: calibrate once in each browser context (your des
 **P1 · Feature · gallery**
 
 Per [ADR 0006](../decisions/0006-setup-surface-pure-overlay.md), add a **Demo ⇄ Live** toggle to the gallery: Live swaps the demo driver for the real calibration engine so the **whole catalogue** responds to your actual wheel at once — bind once, judge every overlay against real input, without opening any single overlay. Same browser context, so the Gamepad API + calibration just work. Builds on the shared-driver architecture (SO-0002).
+
+### SO-0019 — Overlay quality pass {#so-0019}
+**P1 · Chore · catalogue**
+
+A visual + code triage of the 44 draft/experimental overlays is done. The bones are solid — the **pedals** and **shifter** sets are strong and the live overlays read well — but two areas are half-baked:
+
+- **The wheel primitive is crude.** Every literal wheel (`wheel`, `wheel-in-a-ring`, `yoke`) and every combo that draws one (cockpit, corner-card, input-cluster, dash-cluster…) uses the same thin blue line-art (circle + T-crossbar + dot). Redesign it once — real rim / spokes / grips — and every wheel + combo overlay upgrades together. Highest-leverage visual fix.
+- **The combos are repetitive stat-panel recipes** — many are the same *gear + wheel + pedal-bars (+ rev arc)* layout; cull / merge them (ties to [SO-0005](#so-0005)).
+
+Then fix the render bugs triage surfaced: `split-panel` / `lower-third` read rpm from the wrong source (empty rev display), `shift-counter` reads a non-existent `s.shiftCount`, `path-preview` has dead steering-arc math, `radial-hub` hides its gear under the wheel hub, `throw-timer` presents a per-mode constant as a measurement, `ghost-wheel`'s "recording" is a hardcoded sine. Finally, promote the strong candidates and curate the live / hero set. New ideas welcome where the current ones are weak.
+
+### SO-0020 — Interim believable-enough demo lap {#so-0020}
+**P3 · Chore · demo-data**
+
+The current `demo-lap.js` reads robotic. The visible tells: a hard 30-second **seam** (it snaps from the last corner back to the full-throttle start), and **dead-centre steering on straights** so every steering / wheel overlay sits frozen at 0° in previews. Make the loop clean (state at t=30s flows into t=0) and give steering a touch of low-frequency noise so it's never perfectly dead — but keep it *simple*. Full throttle on straights is correct (the fast line), not a bug.
+
+Deliberately minimal placeholder work: this data is superseded by real rig recordings ([SO-0014](#so-0014)), so it isn't worth a physics simulator. (A research pass explored quasi-steady-state lap synthesis — parked as overkill for interim needs.)
 
 ## Conventions
 
