@@ -31,6 +31,7 @@ a:hover{text-decoration:underline}
 .sitenav-brand span{color:var(--str)}
 .sitenav-links{display:flex;gap:6px;margin-left:auto}
 .sitenav-links a{font-size:12px;color:var(--mute);padding:5px 11px;border-radius:7px;border:1px solid transparent;transition:.13s}
+.sitenav-links a[data-dev]{color:var(--clu)}
 .sitenav-links a:hover{color:var(--ink);background:var(--panel-2);text-decoration:none}
 .sitenav-links a[aria-current]{color:var(--str);border-color:var(--line-2);background:var(--panel)}
 
@@ -98,12 +99,21 @@ footer .sep{opacity:.4}
 <body>
 <nav class="sitenav">
   <a class="sitenav-brand" href="/">Stream<span>Overlays</span></a>
-  <div class="sitenav-links">
+  <div class="sitenav-links" id="navlinks">
     <a href="/" aria-current="page">Home</a>
     <a href="/pages/gallery.html">Gallery</a>
     <a href="/pages/setup.html">Setup</a>
   </div>
 </nav>
+<script>
+  // Dev-only: surface the Admin curation tool in the nav when running locally.
+  // On a real (public) domain this check fails, so the link never appears.
+  if (["localhost", "127.0.0.1", "[::1]", ""].includes(location.hostname) || location.protocol === "file:") {
+    const a = document.createElement("a");
+    a.href = "/pages/admin.html"; a.textContent = "Admin"; a.dataset.dev = "1";
+    document.getElementById("navlinks").appendChild(a);
+  }
+</script>
 
 <main class="wrap">
   <section class="hero">
@@ -179,7 +189,8 @@ function arrangeForDiagonal(items) {
   return (a.length === 2 && b.length === 2) ? [a[0], b[0], b[1], a[1]] : items;
 }
 
-const heroes = arrangeForDiagonal(catalogue.filter(e => e.hero && e.stage !== "excluded"));
+// Cap at 4 (the layout's sweet spot) as a defensive guard; admin also enforces this.
+const heroes = arrangeForDiagonal(catalogue.filter(e => e.hero && e.stage !== "excluded").slice(0, 4));
 
 const tiles = [];
 for (const e of heroes) {

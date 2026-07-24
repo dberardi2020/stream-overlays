@@ -116,6 +116,8 @@ h2 .c{color:var(--mute);font-size:12px;font-weight:400;font-family:"IBM Plex Mon
 .sbtn{font-family:inherit;font-size:10.5px;font-weight:500;letter-spacing:.03em;color:var(--mute);
   background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:4px 8px;cursor:pointer;transition:.12s}
 .sbtn:hover{color:var(--ink);border-color:var(--line-2)}
+.sbtn:disabled{opacity:.32;cursor:not-allowed}
+.sbtn:disabled:hover{color:var(--mute);border-color:var(--line)}
 .sbtn.on[data-stage=live]{color:var(--live);border-color:var(--live);background:rgba(52,217,122,.14)}
 .sbtn.on[data-stage=draft]{color:var(--draft);border-color:var(--draft);background:rgba(100,181,255,.14)}
 .sbtn.on[data-stage=experimental]{color:var(--exp);border-color:var(--exp);background:rgba(199,125,255,.14)}
@@ -168,10 +170,11 @@ h2 .c{color:var(--mute);font-size:12px;font-weight:400;font-family:"IBM Plex Mon
 
   <div class="savebar clean" id="savebar">
     <div class="dirty"><b id="dirtyN">0</b> unsaved edit(s)</div>
-    <button id="export" class="btn primary">Export catalogue.json</button>
+    <button id="save" class="btn primary" style="display:none">Save to file</button>
+    <button id="export" class="btn">Export catalogue.json</button>
     <button id="revert" class="btn" disabled>Revert all</button>
     <div class="spacer"></div>
-    <div class="hint">Export downloads <code>catalogue.json</code>; replace <code>overlays/sim-racing/catalogue.json</code> with it and commit. Edits persist in this browser until you revert.</div>
+    <div class="hint"><b>Save to file</b> writes straight to the <code>catalogue.json</code> you pick (Chrome, local). <b>Export</b> downloads it to replace by hand. Either way, commit the result. Edits persist in this browser until you revert.</div>
   </div>
 
   <div class="bar">
@@ -356,28 +359,80 @@ function wireCard(t) {
     e.stage = b.dataset.stage; recordEdit(e); paintCard(t); refresh();
   });
   c.querySelector(".hbtn").onclick = () => { e.hidden = !e.hidden; recordEdit(e); paintCard(t); };
-  c.querySelector(".herobtn").onclick = () => { if (e.hero) delete e.hero; else e.hero = true; recordEdit(e); paintCard(t); };
+  c.querySelector(".herobtn").onclick = () => {
+    if (!e.hero && heroCount() >= HERO_MAX) return;   // enforced cap (buttons also disable at the limit)
+    if (e.hero) delete e.hero; else e.hero = true;
+    recordEdit(e); paintCard(t); refreshHeroButtons();
+  };
   const note = c.querySelector(".note");
   note.addEventListener("blur", () => { e.note = note.textContent.trim(); recordEdit(e); paintCard(t); });
 }
 updateDirty();
 
-document.getElementById("export").onclick = () => {
-  const blob = new Blob([JSON.stringify(manifest, null, 2) + "\n"], { type: "application/json" });
+/* ---- hero cap: at most HERO_MAX featured; add-buttons disable at the limit ---- */
+const HERO_MAX = 4;
+const heroCount = () => manifest.reduce((n, x) => n + (x.hero ? 1 : 0), 0);
+function refreshHeroButtons() {
+  const full = heroCount() >= HERO_MAX;
+  for (const t of tiles) {
+    const b = t.card.querySelector(".herobtn");
+    const blocked = full && !t.e.hero;
+    b.disabled = blocked;
+    b.title = blocked ? "Hero limit is " + HERO_MAX + " — unset one first" : "feature on the landing hero teaser";
+  }
+}
+refreshHeroButtons();
+
+/* ---- save: download (universal) + direct write via File System Access API ---- */
+const catalogueText = () => JSON.stringify(manifest, null, 2) + "\n";
+function downloadCatalogue() {
+  const blob = new Blob([catalogueText()], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob); a.download = "catalogue.json"; a.click();
   URL.revokeObjectURL(a.href);
-};
+}
+document.getElementById("export").onclick = downloadCatalogue;
+
+// Direct save (Chrome/Edge on a secure or localhost origin): write straight to the
+// catalogue.json you pick once, then re-baseline so the "unsaved" count returns to 0.
+const saveBtn = document.getElementById("save");
+if (window.showSaveFilePicker) {
+  saveBtn.style.display = "";
+  let fileHandle = null;
+  saveBtn.onclick = async () => {
+    try {
+      if (!fileHandle) {
+        fileHandle = await window.showSaveFilePicker({
+          suggestedName: "catalogue.json",
+          types: [{ description: "JSON", accept: { "application/json": [".json"] } }]
+        });
+      }
+      if (await fileHandle.requestPermission({ mode: "readwrite" }) !== "granted") { downloadCatalogue(); return; }
+      const w = await fileHandle.createWritable();
+      await w.write(catalogueText()); await w.close();
+      // the file now matches memory — re-baseline so dirty clears and edits stop overriding
+      for (const x of manifest) disk[x.id] = { stage: x.stage, hidden: !!x.hidden, hero: !!x.hero, note: x.note || "" };
+      edits = {}; try { localStorage.removeItem(STORE_KEY); } catch {}
+      tiles.forEach(paintCard); updateDirty();
+      saveBtn.textContent = "Saved ✓"; clearTimeout(saveBtn._t);
+      saveBtn._t = setTimeout(() => { saveBtn.textContent = "Save to file"; }, 1400);
+    } catch (err) {
+      if (err.name === "AbortError") return;    // user dismissed the picker
+      console.error(err); downloadCatalogue();   // any real failure -> safe fallback
+    }
+  };
+}
 revertBtn.onclick = () => {
   if (!confirm("Discard all " + Object.keys(edits).length + " local edit(s) and return to the committed catalogue.json?")) return;
   edits = {}; try { localStorage.removeItem(STORE_KEY); } catch {}
   for (const t of tiles) {
     const d = disk[t.e.id];
     t.e.stage = d.stage; t.e.hidden = d.hidden; t.e.note = d.note;
+    if (d.hero) t.e.hero = true; else delete t.e.hero;
     t.card.querySelector(".note").textContent = d.note;
     paintCard(t);
   }
-  updateDirty(); refresh();
+  updateDirty(); refreshHeroButtons(); refresh();
 };
 
 /* ---- render loop (same engine as the gallery) ---- */

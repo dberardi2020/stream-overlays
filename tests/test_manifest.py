@@ -77,3 +77,16 @@ def test_stage_values_all_valid_and_reported():
     counts = Counter(e["stage"] for e in manifest())
     assert set(counts) <= STAGES
     print("stage counts:", dict(counts))
+
+
+HERO_MAX = 4  # keep in sync with the admin cap + the index layout
+
+
+def test_at_most_four_heroes():
+    """The landing hero teaser features at most HERO_MAX overlays (the 2x2 layout's
+    sweet spot). admin.html enforces this in the UI; this guards the data itself."""
+    heroes = [e["id"] for e in manifest() if e.get("hero")]
+    assert len(heroes) <= HERO_MAX, f"at most {HERO_MAX} hero overlays, got {len(heroes)}: {heroes}"
+    for e in manifest():
+        if "hero" in e:
+            assert e["hero"] is True, f"{e['id']}: hero must be true when present (got {e['hero']!r})"
