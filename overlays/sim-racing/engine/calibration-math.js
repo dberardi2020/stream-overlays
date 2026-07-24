@@ -26,3 +26,33 @@ export function mapWheel(axisValue, rest, min, max) {
   else { const d = rest - min; str = d ? -(rest - axisValue) / d : 0; }
   return clamp(str, -1, 1);
 }
+
+/* ---- gear / shifter (SO-0006) ----
+   The engine's gear value: 0 = neutral, 1..6 = forward, -1 = reverse. The rest
+   of the system (GATE, gateUse, gearName) was built for N + 1..6; reverse is the
+   one value outside that, represented as -1 and rendered "R". */
+
+// The capture order the H-shifter flow walks the user through.
+export const GEAR_LABELS = ["R", "1", "2", "3", "4", "5", "6"];
+
+// A stored gear-button label -> the numeric gear value overlays read.
+export const gearValue = label => label === "R" ? -1 : Number(label);
+
+/* Absolute H-shifter: which calibrated gear button is currently held? Returns
+   that gear's value, or 0 (neutral) when none is. `isDown(index)` is a predicate
+   so this stays pure — the caller supplies the live button read. If more than one
+   is somehow held, the first captured wins (an H-shifter only engages one). */
+export function resolveShifterGear(buttons, isDown) {
+  if (!buttons) return 0;
+  for (const label of Object.keys(buttons)) {
+    if (isDown(buttons[label])) return gearValue(label);
+  }
+  return 0;
+}
+
+/* Sequential paddles: a shift is a step, not a position. Clamp a ±1 step into the
+   N(0)..6 range (reverse isn't reachable by paddles). */
+export function stepSequentialGear(gear, dir) {
+  const g = gear + dir;
+  return g < 0 ? 0 : g > 6 ? 6 : g;
+}

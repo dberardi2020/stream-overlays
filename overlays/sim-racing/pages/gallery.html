@@ -227,11 +227,11 @@ driver.reset();
 
 /* ---- SO-0018: live input source. Demo drives synthetic data; Live swaps in the
    real calibrated wheel so the whole catalogue responds to one binding at once.
-   Same localStorage contract setup.html writes. Pedals + steering are live;
-   telemetry (rpm/spd, SO-0007) and the H-shifter (gear, SO-0006) have no rig
-   source yet, so those channels rest. ---- */
-const liveState = Object.assign(createState(),
-  { gear: 0, lever: 0, prevGear: 0, shiftDir: 0, shiftAge: 0, shiftProg: 0 });
+   Same localStorage contract setup.html writes. Pedals + steering are live, and
+   the H-shifter/paddles too when calibrated (SO-0006); telemetry (rpm/spd,
+   SO-0007) has no rig source yet, so it rests. The gear fields now live in
+   createState(), so liveState is just a plain state object. ---- */
+const liveState = createState();
 const liveInput = createInputReader({ state: liveState });
 let source = "demo";                       // "demo" | "live"
 
@@ -337,7 +337,7 @@ function loop(now) {
 
   let state;
   if (source === "live") {
-    liveInput.poll();          // real wheel → liveState.thr/brk/clu/str (or rest at zero)
+    liveInput.poll(dt);        // real wheel + shifter → liveState (or rest at zero)
     pushHistory(liveState);    // feed trace/history overlays from live values
     tel.rpm = 0; tel.spd = 0;  // no telemetry source yet (SO-0007)
     state = liveState;

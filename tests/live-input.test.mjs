@@ -12,11 +12,15 @@ import assert from "node:assert/strict";
 import { applyInput } from "../overlays/sim-racing/engine/live-input.js";
 import { mapPedal, mapWheel } from "../overlays/sim-racing/engine/calibration-math.js";
 
+/* The fixture is shaped EXACTLY as calibration.js persists it: keyed by the long
+   channel keys (throttle/brake/clutch/steering) with mode tags. If the read side
+   (live-input.js) ever looks pedals up by any other key, these break — which is
+   the drift that once shipped silently (pedals read under thr/brk/clu). */
 const MAP = {
-  thr: { axis: 0, rest: -1, full: 1 },
-  brk: { axis: 1, rest: -1, full: 1 },
-  clu: { axis: 2, rest: -1, full: 1 },
-  steering: { axis: 3, rest: 0, min: -1, max: 1 }
+  throttle: { axis: 0, rest: -1, full: 1, mode: "pedal" },
+  brake:    { axis: 1, rest: -1, full: 1, mode: "pedal" },
+  clutch:   { axis: 2, rest: -1, full: 1, mode: "pedal" },
+  steering: { axis: 3, rest: 0, min: -1, max: 1, mode: "wheel" }
 };
 
 test("applyInput maps pedals + steering exactly via the shared calibration maths", () => {
@@ -31,13 +35,13 @@ test("applyInput maps pedals + steering exactly via the shared calibration maths
 
 test("applyInput rests steering at zero when uncalibrated for it", () => {
   const s = { thr: 0, brk: 0, clu: 0, str: 0.9 };
-  applyInput(s, { thr: MAP.thr }, { axes: [0.2, 0, 0, 0.7] }); // no steering entry
+  applyInput(s, { throttle: MAP.throttle }, { axes: [0.2, 0, 0, 0.7] }); // no steering entry
   assert.equal(s.str, 0);
 });
 
 test("applyInput skips a channel whose axis is absent on the pad", () => {
   const s = { thr: 0, brk: 5, clu: 0, str: 0 };
-  applyInput(s, { thr: MAP.thr, brk: { axis: 9, rest: -1, full: 1 } }, { axes: [1] });
+  applyInput(s, { throttle: MAP.throttle, brake: { axis: 9, rest: -1, full: 1 } }, { axes: [1] });
   assert.equal(s.thr, mapPedal(1, -1, 1));
   assert.equal(s.brk, 5); // axis 9 missing → left untouched
 });

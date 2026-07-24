@@ -13,7 +13,8 @@ product — those live in the repo docs and this links to them:
 | Surface | Where | Un-mockable? |
 | --- | --- | --- |
 | Manifest (`catalogue.json`) | `overlays/sim-racing/catalogue.json` | No — pure JSON, unit-tested |
-| Pure calibration maths | `engine/calibration-math.js` | No — unit-tested in node |
+| Pure calibration + gear maths | `engine/calibration-math.js` | No — unit-tested in node |
+| Live input reader (calibration read side + gear/shifter) | `engine/live-input.js` + `engine/gamepad.js` | **Mixed** — mapping + shift bookkeeping unit-tested in node; `poll()` + real buttons need a wheel |
 | Overlay modules (canvas draw) | `overlays/sim-racing/overlays/*.js` | **Yes — real canvas pixels** |
 | Live overlay page | `pages/overlay.html?style=<id>` | **Yes — needs a real wheel + OBS** |
 | Demo driver (animated preview state) | `engine/demo-lap.js` + `engine/demo-driver.js` | No — pure, node-testable; reproduces `qa/fixture.json` |
@@ -46,7 +47,7 @@ npm run serve                       # static server on overlays/sim-racing
 
 Run the layers a change touches; these must stay true.
 
-- [ ] `node --test` green — maths + every migrated overlay paints (mock) + **the demo driver reproduces `qa/fixture.json` exactly** (`tests/demo-driver.test.mjs`).
+- [ ] `node --test` green — maths + every migrated overlay paints (mock) + **the demo driver reproduces `qa/fixture.json` exactly** (`tests/demo-driver.test.mjs`) + **the live-input contract** (pedals keyed exactly as `calibration.js` persists them — `tests/live-input.test.mjs`) + **the gear/shifter layer** (button reads, gear maths, and `readGear`/`applyGear` bookkeeping that mirrors the demo driver — `tests/gear-input.test.mjs`).
 - [ ] `pytest` green — manifest valid; `set` agrees with `uses`; no orphan modules.
 - [ ] `node qa/acceptance.mjs` green — every migrated overlay paints in **real** Chromium **and** is pixel-faithful to its prototype golden (any new overlay whose helper is mis-ported fails here).
 - [ ] `overlay.html?style=bowtie` served over **http** (never `file://`).
@@ -61,7 +62,9 @@ Run the layers a change touches; these must stay true.
 
 - **http required** everywhere — `file://` blocks `fetch` + ES modules (and the Gamepad API needs a secure context). See [ADR 0002](../docs/decisions/0002-static-first-hosting.md).
 - **Fonts** (Oxanium, IBM Plex Mono) load from Google Fonts; the harness `await document.fonts.ready` before drawing, and polls `painted>0` because the first navigation can race first-paint.
-- **Telemetry/shifter overlays render but can't run *live*** yet (no rpm/gear source — SO-0006/0007). Not a bug.
+- **Telemetry overlays render but can't run *live*** yet (no rpm/spd source — SO-0007). Not a bug.
+- **The shifter now HAS a live path (SO-0006).** Once an H-shifter or paddles is calibrated on the setup page, `live-input.js` reads the gear buttons each frame and reproduces the demo driver's shift bookkeeping, so shifter overlays animate live. But the button→gear *mapping* is only **unit-proven** — the actual G923 shifter round-trip (real buttons, real OBS browser) is un-mockable and still owed on hardware before this can be called done.
+- **The calibration read/write contract is keyed by the LONG channel names** (`throttle`/`brake`/`clutch`/`steering`) — what `calibration.js` persists; `live-input.js` reads the same keys. `tests/live-input.test.mjs` loads a calibration-shaped map so the two can't drift. They did once: pedals were read under `thr`/`brk`/`clu`, so a real calibration never satisfied Live and it rested silently — invisible headless (no gamepad short-circuits `poll()`), only biting on hardware.
 - The 4 `excluded` overlays are archived-in-manifest, intentionally module-less — expect no module for them.
 - **Canvas text has subpixel rendering variance** across page contexts, so glyph-dense overlays (e.g. `terminal`) diff ~0.5% while looking identical. Tolerance is 0.6% with an AA-aware pixelmatch threshold; a real mis-port is a wrong shape at many percent. Don't tighten to chase glyph noise; do investigate any diff whose `.diff.png` shows a *structural* change (missing element, wrong position/colour), not edge scatter.
 - **Golden faithfulness needs the fixture + goldens to agree.** `qa/render.html` and the goldens both read `qa/fixture.json`; if you re-capture goldens, the fixture is rewritten in lockstep.
@@ -75,4 +78,5 @@ Run the layers a change touches; these must stay true.
   overlay against its golden. **68/68 non-excluded overlays pixel-faithful.** The baseline is frozen —
   the prototype can be deleted without losing it. Re-capture only to intentionally re-baseline
   (`qa/capture-golden.mjs <prototype-path>`).
+- **Owed (SO-0006): the live shifter round-trip on a real G923.** The read side + bookkeeping are unit-covered, but the button→gear mapping and the whole capture→persist→read→animate loop are un-mockable — they need a real H-shifter/paddles in a real browser (and OBS's browser once). Until that passes, SO-0006 is "framework in, hardware-unverified." (Also blocked-adjacent: the gear *capture UI* in `calibration.js` + the setup-page surface aren't built yet, so nothing writes `map.gear` yet.)
 - Layer 3 fresh-eyes persona pass at the first hosted-site milestone (expensive; milestones only).

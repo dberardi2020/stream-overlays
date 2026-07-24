@@ -107,8 +107,11 @@ const state = createState();
 const input = createInputReader({ state });
 const mem = {};
 
-function frame() {
-  input.poll();          // applies live wheel, or rests every channel at zero
+let last = 0;
+function frame(now) {
+  const dt = last ? Math.min((now - last) / 1000, 0.1) : 0;   // seconds; capped across a tab-refocus gap
+  last = now;
+  input.poll(dt);        // applies live wheel + shifter, or rests every channel at zero
   pushHistory(state);
   ctx.clearRect(0, 0, W, H);
   ctx.save();
