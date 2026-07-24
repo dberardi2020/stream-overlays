@@ -22,6 +22,9 @@ h1{font-family:Oxanium,monospace;font-weight:800;font-size:24px;margin:0 0 5px}
 .lede{color:var(--mute);margin:0 0 18px;font-size:12.8px}
 .devstatus{font-size:12.5px;color:var(--mute);margin:0 0 16px;font-variant-numeric:tabular-nums;letter-spacing:.01em}
 .devstatus.on{color:var(--thr)}
+.preview-wrap{margin-top:14px;border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;align-items:center;gap:7px}
+.preview-cap{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--mute)}
+canvas.preview{display:block;background:transparent}
 .lede code,.card code{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px}
 .lede b{color:var(--ink)}
 a{color:var(--str);text-decoration:none}
@@ -84,12 +87,14 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
     <p>Press any wheel button first so the browser sees the device. Then release everything for neutral and press each
       pedal fully — travel scales to your hardware.</p>
     <div id="mount-pedals"></div>
+    <div class="preview-wrap"><span class="preview-cap">live preview · pedal-blocks</span><canvas class="preview" id="prev-pedals"></canvas></div>
   </div>
 
   <div class="card">
     <h2>Wheel</h2>
     <p>Sweep <b>fully left</b>, then <b>fully right</b>, then re-centre. Only steering / wheel overlays need it.</p>
     <div id="mount-wheel"></div>
+    <div class="preview-wrap"><span class="preview-cap">live preview · wheel</span><canvas class="preview" id="prev-wheel"></canvas></div>
   </div>
 
   <div class="card">
@@ -124,6 +129,8 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
 import { createState } from "../engine/state.js";
 import { createCalibration } from "../engine/calibration.js";
 import { CALIBRATION_KEY } from "../engine/live-input.js";
+import * as pedalBlocks from "../overlays/pedal-blocks.js";
+import * as wheelOverlay from "../overlays/wheel.js";
 
 const state = createState();
 const cal = createCalibration({
@@ -138,9 +145,28 @@ const cal = createCalibration({
   autoHideWhenLive: false        // this is the setup surface — keep the boxes up
 });
 
-// The panel now owns its own live meters — the host just needs to poll it.
+/* Live overlay previews (SO-0029): each box renders its real overlay module over
+   the SAME state the calibration engine drives, so it reacts to your input once
+   that channel is calibrated + a wheel is connected — and rests at zero otherwise
+   (no fake data, matching the pure overlay). Reuses the gallery's draw path. */
+const previews = [];
+function addPreview(id, mod, w, h) {
+  const c = document.getElementById("prev-" + id);
+  if (!c) return;
+  c.width = w; c.height = h; c.style.width = w + "px"; c.style.height = h + "px";
+  previews.push({ ctx: c.getContext("2d"), w, h, mod, mem: {} });
+}
+await document.fonts.ready;                 // overlays draw text — use the real font
+addPreview("pedals", pedalBlocks, 260, 96);
+addPreview("wheel", wheelOverlay, 150, 130);
+
 function frame() {
-  cal.poll();
+  cal.poll();                               // updates `state` from the live wheel (per channel)
+  for (const p of previews) {
+    p.ctx.clearRect(0, 0, p.w, p.h);
+    try { p.mod.draw(p.ctx, p.w, p.h, state, p.mem); }
+    catch (e) { /* a preview must never break the setup page */ }
+  }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

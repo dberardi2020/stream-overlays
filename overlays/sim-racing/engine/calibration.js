@@ -140,6 +140,7 @@ export function createCalibration(opts) {
 
   // engine state (shared axis machine)
   const S = { map: {}, queue: [], phase: "idle", baseline: null, cand: null, used: [] };
+  let connected = false;   // a pad is present this frame — drives per-channel live meters/state
   if (storeKey) {
     try {
       const saved = JSON.parse(localStorage.getItem(storeKey) || "null");
@@ -252,7 +253,7 @@ export function createCalibration(opts) {
         ref.val.textContent = c.optional ? "optional" : "needed";
         if (c.mode === "pedal") ref.fill.style.width = "0%";
         else ref.mark.style.left = "50%";
-      } else if (state.real) {               // bound + a live device — drive the meter
+      } else if (connected) {                // bound + a live device — drive the meter (per-channel)
         ref.row.classList.remove("unset");
         ref.val.removeAttribute("data-idle");
         if (c.mode === "pedal") {
@@ -581,6 +582,7 @@ export function createCalibration(opts) {
 
   function poll() {
     const pad = getPad();
+    connected = !!pad;
     if (statusEl) {
       statusEl.textContent = pad ? "● " + pad.id.replace(/\s*\(.*$/, "").slice(0, 42) : "○ no wheel detected";
       statusEl.classList.toggle("on", !!pad);
@@ -621,7 +623,7 @@ export function createCalibration(opts) {
       }
     }
 
-    if (state.real && pad) applyLive(pad);
+    if (pad) applyLive(pad);   // per-channel: applyLive only touches calibrated channels
     updateRowStatus();
     pollGear(pad);
 
