@@ -8,7 +8,10 @@ Rows are pointers; anything needing more than a sentence has a block in **Detail
 
 ## In progress
 
-*(none)*
+| ID | Pri | Type | Title |
+|---|---|---|---|
+| [SO-0006](#so-0006) | P1 | Feature | Shifter / gear live calibration + input (v0 input binding) |
+| [SO-0024](#so-0024) | P2 | Chore | Dev/debug input inspector page (localhost-only) |
 
 ## On deck
 
@@ -22,8 +25,6 @@ behind input binding + the configure page** — still committed, just no longer 
 
 | ID | Pri | Type | Title |
 |---|---|---|---|
-| [SO-0006](#so-0006) | P1 | Feature | Shifter / gear live calibration + input (v0 input binding) |
-| [SO-0024](#so-0024) | P2 | Chore | Dev/debug input inspector page (localhost-only) |
 | [SO-0003](#so-0003) | P2 | Feature | Configure page → URL generator |
 | [SO-0023](#so-0023) | P2 | Feature | Overlay capability requirements + setup-fit checks |
 | [SO-0019](#so-0019) | P1 | Chore | Overlay quality pass — cull half-baked, upgrade the rough |
