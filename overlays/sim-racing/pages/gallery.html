@@ -144,7 +144,7 @@ input[type=color]::-webkit-color-swatch-wrapper{padding:0}
 <div class="wrap">
   <h1>Overlay Gallery</h1>
   <p class="lede">Every sim-racing overlay, rendered live against a synthetic demo lap — throttle, brake,
-    steering, gears, and telemetry all move so you can judge a style before a wheel is ever connected.
+    steering, gears, and telemetry all move so you can judge a style before any hardware is connected.
     Pick one, then open it in OBS with <code>overlay.html?style=&lt;id&gt;</code>. Telemetry and shifter
     overlays animate here from demo data; running them <em>live</em> needs a sim feed (see the roadmap).</p>
 
@@ -451,9 +451,9 @@ function updateLiveStatus() {
   const key = pad && liveInput.hasCalibration() ? "ok" : pad ? "uncal" : "nopad";
   if (key === lastLiveKey) return;
   lastLiveKey = key;
-  if (key === "ok") { liveStatus.className = "livestat ok"; liveStatus.textContent = "● Live — your wheel drives every overlay"; }
-  else if (key === "uncal") { liveStatus.className = "livestat"; liveStatus.innerHTML = 'Wheel seen, not calibrated — <a href="setup.html">calibrate →</a>'; }
-  else { liveStatus.className = "livestat"; liveStatus.innerHTML = 'No wheel yet — press a button on it, then <a href="setup.html">calibrate →</a>'; }
+  if (key === "ok") { liveStatus.className = "livestat ok"; liveStatus.textContent = "● Live — your rig drives every overlay"; }
+  else if (key === "uncal") { liveStatus.className = "livestat"; liveStatus.innerHTML = 'Rig seen, not calibrated — <a href="setup.html">calibrate →</a>'; }
+  else { liveStatus.className = "livestat"; liveStatus.innerHTML = 'No rig yet — press a button on it, then <a href="setup.html">calibrate →</a>'; }
 }
 
 // Returning from the Setup tab re-reads a freshly-saved calibration.

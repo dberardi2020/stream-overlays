@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Wheel Setup — Stream Overlays</title>
+<title>Rig Setup — Stream Overlays</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -60,11 +60,10 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
 </nav>
 <script src="/pages/dev-nav.js"></script>
 <div class="wrap">
-  <h1>Wheel Setup</h1>
-  <p class="lede">Calibrate your wheel once, here. Calibration is saved in <b>this browser</b> (it's intrinsic to your
-    physical wheel), so the <a href="gallery.html">gallery</a>'s Live mode and any <code>overlay.html</code> in
-    <b>this same browser</b> pick it up automatically. The overlay page itself has no setup — it's a pure renderer, so
-    nothing here can ever end up on your stream.</p>
+  <h1>Rig Setup</h1>
+  <p class="lede">Calibrate your rig once, here — pedals, steering, and shifter. Calibration is saved in
+    <b>this browser</b> (it's intrinsic to your physical hardware), so the <a href="gallery.html">gallery</a>'s Live mode
+    and any <code>overlay.html</code> in <b>this same browser</b> pick it up automatically.</p>
 
   <div id="file-warning"></div>
   <script>
@@ -77,7 +76,7 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
   }
   </script>
 
-  <p class="devstatus" id="devstatus">○ no wheel detected</p>
+  <p class="devstatus" id="devstatus">○ no device detected</p>
 
   <div class="card">
     <h2>Pedals</h2>
@@ -93,9 +92,9 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
   </div>
 
   <div class="card">
-    <h2>Shifter <span class="tag">optional</span></h2>
-    <p>Bind an <b>H-shifter</b> (shift into each gear) or <b>paddles</b> (pull each paddle) — only the shifter overlays
-      need it.</p>
+    <h2>Shifter</h2>
+    <p>Calibrate an <b>H-shifter</b> (shift into each gear) or <b>paddles / a sequential shifter</b> (capture upshift +
+      downshift — both report as the same up/down pair). Use whichever you have; only the shifter overlays need it.</p>
     <div id="mount-shifter"></div>
   </div>
 

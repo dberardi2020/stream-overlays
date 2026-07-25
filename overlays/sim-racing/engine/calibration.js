@@ -83,42 +83,48 @@ const CSS = `
 .g923cal-msg{color:var(--cal-mute);font-size:11px;margin-left:auto;text-align:right}
 .g923cal [hidden]{display:none!important}
 /* ---- shifter / gear section (SO-0006) — its own box ---- */
-.g923cal-gear-top{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-bottom:2px}
-.g923cal-seg{display:inline-flex;border:1px solid var(--cal-line);border-radius:6px;overflow:hidden}
-.g923cal-seg button{border:0;border-radius:0;background:var(--cal-panel);color:var(--cal-mute);padding:4px 12px;font-size:11px}
-.g923cal-seg button + button{border-left:1px solid var(--cal-line)}
-.g923cal-seg button.on{background:var(--cal-accent);color:#15171c;font-weight:600}
-.g923cal-seg button.on:hover{color:#15171c;filter:brightness(1.05)}
-/* H-pattern gate — the product's own gate language */
-.g923cal-gate{display:flex;align-items:center;gap:20px;margin:6px 0 5px;min-height:66px}
-.gate-cols{display:flex;gap:17px;position:relative}
-.gate-cols::before{content:"";position:absolute;left:2px;right:2px;top:50%;height:2px;background:var(--cal-line);transform:translateY(-1px)}
+/* H-shifter and Paddles/sequential are two independent controls in one box — no
+   mode toggle. One gear source is stored at a time (calibrating one clears the
+   other); the unbound control simply reads "not set". */
+/* Two halves, side by side, each centred in its column, split by a divider. */
+.g923cal-gsubs{display:flex;align-items:stretch}
+.g923cal-gsub{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;padding:4px 14px 10px}
+.g923cal-gsub + .g923cal-gsub{border-left:1px solid var(--cal-line)}
+.g923cal-gsub-head{display:flex;flex-direction:column;align-items:center;gap:1px;margin-bottom:9px}
+.g923cal-gsub-name{font-size:12px;color:var(--cal-fg);font-weight:600;letter-spacing:.02em}
+.g923cal-gstatus{font-size:11px;color:var(--cal-mute);white-space:nowrap}
+.g923cal-gstatus .ok{color:var(--cal-on)}
+/* H-pattern gate on a recessed plate — the product's own gate language. R doglegs
+   off the right column (1 3 5 / 2 4 6 R), the way a 6-speed + reverse actually sits. */
+.g923cal-gate{display:flex;justify-content:center;align-items:center;flex:1;margin-bottom:10px}
+.gate-plate{display:inline-flex;padding:13px 16px;border-radius:11px;border:1px solid var(--cal-line);
+  background:color-mix(in srgb,var(--cal-panel) 55%,#000)}
+.gate-cols{display:flex;gap:16px;position:relative}
+.gate-cols::before{content:"";position:absolute;left:16px;right:16px;top:50%;height:2px;background:var(--cal-line);transform:translateY(-1px)}
 .gate-col{display:flex;flex-direction:column;gap:15px;position:relative}
-.gate-col::before{content:"";position:absolute;left:50%;top:5px;bottom:5px;width:2px;background:var(--cal-line);transform:translateX(-1px)}
-.gate-cell{position:relative;z-index:1;width:30px;height:25px;display:flex;align-items:center;justify-content:center;
-  border-radius:6px;border:1px solid var(--cal-line);background:var(--cal-panel);color:var(--cal-mute);
-  font-variant-numeric:tabular-nums;font-weight:600;font-size:12.5px;transition:background .12s,border-color .12s,color .12s}
+.gate-col::before{content:"";position:absolute;left:50%;top:6px;bottom:6px;width:2px;background:var(--cal-line);transform:translateX(-1px)}
+.gate-col-r{justify-content:flex-end}
+.gate-col-r::before{top:50%;bottom:6px}          /* stub: centre line down to R, not full height */
+.gate-cell{position:relative;z-index:1;width:33px;height:29px;display:flex;align-items:center;justify-content:center;
+  border-radius:7px;border:1px solid var(--cal-line);background:var(--cal-panel);color:var(--cal-mute);
+  font-variant-numeric:tabular-nums;font-weight:600;font-size:13px;transition:background .12s,border-color .12s,color .12s}
 .gate-cell.set{border-color:color-mix(in srgb,var(--cal-accent) 55%,var(--cal-line));color:var(--cal-fg)}
 .gate-cell.live{background:var(--cal-on);border-color:var(--cal-on);color:#15171c;box-shadow:0 0 0 3px color-mix(in srgb,var(--cal-on) 26%,transparent)}
 .gate-cell.target{border-color:var(--cal-accent);color:var(--cal-accent);animation:g923pulse 1.1s ease-in-out infinite}
-.gate-r{display:flex;align-items:center}
 @keyframes g923pulse{0%,100%{box-shadow:0 0 0 3px color-mix(in srgb,var(--cal-accent) 32%,transparent)}50%{box-shadow:0 0 0 3px transparent}}
-/* paddles — sequential, so a pair, not a gate */
-.g923cal-paddles{display:flex;gap:10px;flex:1}
-.g923cal-pad{flex:1;display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;border:1px solid var(--cal-line);
+/* paddles — sequential up/down, stacked so the pair sits centred in its half */
+.g923cal-paddles{display:flex;flex-direction:column;gap:8px;width:100%;max-width:210px;margin:auto 0}
+.g923cal-pad{display:flex;align-items:center;gap:9px;padding:10px 13px;border-radius:8px;border:1px solid var(--cal-line);
   background:var(--cal-panel);color:var(--cal-mute);font-size:12px;transition:background .12s,border-color .12s,color .12s}
 .g923cal-pad .ar{font-size:14px;line-height:1}
 .g923cal-pad .pv{margin-left:auto;font-variant-numeric:tabular-nums;font-size:11px}
 .g923cal-pad.set{border-color:color-mix(in srgb,var(--cal-accent) 55%,var(--cal-line));color:var(--cal-fg)}
 .g923cal-pad.live{background:var(--cal-on);border-color:var(--cal-on);color:#15171c}
 .g923cal-pad.target{border-color:var(--cal-accent);color:var(--cal-accent);animation:g923pulse 1.1s ease-in-out infinite}
-/* foot: live readout (left) + status (right) */
-.g923cal-gear-foot{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:11.5px;min-height:16px}
-.g923cal-greadout{color:var(--cal-mute);font-variant-numeric:tabular-nums}
+/* live readout under the two controls */
+.g923cal-greadout{margin-top:4px;min-height:16px;font-size:11.5px;text-align:center;color:var(--cal-mute);font-variant-numeric:tabular-nums}
 .g923cal-greadout b{color:var(--cal-fg);font-weight:600}
 .g923cal-greadout.on b{color:var(--cal-on)}
-.g923cal-gstatus{color:var(--cal-mute);text-align:right;white-space:nowrap}
-.g923cal-gstatus .ok{color:var(--cal-on)}
 `;
 
 function injectCSS() {
@@ -206,7 +212,7 @@ export function createCalibration(opts) {
   }
   const groupStatus = g => g === groups.pedals
     ? (hasAllPedals() ? "✓ calibrated" : "throttle · brake · clutch")
-    : (S.map.steering ? "✓ calibrated" : "optional");
+    : (S.map.steering ? "✓ calibrated" : "not set");
   function refreshStatus() {
     for (const key of ["pedals", "wheel"]) {
       const g = groups[key];
@@ -250,7 +256,7 @@ export function createCalibration(opts) {
       if (!m) {                              // unbound — faint empty track, intent in the status column
         ref.row.classList.add("unset");
         ref.val.setAttribute("data-idle", "");
-        ref.val.textContent = c.optional ? "optional" : "needed";
+        ref.val.textContent = "not set";
         if (c.mode === "pedal") ref.fill.style.width = "0%";
         else ref.mark.style.left = "50%";
       } else if (connected) {                // bound + a live device — drive the meter (per-channel)
@@ -375,17 +381,31 @@ export function createCalibration(opts) {
   shifterRoot.className = "g923cal";
   shifterRoot.innerHTML =
     '<div class="g923cal-gear" data-gearsec>' +
-      '<div class="g923cal-gear-top">' +
-        '<div class="g923cal-seg" data-gseg>' +
-          '<button data-gmode="shifter">H-shifter</button>' +
-          '<button data-gmode="paddles">Paddles</button>' +
+      '<div class="g923cal-gsubs">' +
+      '<div class="g923cal-gsub">' +
+        '<div class="g923cal-gsub-head">' +
+          '<span class="g923cal-gsub-name">H-shifter</span>' +
+          '<span class="g923cal-gstatus" data-gstatus="shifter"></span>' +
+        '</div>' +
+        '<div class="g923cal-gate" data-ggate="shifter"></div>' +
+        '<div class="g923cal-actions" data-gactions>' +
+          '<button class="g923cal-primary" data-gcal="shifter">Calibrate</button>' +
+          '<button data-gclear="shifter" hidden>Clear</button>' +
         '</div>' +
       '</div>' +
-      '<div class="g923cal-gate" data-ggate></div>' +
-      '<div class="g923cal-gear-foot">' +
-        '<span class="g923cal-greadout" data-greadout></span>' +
-        '<span class="g923cal-gstatus" data-gstatus></span>' +
+      '<div class="g923cal-gsub">' +
+        '<div class="g923cal-gsub-head">' +
+          '<span class="g923cal-gsub-name">Paddles / sequential</span>' +
+          '<span class="g923cal-gstatus" data-gstatus="paddles"></span>' +
+        '</div>' +
+        '<div class="g923cal-gate" data-ggate="paddles"></div>' +
+        '<div class="g923cal-actions" data-gactions>' +
+          '<button class="g923cal-primary" data-gcal="paddles">Calibrate</button>' +
+          '<button data-gclear="paddles" hidden>Clear</button>' +
+        '</div>' +
       '</div>' +
+      '</div>' +
+      '<div class="g923cal-greadout" data-greadout></div>' +
       '<div class="g923cal-active" data-gactive hidden>' +
         '<div class="g923cal-prompt" data-gprompt></div>' +
         '<div class="g923cal-btns">' +
@@ -393,20 +413,20 @@ export function createCalibration(opts) {
           '<button data-gcancel>Cancel</button>' +
         '</div>' +
       '</div>' +
-      '<div class="g923cal-actions" data-gactions>' +
-        '<button class="g923cal-primary" data-gcal>Calibrate shifter</button>' +
-        '<button data-gclear-gear>Clear</button>' +
-        '<span class="g923cal-msg" data-gmsg></span>' +
-      '</div>' +
+      '<span class="g923cal-msg" data-gmsg></span>' +
     '</div>';
   (mounts.shifter || document.body).appendChild(shifterRoot);
 
   const gq = sel => shifterRoot.querySelector(sel);
-  const ggateEl = gq("[data-ggate]"), greadoutEl = gq("[data-greadout]"), gstatusEl = gq("[data-gstatus]");
-  const gactiveEl = gq("[data-gactive]"), gactionsEl = gq("[data-gactions]");
+  const ggateEls   = { shifter: gq('[data-ggate="shifter"]'),  paddles: gq('[data-ggate="paddles"]') };
+  const gstatusEls = { shifter: gq('[data-gstatus="shifter"]'), paddles: gq('[data-gstatus="paddles"]') };
+  const gcalBtns   = { shifter: gq('[data-gcal="shifter"]'),    paddles: gq('[data-gcal="paddles"]') };
+  const gclearBtns = { shifter: gq('[data-gclear="shifter"]'),  paddles: gq('[data-gclear="paddles"]') };
+  const gactionEls = [...shifterRoot.querySelectorAll("[data-gactions]")];
+  const greadoutEl = gq("[data-greadout]");
+  const gactiveEl = gq("[data-gactive]");
   const gpromptEl = gq("[data-gprompt]"), gmsgEl = gq("[data-gmsg]");
-  const gcalBtn = gq("[data-gcal]"), gskipBtn = gq("[data-gskip]"), gcancelBtn = gq("[data-gcancel]");
-  const gsegBtns = [...shifterRoot.querySelectorAll("[data-gmode]")];
+  const gskipBtn = gq("[data-gskip]"), gcancelBtn = gq("[data-gcancel]");
 
   const persist = () => { if (storeKey) localStorage.setItem(storeKey, JSON.stringify(S.map)); };
 
@@ -414,7 +434,7 @@ export function createCalibration(opts) {
     mode: (S.map.gear && S.map.gear.mode) || "shifter",   // which flow to calibrate next
     phase: "idle", queue: [], captured: {}, baseline: [], waiting: null, lastLive: NaN
   };
-  const GLABEL = { R: "Reverse", up: "the upshift paddle", down: "the downshift paddle" };
+  const GLABEL = { R: "Reverse", up: "upshift", down: "downshift" };
   const gLabelOf = l => G.mode === "paddles" ? GLABEL[l] : (l === "R" ? "Reverse" : "gear " + l);
   const gSetMsg = t => { gmsgEl.textContent = t || ""; };
   const setReadout = (html, on) => { greadoutEl.innerHTML = html || ""; greadoutEl.classList.toggle("on", !!on); };
@@ -448,28 +468,34 @@ export function createCalibration(opts) {
       '<span class="pv">' + (set ? "btn " + g[key] : "—") + '</span></div>';
   }
   function renderGearVisual() {
-    ggateEl.innerHTML = G.mode === "paddles"
-      ? '<div class="g923cal-paddles">' + gPad("up", "▲", "Upshift") + gPad("down", "▼", "Downshift") + '</div>'
-      : '<div class="gate-cols">' +
-          '<div class="gate-col">' + gCell("1") + gCell("2") + '</div>' +
-          '<div class="gate-col">' + gCell("3") + gCell("4") + '</div>' +
-          '<div class="gate-col">' + gCell("5") + gCell("6") + '</div>' +
-        '</div><div class="gate-r">' + gCell("R") + '</div>';
+    // Both controls always render; only the stored one shows "set" cells.
+    ggateEls.paddles.innerHTML =
+      '<div class="g923cal-paddles">' + gPad("up", "▲", "Upshift") + gPad("down", "▼", "Downshift") + '</div>';
+    ggateEls.shifter.innerHTML =
+      '<div class="gate-plate"><div class="gate-cols">' +
+        '<div class="gate-col">' + gCell("1") + gCell("2") + '</div>' +
+        '<div class="gate-col">' + gCell("3") + gCell("4") + '</div>' +
+        '<div class="gate-col">' + gCell("5") + gCell("6") + '</div>' +
+        '<div class="gate-col gate-col-r">' + gCell("R") + '</div>' +
+      '</div></div>';
     G.lastLive = null;                    // DOM rebuilt — force the next live tick to re-apply
   }
 
   function renderGearStatus() {
-    gsegBtns.forEach(b => b.classList.toggle("on", b.dataset.gmode === G.mode));
-    gcalBtn.textContent = G.mode === "paddles" ? "Calibrate paddles" : "Calibrate shifter";
-    const sum = gStoredSummary();
-    gstatusEl.innerHTML = sum ? '<span class="ok">✓</span> ' + sum : "optional · for shifter overlays";
+    const mode = S.map.gear && S.map.gear.mode, sum = gStoredSummary();
+    for (const k of ["shifter", "paddles"]) {
+      const bound = mode === k;
+      gstatusEls[k].innerHTML = bound && sum ? '<span class="ok">✓</span> ' + sum : "not set";
+      gcalBtns[k].textContent = bound ? "Recalibrate" : "Calibrate";
+      gclearBtns[k].hidden = !bound;
+    }
     renderGearVisual();
     setReadout("", false);
   }
 
   function resetGearCapture() {
     G.phase = "idle"; G.queue = []; G.waiting = null;
-    gactiveEl.hidden = true; gactionsEl.hidden = false;
+    gactiveEl.hidden = true; gactionEls.forEach(e => e.hidden = false);
   }
   // Stop the axis flow if it's mid-capture — only one capture runs at a time.
   function cancelAxis() {
@@ -479,19 +505,22 @@ export function createCalibration(opts) {
     state.real = hasAllPedals(); fireLive(); renderRows(); refreshStatus(); cur = null;
   }
 
-  function startGear() {
+  function startGear(mode) {
     const pad = getPad();
     if (!pad) { gSetMsg("No device — connect the wheel and press a button."); return; }
     cancelAxis();
-    G.queue = G.mode === "paddles" ? ["up", "down"] : GEAR_LABELS.slice();
+    if (G.phase !== "idle") resetGearCapture();   // switching controls mid-capture — drop the old flow
+    G.mode = mode;
+    G.queue = mode === "paddles" ? ["up", "down"] : GEAR_LABELS.slice();
     G.captured = {}; G.baseline = pressedButtons(pad); G.waiting = null; G.phase = "capture";
-    gactiveEl.hidden = false; gactionsEl.hidden = true;
+    gactiveEl.hidden = false; gactionEls.forEach(e => e.hidden = true);
     gPromptCapture(); gSetMsg("");
   }
   function gPromptCapture() {
-    gpromptEl.innerHTML = "Shift into <b>" + gLabelOf(G.queue[0]) + "</b> and hold.";
+    const verb = G.mode === "paddles" ? "Engage <b>" : "Shift into <b>";
+    gpromptEl.innerHTML = verb + gLabelOf(G.queue[0]) + "</b> and hold.";
     gskipBtn.hidden = false;
-    renderGearVisual();                   // pulse the target cell on the gate
+    renderGearVisual();                   // pulse the target cell on the gate / paddle
   }
   function gAdvance() {
     G.queue.shift(); G.waiting = null;
@@ -509,21 +538,19 @@ export function createCalibration(opts) {
       delete S.map.gear;                 // captured nothing — leave it uncalibrated
     }
     persist();
-    gactiveEl.hidden = true; gactionsEl.hidden = false;
+    gactiveEl.hidden = true; gactionEls.forEach(e => e.hidden = false);
     renderGearStatus();
-    gSetMsg(has ? "Shifter saved ✓" : "Nothing captured.");
+    const saved = G.mode === "paddles" ? "Paddles saved ✓" : "H-shifter saved ✓";
+    gSetMsg(has ? saved : "Nothing captured.");
   }
 
-  gcalBtn.addEventListener("click", startGear);
+  gcalBtns.shifter.addEventListener("click", () => startGear("shifter"));
+  gcalBtns.paddles.addEventListener("click", () => startGear("paddles"));
   gskipBtn.addEventListener("click", () => { if (G.phase !== "idle") gAdvance(); });
   gcancelBtn.addEventListener("click", () => { resetGearCapture(); renderGearStatus(); gSetMsg("Cancelled."); });
-  gq("[data-gclear-gear]").addEventListener("click", () => {
-    delete S.map.gear; persist(); renderGearStatus(); gSetMsg("Cleared.");
-  });
-  gsegBtns.forEach(b => b.addEventListener("click", () => {
-    if (G.phase !== "idle") resetGearCapture();
-    G.mode = b.dataset.gmode; renderGearStatus(); gSetMsg("");
-  }));
+  const clearGear = () => { delete S.map.gear; persist(); renderGearStatus(); gSetMsg("Cleared."); };
+  gclearBtns.shifter.addEventListener("click", clearGear);
+  gclearBtns.paddles.addEventListener("click", clearGear);
 
   // Live engaged-gear highlight + readout while idle; button auto-capture mid-flow.
   function gLiveSig(pad) {
@@ -536,16 +563,17 @@ export function createCalibration(opts) {
     const sig = gLiveSig(pad);
     if (sig === G.lastLive) return;       // nothing changed this frame — no DOM work
     G.lastLive = sig;
-    ggateEl.querySelectorAll(".live").forEach(e => e.classList.remove("live"));
+    ggateEls.shifter.querySelectorAll(".live").forEach(e => e.classList.remove("live"));
+    ggateEls.paddles.querySelectorAll(".live").forEach(e => e.classList.remove("live"));
     const g = S.map.gear;
     if (!pad) { setReadout(g ? "connect a wheel to test" : "", false); return; }
     if (g && g.mode === "shifter") {
       const gear = resolveShifterGear(g.buttons, i => isButtonDown(pad, i));
-      if (gear !== 0) { const c = ggateEl.querySelector('[data-g="' + (gear < 0 ? "R" : gear) + '"]'); if (c) c.classList.add("live"); }
+      if (gear !== 0) { const c = ggateEls.shifter.querySelector('[data-g="' + (gear < 0 ? "R" : gear) + '"]'); if (c) c.classList.add("live"); }
       setReadout("in gear <b>" + (gear < 0 ? "R" : gear === 0 ? "N" : gear) + "</b>", gear !== 0);
     } else if (g && g.mode === "paddles") {
       const up = g.up != null && isButtonDown(pad, g.up), down = g.down != null && isButtonDown(pad, g.down);
-      const u = ggateEl.querySelector('[data-p="up"]'), d = ggateEl.querySelector('[data-p="down"]');
+      const u = ggateEls.paddles.querySelector('[data-p="up"]'), d = ggateEls.paddles.querySelector('[data-p="down"]');
       if (u) u.classList.toggle("live", up); if (d) d.classList.toggle("live", down);
       setReadout(up ? "<b>▲ upshift</b>" : down ? "<b>▼ downshift</b>" : "neutral", up || down);
     } else {
@@ -584,7 +612,7 @@ export function createCalibration(opts) {
     const pad = getPad();
     connected = !!pad;
     if (statusEl) {
-      statusEl.textContent = pad ? "● " + pad.id.replace(/\s*\(.*$/, "").slice(0, 42) : "○ no wheel detected";
+      statusEl.textContent = pad ? "● " + pad.id.replace(/\s*\(.*$/, "").slice(0, 42) : "○ no device detected";
       statusEl.classList.toggle("on", !!pad);
     }
 
