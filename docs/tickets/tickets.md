@@ -55,7 +55,7 @@ Pre-public candidates not yet committed to the On-deck sequence.
 | [SO-0026](#so-0026) | P2 | Chore | Integration + browser test coverage for the live input path |
 | [SO-0030](#so-0030) | P3 | Chore | Sequential shifter input — confirm HID model + where it groups |
 | [SO-0031](#so-0031) | P3 | Idea | Live overlay previews on setup — shelved, revisit post-launch |
-| [SO-0032](#so-0032) | P3 | Feature | Optional 7th gear — dynamic gear count across model + overlays |
+| [SO-0032](#so-0032) | P3 | Feature | Extra forward gears (up to 8) — dynamic gear count across model + overlays |
 | [SO-0005](#so-0005) | P3 | Chore | Collapse near-duplicate overlay families |
 | [SO-0011](#so-0011) | P3 | Idea | The builder — compose overlays from sub-visuals |
 | [SO-0014](#so-0014) | P3 | Feature | Real-session recorder + demo-data library |
@@ -240,10 +240,10 @@ A sequential shifter (an aftermarket lever, or a wheel's sequential mode) — do
 
 SO-0029 embedded each calibration box's real overlay as a live preview (Pedals→pedal-blocks, Wheel→wheel, Shifter→H-gate). Shelved on 2026-07-24 for go-live: the minimal per-box calibration UI (rows/meters) is enough, and the box's calibration widget + overlay preview visualised the same channel twice (double duty). Removed only the embedded canvases from `setup.html`; the box split, multi-mount engine, and per-channel live meters stayed. **Full working implementation preserved on branch `shelf/so-0029-live-overlay-setup`** — restore from there rather than rebuilding. If revisited, the handoff's "overlay-only" direction (overlay as the single hero visual per box, stripping the rows/meters) is the design to weigh against just re-adding the previews alongside. Blocks nothing; pure polish.
 
-### SO-0032 — Optional 7th gear: dynamic gear count {#so-0032}
+### SO-0032 — Extra forward gears (up to 8): dynamic gear count {#so-0032}
 **P3 · Feature · engine/overlays**
 
-Some rigs have a 7th forward gear; the model hardcodes six. Making it optional is an overhaul, not a one-liner: `calibration-math.js` `GEAR_LABELS` is `["R","1".."6"]`; the calibration gate UI lays out a fixed 3×2 + R; and **~8 overlays loop `g<=6` with layout math baked to six** — `gate-heatmap`, `gate-map`, `gate-with-trail`, `gear-donut`, `gear-ladder`, `gear-timeline`, `sequential-column`, plus `engineer-view`'s `v/6` gear normalization. The right shape is a **dynamic gear count** (a rig has N forward gears, default 6, optional 7) threaded from calibration into the draw path, with overlays rendering to the actual max rather than a constant. Also re-baselines the `qa/` golden pixel diffs for every gear overlay touched. The read side (`resolveShifterGear`, the button map) is already gear-count-agnostic — it captures whatever you bind — so the work is UI/layout + rendering, not input logic. Sequence after the SO-0006 hardware round-trip so a real 7-speed can verify it.
+Rigs vary — 6, 7, or 8 forward gears; the model hardcodes six. The fix is **not** "add a 7th" but a **dynamic gear count** (a rig has N forward gears, default 6, up to 8) threaded from calibration into the draw path, with overlays rendering to the actual max rather than a constant. That's an overhaul: `calibration-math.js` `GEAR_LABELS` is `["R","1".."6"]`; the calibration gate UI lays out a fixed 3×2 + R (7–8 need an extra column / re-flowed gate); and **~8 overlays loop `g<=6` with layout math baked to six** — `gate-heatmap`, `gate-map`, `gate-with-trail`, `gear-donut`, `gear-ladder`, `gear-timeline`, `sequential-column`, plus `engineer-view`'s `v/6` gear normalization (which becomes `v/max`). Also re-baselines the `qa/` golden pixel diffs for every gear overlay touched. The read side (`resolveShifterGear`, the button map) is already gear-count-agnostic — it captures whatever you bind — so the work is UI/layout + rendering, not input logic. Sequence after the SO-0006 hardware round-trip so a real 7-/8-speed can verify it.
 
 ## Conventions
 
