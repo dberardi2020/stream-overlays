@@ -63,7 +63,7 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
   <h1>Rig Setup</h1>
   <p class="lede">Calibrate your rig once, here — pedals, steering, and shifter. Calibration is saved in
     <b>this browser</b> (it's intrinsic to your physical hardware), so the <a href="gallery.html">gallery</a>'s Live mode
-    and any <code>overlay.html</code> in <b>this same browser</b> pick it up automatically.</p>
+    and your overlays in <b>this same browser</b> pick it up automatically.</p>
 
   <div id="file-warning"></div>
   <script>
@@ -87,14 +87,14 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
 
   <div class="card">
     <h2>Wheel</h2>
-    <p>Sweep <b>fully left</b>, then <b>fully right</b>, then re-centre. Only steering / wheel overlays need it.</p>
+    <p>Sweep <b>fully left</b>, then <b>fully right</b>, then re-centre.</p>
     <div id="mount-wheel"></div>
   </div>
 
   <div class="card">
     <h2>Shifter</h2>
-    <p>Calibrate an <b>H-shifter</b> (shift into each gear) or <b>paddles / a sequential shifter</b> (capture upshift +
-      downshift — both report as the same up/down pair). Use whichever you have; only the shifter overlays need it.</p>
+    <p>Calibrate an <b>H-Shifter</b> (shift into each gear) or <b>Paddles / a Sequential shifter</b> (capture upshift +
+      downshift — both report as the same up/down pair).</p>
     <div id="mount-shifter"></div>
   </div>
 
@@ -106,12 +106,12 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
 
   <div class="card" id="obs">
     <h2>Using it in OBS</h2>
-    <p class="hint">Overlays are a separate, pure page (<code>overlay.html?style=&lt;id&gt;</code>). Because
+    <p class="hint">Each overlay is its own page — you copy its URL into OBS. Because
       calibration is per-browser, OBS's built-in browser needs its own one-time calibration:</p>
     <ol>
       <li>Add <b>this setup page</b> as a temporary OBS Browser Source.</li>
       <li>Right-click it → <b>Interact</b>, press a wheel button, and calibrate here.</li>
-      <li>Remove the setup source. Every <code>overlay.html</code> in that OBS browser now reads the saved calibration.</li>
+      <li>Remove the setup source. Every overlay in that OBS browser now reads the saved calibration.</li>
     </ol>
     <p class="hint"><b>No device showing?</b> The Gamepad API only wakes on a focused page — that's what the Interact
       window gives you. If it still won't appear, run the overlay in a real Chrome window and use OBS <b>Window Capture</b>

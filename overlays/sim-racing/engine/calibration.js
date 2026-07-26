@@ -194,7 +194,7 @@ export function createCalibration(opts) {
     return g;
   }
 
-  const groups = { pedals: buildGroup("Calibrate pedals"), wheel: buildGroup("Calibrate steering") };
+  const groups = { pedals: buildGroup("Calibrate"), wheel: buildGroup("Calibrate") };
   groups.pedals.calBtn.addEventListener("click", () => startQueue(PEDAL_KEYS, groups.pedals));
   groups.wheel.calBtn.addEventListener("click", () => startQueue(["steering"], groups.wheel));
   groups.pedals.clearBtn.addEventListener("click", () => clearGroup(groups.pedals, PEDAL_KEYS));
@@ -212,7 +212,7 @@ export function createCalibration(opts) {
   }
   const groupStatus = g => g === groups.pedals
     ? (hasAllPedals() ? "✓ calibrated" : "throttle · brake · clutch")
-    : (S.map.steering ? "✓ calibrated" : "not set");
+    : (S.map.steering ? "✓ calibrated" : "");   // single channel — the row already reads "not set"
   function refreshStatus() {
     for (const key of ["pedals", "wheel"]) {
       const g = groups[key];
@@ -384,7 +384,7 @@ export function createCalibration(opts) {
       '<div class="g923cal-gsubs">' +
       '<div class="g923cal-gsub">' +
         '<div class="g923cal-gsub-head">' +
-          '<span class="g923cal-gsub-name">H-shifter</span>' +
+          '<span class="g923cal-gsub-name">H-Shifter</span>' +
           '<span class="g923cal-gstatus" data-gstatus="shifter"></span>' +
         '</div>' +
         '<div class="g923cal-gate" data-ggate="shifter"></div>' +
@@ -395,7 +395,7 @@ export function createCalibration(opts) {
       '</div>' +
       '<div class="g923cal-gsub">' +
         '<div class="g923cal-gsub-head">' +
-          '<span class="g923cal-gsub-name">Paddles / sequential</span>' +
+          '<span class="g923cal-gsub-name">Paddles / Sequential</span>' +
           '<span class="g923cal-gstatus" data-gstatus="paddles"></span>' +
         '</div>' +
         '<div class="g923cal-gate" data-ggate="paddles"></div>' +
@@ -446,7 +446,7 @@ export function createCalibration(opts) {
       return n === 2 ? "Paddles · up + down" : n === 1 ? "Paddles · 1 of 2" : null;
     }
     const n = Object.keys(g.buttons || {}).length;
-    return n ? "H-shifter · " + n + "/7 gears" : null;
+    return n ? "H-Shifter · " + n + "/7 gears" : null;
   }
 
   /* The gate (or paddle pair) — the product's own H-pattern language. Cells carry
@@ -486,8 +486,7 @@ export function createCalibration(opts) {
     for (const k of ["shifter", "paddles"]) {
       const bound = mode === k;
       gstatusEls[k].innerHTML = bound && sum ? '<span class="ok">✓</span> ' + sum : "not set";
-      gcalBtns[k].textContent = bound ? "Recalibrate" : "Calibrate";
-      gclearBtns[k].hidden = !bound;
+      gclearBtns[k].hidden = !bound;   // button stays "Calibrate" in both states
     }
     renderGearVisual();
     setReadout("", false);
@@ -540,7 +539,7 @@ export function createCalibration(opts) {
     persist();
     gactiveEl.hidden = true; gactionEls.forEach(e => e.hidden = false);
     renderGearStatus();
-    const saved = G.mode === "paddles" ? "Paddles saved ✓" : "H-shifter saved ✓";
+    const saved = G.mode === "paddles" ? "Paddles saved ✓" : "H-Shifter saved ✓";
     gSetMsg(has ? saved : "Nothing captured.");
   }
 
