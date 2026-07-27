@@ -33,7 +33,7 @@ There is nothing to install — the overlays are static files served over HTTP (
 ```sh
 git clone git@github.com:dberardi2020/stream-overlays.git ~/Code/stream-overlays
 cd ~/Code/stream-overlays
-python3 -m http.server --directory overlays/sim-racing 8000
+npm run serve   # finds python3 / py / python, whichever this machine has
 # then open http://localhost:8000/pages/overlay.html?style=bowtie
 ```
 
