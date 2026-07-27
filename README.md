@@ -39,6 +39,8 @@ npm run serve   # finds python3 / py / python, whichever this machine has
 
 In **OBS**: add a **Browser Source** pointing at the overlay URL, then right-click it → **Interact**, press a wheel button, and calibrate. Config lives entirely in the URL (`?style=…&scale=…`), so a configured overlay is just a link you paste.
 
+Those URLs are served by the local dev server, so **it has to be running whenever OBS loads the source** — otherwise the overlay is blank. On Windows, double-click `scripts/start-overlays.cmd`; drop a shortcut to it in `shell:startup` to have it always up. (Hosting the overlays instead would make the links permanent — see [ADR 0002](docs/decisions/0002-static-first-hosting.md) — but nothing is deployed yet.)
+
 ### Hand it to your coding agent
 
 ```

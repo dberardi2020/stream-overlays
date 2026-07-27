@@ -124,6 +124,11 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
 
   <div class="card" id="obs">
     <h2>Using it in OBS</h2>
+    <p class="hint"><b>The local server has to be running.</b> Overlay URLs are
+      <code>http://localhost:8000/…</code>, which only resolve while it is up — if it isn't when OBS loads
+      a Browser Source, the overlay is just blank, mid-stream. Start it with <code>npm run serve</code>, or
+      double-click <code>scripts/start-overlays.cmd</code>. To have it always up, put a shortcut to that file
+      in your Startup folder (<kbd>Win</kbd>+<kbd>R</kbd> → <code>shell:startup</code>).</p>
     <p class="hint">Each overlay is its own page — you copy its URL into OBS. Because
       calibration is per-browser, OBS's built-in browser needs its own one-time calibration:</p>
     <ol>
