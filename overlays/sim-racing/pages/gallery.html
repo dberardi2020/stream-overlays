@@ -207,6 +207,7 @@ import { setMode, MODES, pushHistory, tel, hist, gateUse, shiftLog, shiftTimes, 
 import { createDemoDriver } from "../engine/demo-driver.js";
 import { createState } from "../engine/state.js";
 import { createInputReader } from "../engine/live-input.js";
+import { readParams } from "../engine/url-config.js";
 import { getPad } from "../engine/gamepad.js";
 
 const errEl = document.getElementById("err");
@@ -225,6 +226,15 @@ try {
 // The product gallery shows every migrated overlay; `excluded` are archived-in-manifest
 // and intentionally module-less, so they never render here.
 const SET_ORDER = ["pedals", "wheel", "shifter", "combo"];
+/* The size a card advertises must be the size you type into OBS, not the native
+   design size — overlay.html renders at `scale`, which defaults to 2, so a
+   180×130 overlay needs a 360×260 Browser Source. Showing the native number
+   next to a "Copy OBS link" button meant the badge and the link disagreed.
+   Read the default from url-config rather than restating it, and pin it into
+   the copied URL so the two can never drift apart. */
+const OBS_SCALE = readParams("").scale;
+const obsSize = e => ({ w: Math.round(e.size.w * OBS_SCALE), h: Math.round(e.size.h * OBS_SCALE) });
+
 const CHAN_ORDER = ["clu", "brk", "thr", "str", "gear:absolute", "gear:direction", "rpm", "spd"];
 // Chip label + CSS-safe class for each channel (":" can't ride in a class name).
 const CHAN_LABEL = { "gear:absolute": "GEAR", "gear:direction": "SHIFT" };
@@ -271,13 +281,16 @@ function resetAccumulators() {
 document.getElementById("resetAccum").onclick = resetAccumulators;
 
 /* copy-to-clipboard with a transient "Copied!" on the button itself */
-function wireCopy(btn, text, label) {
+function wireCopy(btn, text, label, confirm) {
   if (!btn) return;
   btn.addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText(text); btn.textContent = "Copied!"; btn.classList.add("ok"); }
+    // The confirmation carries the Browser Source size, because this is the
+    // moment before it gets pasted into OBS — the one place it has to be right.
+    try { await navigator.clipboard.writeText(text); btn.textContent = confirm || "Copied!"; btn.classList.add("ok"); }
     catch { btn.textContent = "Press ⌘C"; }
     clearTimeout(btn._t);
-    btn._t = setTimeout(() => { btn.textContent = label; btn.classList.remove("ok"); }, 1100);
+    // Longer when it carries the size — there is something to actually read.
+    btn._t = setTimeout(() => { btn.textContent = label; btn.classList.remove("ok"); }, confirm ? 2600 : 1100);
   });
 }
 
@@ -311,7 +324,10 @@ for (const set of SET_ORDER) {
       .map(u => '<span class="ch ch-' + chanKey(u) + '">' + chanLabel(u) + "</span>").join("");
 
     card.innerHTML =
-      '<div class="hd"><h3>' + e.name + '</h3><span class="sz">' + e.size.w + "×" + e.size.h + "</span></div>" +
+      '<div class="hd"><h3>' + e.name + '</h3><span class="sz" title="Browser Source size at scale ' +
+        OBS_SCALE + ' — the overlay renders at ' + OBS_SCALE + '× its ' + e.size.w + '×' + e.size.h +
+        ' native design size. Add &scale=1 to the URL for native.">' +
+        obsSize(e).w + "×" + obsSize(e).h + "</span></div>" +
       '<div class="badges">' +
         '<span class="tag stage-' + e.stage + '">' + e.stage + "</span>" +
         (tel ? '<span class="tag tel">tel: ' + e.telemetry.join(",") + "</span>" : "") +
@@ -340,8 +356,10 @@ for (const set of SET_ORDER) {
 
     // Copy actions: the OBS link is the *absolute* overlay URL to paste into a
     // Browser Source (resolves to whatever origin is serving this page).
-    const obsUrl = new URL("overlay.html?style=" + e.id, location.href).href;
-    wireCopy(card.querySelector('[data-act="obs"]'), obsUrl, "Copy OBS link");
+    // Pin the scale explicitly: self-documenting, and immune to the default moving.
+    const obsUrl = new URL("overlay.html?style=" + e.id + "&scale=" + OBS_SCALE, location.href).href;
+    wireCopy(card.querySelector('[data-act="obs"]'), obsUrl, "Copy OBS link",
+      "Copied — size " + obsSize(e).w + "×" + obsSize(e).h);
     wireCopy(card.querySelector('[data-act="name"]'), e.name, "Copy name");
 
     grid.appendChild(card);
