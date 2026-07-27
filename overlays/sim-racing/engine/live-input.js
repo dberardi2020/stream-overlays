@@ -16,8 +16,21 @@
    buttons, so live-input reads them and reproduces the exact shift bookkeeping
    the demo driver does (demo-driver.js) — gear/lever/shiftAge/shiftDir plus the
    shared shiftLog/shiftTimes/gateUse singletons — so a shifter overlay animates
-   identically whether it's fed live buttons or the demo lap. */
-import { mapPedal, mapWheel, resolveShifterGear, stepSequentialGear } from "./calibration-math.js";
+   identically whether it's fed live buttons or the demo lap.
+
+   The two gear controls are INDEPENDENT sources, not two modes of one (ADR 0007).
+   They report different things and are calibrated separately:
+
+     H-shifter  -> POSITION. A gear is a held button, so `gear`/`lever` are read
+                   directly, and direction falls out of diffing them. Absolute.
+     Paddles    -> DIRECTION. A pull is an edge, nothing more. It yields
+                   shiftDir/shiftCount/shiftLog/shiftTimes and NOTHING else.
+
+   So `gear` is non-null if and only if an H-shifter is calibrated. Paddles never
+   synthesise one — see the note where stepSequentialGear used to live. Both may
+   be mapped at once (paddles live on the wheel, the H-shifter is a separate
+   unit); each simply reports the motion that actually happened. */
+import { mapPedal, mapWheel, resolveShifterGear } from "./calibration-math.js";
 import { getPad, isButtonDown } from "./gamepad.js";
 import { tel, shiftLog, shiftTimes, gateUse, clock, MODES } from "./draw-kit.js";
 
@@ -33,7 +46,24 @@ const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
    H-pattern throw; paddles → the sequential paddle throw. */
 const H_MODE      = MODES.find(m => m.id === "H");
 const PADDLE_MODE = MODES.find(m => m.id === "PADDLE");
-const gearShiftMode = gearMap => (gearMap && gearMap.mode === "paddles") ? PADDLE_MODE : H_MODE;
+
+/* Gear map shape (see ADR 0007):
+     { shifter: { buttons: { R,1..6 -> index } },   // optional
+       paddles: { up, down } }                      // optional
+   Either half may be absent; both may be present. Upgrades the pre-ADR-0007
+   single-slot shape (`{mode:"shifter"|"paddles", ...}`) in place on read, so a
+   browser holding an old calibration keeps it instead of silently losing it. */
+export function normalizeGearMap(gear) {
+  if (!gear) return null;
+  if (gear.shifter || gear.paddles) return gear;          // already current
+  if (gear.mode === "paddles") return { paddles: { up: gear.up, down: gear.down } };
+  if (gear.mode === "shifter") return { shifter: { buttons: gear.buttons } };
+  return null;
+}
+
+export const hasShifter = gear => !!(gear && gear.shifter && gear.shifter.buttons);
+export const hasPaddles = gear => !!(gear && gear.paddles &&
+  (gear.paddles.up != null || gear.paddles.down != null));
 
 /* The saved map is keyed by calibration.js's channel keys — the LONG names
    (`throttle`/`brake`/`clutch`/`steering`), not the short channel-state fields
@@ -61,48 +91,95 @@ export function applyInput(state, map, pad) {
   else state.str = 0;   // never freeze a stale wheel angle
 }
 
-/* Resolve the current gear from the live buttons. Absolute for the H-shifter
-   (a gear IS a held button); a step for paddles (edge-detect up/down against
-   `mem` and walk the sequence). Returns 0 (neutral) with no gear calibration. */
-export function readGear(state, gearMap, pad, mem) {
-  if (!gearMap) return 0;
-  if (gearMap.mode === "paddles") {
-    const up   = gearMap.up   != null && isButtonDown(pad, gearMap.up);
-    const down = gearMap.down != null && isButtonDown(pad, gearMap.down);
-    let g = state.gear;
-    if (up && !mem.up)     g = stepSequentialGear(g, +1);   // rising edge only
-    if (down && !mem.down) g = stepSequentialGear(g, -1);
-    mem.up = up; mem.down = down;
-    return g;
-  }
-  return resolveShifterGear(gearMap.buttons, i => isButtonDown(pad, i));
+/* The absolute gear the H-shifter is holding: a gear IS a held button, so this is
+   a direct read, never an integration. `null` — not 0 — when no H-shifter is
+   calibrated: 0 means "in neutral", which is a claim we have no basis to make. */
+export function readGear(gearMap, pad) {
+  if (!hasShifter(gearMap)) return null;
+  return resolveShifterGear(gearMap.shifter.buttons, i => isButtonDown(pad, i));
+}
+
+/* Rising edges on the paddles this frame, edge-detected against `mem`. A held
+   paddle is not a repeat shift, so only the 0->1 transition counts. */
+export function readPaddleEdges(gearMap, pad, mem) {
+  if (!hasPaddles(gearMap)) { mem.up = false; mem.down = false; return { up: false, down: false }; }
+  const p = gearMap.paddles;
+  const up   = p.up   != null && isButtonDown(pad, p.up);
+  const down = p.down != null && isButtonDown(pad, p.down);
+  const edges = { up: up && !mem.up, down: down && !mem.down };
+  mem.up = up; mem.down = down;
+  return edges;
 }
 
 /* Apply a resolved gear to the state + shared shifter singletons, exactly as
    demo-driver.js's tick does: log the change, age the shift, derive the throw
    (shiftProg) and the gate-animated lever, accumulate gate dwell. Exported so
    the bookkeeping is unit-testable without a live pad. */
+function logShift(state, dir) {
+  state.shiftDir = dir;
+  state.shiftAge = 0;
+  state.shiftCount++;
+  shiftLog.push({ rpm: tel.rpm, dir });
+  shiftTimes.push({ t: clock.t, dir });
+  if (shiftLog.length > 60) shiftLog.shift();
+  if (shiftTimes.length > 40) shiftTimes.shift();
+}
+
 export function applyGear(state, gearMap, pad, dt, mem) {
-  const gear = readGear(state, gearMap, pad, mem);
+  const absolute = hasShifter(gearMap);
+  const gear = readGear(gearMap, pad);              // null unless an H-shifter is mapped
+  const edges = readPaddleEdges(gearMap, pad, mem);
+  let shifted = false;
 
-  if (gear !== state.gear) {
-    state.prevGear = state.gear;
-    state.shiftDir = gear > state.gear ? 1 : -1;
-    state.gear = gear;
-    state.shiftAge = 0;
-    state.shiftCount++;
-    shiftLog.push({ rpm: tel.rpm, dir: state.shiftDir });
-    shiftTimes.push({ t: clock.t, dir: state.shiftDir });
-    if (shiftLog.length > 60) shiftLog.shift();
-    if (shiftTimes.length > 40) shiftTimes.shift();
-  } else {
-    state.shiftAge += dt;
+  /* Position source. A shift is a transition between two ENGAGED gears: on a real
+     H-pattern every shift physically crosses neutral (2 -> N -> 3), so counting
+     each change of `gear` would log two events per shift — a phantom downshift
+     into neutral and a phantom upshift out of it. That is real jitter: doubled
+     shiftCount, flapping shiftDir, a shiftLog full of noise.
+
+     So `gear` still tracks the live position every frame (the gate correctly
+     reads NEUTRAL mid-shift), but the EVENT is logged only on engagement, with
+     its direction measured from the last gear actually engaged.
+
+     demo-driver.js keeps the simpler form deliberately: its scripted lap steps
+     gear-to-gear and never passes through neutral, so the two cannot diverge. */
+  if (gear !== null) {
+    if (state.gear === null) {
+      // First look at the rig: whatever it is holding, we did not watch it get
+      // there. Sitting in 3rd at session start is not a shift into 3rd.
+      state.gear = gear;
+      if (gear !== 0) mem.engaged = gear;
+    } else if (gear !== state.gear) {
+      state.gear = gear;
+      if (gear !== 0) {                             // engaged — the shift completes here
+        // From the last gear actually engaged; falling back to 0 because if we
+        // never held one, the neutral we were sitting in WAS observed.
+        const from = mem.engaged != null ? mem.engaged : 0;
+        if (from !== gear) {
+          state.prevGear = from;
+          logShift(state, gear > from ? 1 : -1);
+          shifted = true;
+        }
+        mem.engaged = gear;
+      }
+    }
   }
+  // Direction source: independent of the above — a paddle pull is its own event.
+  if (edges.up)   { logShift(state, +1); shifted = true; }
+  if (edges.down) { logShift(state, -1); shifted = true; }
 
-  const m = gearShiftMode(gearMap);
+  if (!shifted) state.shiftAge += dt;
+
+  const m = absolute ? H_MODE : PADDLE_MODE;
   state.shiftProg = clamp01(m.throw ? state.shiftAge / m.throw : 1);
-  state.lever = (m.absolute && state.shiftProg < 1) ? 0 : state.gear;
-  if (state.lever > 0) gateUse[state.lever] += dt;   // reverse (-1) never accrues gate dwell
+  if (absolute) {
+    state.lever = state.shiftProg < 1 ? 0 : state.gear;
+    if (state.lever > 0) gateUse[state.lever] += dt;   // reverse (-1) never accrues gate dwell
+  } else {
+    // No position source. Clear the gear outright rather than leaving whatever
+    // it last held (createState seeds 0, and a stale 0 reads as "in neutral").
+    state.gear = null; state.prevGear = null; state.lever = null;
+  }
 }
 
 /* Returns { poll, hasCalibration, hasGear, reload }. `poll(dt)` is called once
@@ -114,24 +191,34 @@ export function createInputReader(opts) {
   const storeKey = opts.storeKey || CALIBRATION_KEY;
 
   const load = () => {
-    try { const s = JSON.parse(localStorage.getItem(storeKey) || "null"); return (s && typeof s === "object") ? s : {}; }
-    catch { return {}; }
+    try {
+      const s = JSON.parse(localStorage.getItem(storeKey) || "null");
+      if (!s || typeof s !== "object") return {};
+      if (s.gear) s.gear = normalizeGearMap(s.gear);   // upgrade the pre-ADR-0007 shape
+      return s;
+    } catch { return {}; }
   };
   let map = load();
-  let paddleMem = { up: false, down: false };   // paddle edge state across frames
+  let paddleMem = { up: false, down: false, engaged: null };   // paddle edges + last engaged gear, across frames
   const hasCalibration = () => PEDALS.every(p => map[p.key]);
-  const hasGear = () => !!map.gear;
+  const hasGear = () => hasShifter(map.gear) || hasPaddles(map.gear);
 
+  /* No live gear source: every gear field goes UNKNOWN, not neutral. `gear: 0`
+     would assert the car is in neutral, which nothing here observed. */
   function restGear() {
-    state.gear = 0; state.lever = 0; state.prevGear = 0;
+    state.gear = null; state.lever = null; state.prevGear = null;
     state.shiftDir = 0; state.shiftProg = 1;
-    paddleMem.up = false; paddleMem.down = false;
+    paddleMem.up = false; paddleMem.down = false; paddleMem.engaged = null;
   }
 
   return {
     hasCalibration,
     hasGear,
-    reload() { map = load(); paddleMem = { up: false, down: false }; },
+    // Which gear source is live — the gallery gates absolute-gear overlays on
+    // hasShifter(), since paddles can never stand in for a position read.
+    hasShifter: () => hasShifter(map.gear),
+    hasPaddles: () => hasPaddles(map.gear),
+    reload() { map = load(); paddleMem = { up: false, down: false, engaged: null }; },
     poll(dt) {
       const d = dt > 0 ? dt : FRAME_DT;
       const pad = getPad();

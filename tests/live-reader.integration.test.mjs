@@ -89,7 +89,8 @@ test("poll() rests every channel at zero with no wheel connected", () => {
   assert.equal(state.real, false);
   assert.equal(state.thr, 0); assert.equal(state.brk, 0);
   assert.equal(state.clu, 0); assert.equal(state.str, 0);
-  assert.equal(state.gear, 0, "gear rests at neutral");
+  assert.equal(state.gear, null, "gear rests UNKNOWN, not neutral — nothing observed a gear (ADR 0007)");
+  assert.equal(state.lever, null, "and there is no lever position to report");
 });
 
 test("poll() drives gear from the shifter buttons and advances the shift clock", () => {
@@ -105,7 +106,41 @@ test("poll() drives gear from the shifter buttons and advances the shift clock",
   assert.ok(clock.t > 0, "shift clock advances when a shifter is calibrated");
 });
 
-test("poll() with pedals-only calibration leaves gear neutral AND keeps the clock frozen", () => {
+test("poll() reads BOTH gear sources from one stored map (ADR 0007)", () => {
+  resetSingletons();
+  store(calibration({ gear: { shifter: { buttons: { 1: 6, 2: 7 } }, paddles: { up: 4, down: 5 } } }));
+  const state = createState();
+  const reader = createInputReader({ state });
+
+  assert.ok(reader.hasShifter() && reader.hasPaddles(), "both halves survive the round-trip");
+
+  PAD = pad([-1, -1, -1, 0], [7]);               // H-shifter in 2nd
+  reader.poll(1 / 60);
+  assert.equal(state.gear, 2);
+  assert.equal(state.shiftCount, 1);
+
+  PAD = pad([-1, -1, -1, 0], [7, 4]);            // still in 2nd, paddle pulled
+  reader.poll(1 / 60);
+  assert.equal(state.gear, 2, "the paddle did not move the physical lever");
+  assert.equal(state.shiftCount, 2, "but it is its own shift event");
+});
+
+test("poll() with paddles only reports direction and never a gear", () => {
+  resetSingletons();
+  store(calibration({ gear: { paddles: { up: 4, down: 5 } } }));
+  const state = createState();
+  const reader = createInputReader({ state });
+
+  PAD = pad([-1, -1, -1, 0], [4]);
+  reader.poll(1 / 60);
+
+  assert.equal(state.shiftDir, 1, "the pull is measured");
+  assert.equal(state.gear, null, "the gear is not invented");
+  assert.equal(state.lever, null);
+  assert.equal(reader.hasShifter(), false);
+});
+
+test("poll() with pedals-only calibration leaves gear UNKNOWN AND keeps the clock frozen", () => {
   resetSingletons();
   store(calibration());                          // no gear map
   const state = createState();
@@ -114,7 +149,7 @@ test("poll() with pedals-only calibration leaves gear neutral AND keeps the cloc
   PAD = pad([-1, -1, -1, 0], [7]);               // a button is held, but no gear is calibrated
   reader.poll(1 / 60);
 
-  assert.equal(state.gear, 0, "no gear map -> neutral regardless of buttons");
+  assert.equal(state.gear, null, "no gear map -> unknown regardless of buttons");
   assert.equal(clock.t, 0, "no shifter -> clock stays frozen (pre-SO-0006 behaviour preserved)");
   assert.equal(reader.hasGear(), false);
 });

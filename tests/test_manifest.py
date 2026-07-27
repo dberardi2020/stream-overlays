@@ -19,7 +19,11 @@ import channels  # noqa: E402
 
 STAGES = {"live", "draft", "experimental", "excluded"}
 SETS = {"pedals", "wheel", "shifter", "combo"}
-CHANNEL_KEYS = {"thr", "brk", "clu", "str", "gear", "rpm", "spd"}
+# `gear` is split by source (ADR 0007): an H-shifter reports an absolute
+# position, paddles report only a shift direction, and they are calibrated
+# independently. An overlay declares which it reads; there is no bare "gear".
+GEAR_KEYS = {"gear:absolute", "gear:direction"}
+CHANNEL_KEYS = {"thr", "brk", "clu", "str", "rpm", "spd"} | GEAR_KEYS
 KEBAB = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 
 
@@ -50,6 +54,29 @@ def test_required_fields_and_enums():
         assert set(e["uses"]) <= CHANNEL_KEYS, f"{e['id']}: unknown channel in uses"
         w, h = e["size"]["w"], e["size"]["h"]
         assert isinstance(w, int) and isinstance(h, int) and w > 0 and h > 0, f"{e['id']}: bad size"
+
+
+def test_requires_is_a_subset_of_uses():
+    """`requires` gates an overlay out of Live mode when that source is not
+    calibrated. It must name a channel the overlay actually reads, or the
+    gallery would hide something for a reason that isn't true (ADR 0007)."""
+    for e in manifest():
+        req = e.get("requires")
+        if req is None:
+            continue
+        assert isinstance(req, list) and req, f"{e['id']}: requires must be a non-empty list"
+        assert set(req) <= CHANNEL_KEYS, f"{e['id']}: unknown channel in requires: {req!r}"
+        assert set(req) <= set(e["uses"]), \
+            f"{e['id']}: requires {req!r} names a channel it never reads ({e['uses']!r})"
+
+
+def test_absolute_gear_overlays_declare_the_requirement():
+    """Anything whose subject IS the gear position must be gated: paddles cannot
+    report a position, so these render empty rather than wrong without a shifter."""
+    for e in manifest():
+        if "gear:absolute" not in e.get("requires", []):
+            continue
+        assert "gear:absolute" in e["uses"], f"{e['id']}: gated on a channel it doesn't use"
 
 
 def test_aliases_never_collide_with_an_id():

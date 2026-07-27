@@ -36,5 +36,5 @@ export function draw(ctx, w, h, s, mem) {
     mono(10,500); txt(String(g), x+GATE[g][0]*12, y+(GATE[g][1]<0?-10:18), C.label);
   }
   drawKnob(cx,cy,sx,sy,9);
-  mono(10,500); txt(s.lever===0?"NEUTRAL":"GEAR "+s.lever, cx, h-10, C.label);
+  mono(10,500); txt(s.lever==null?"NO SHIFTER":s.lever===0?"NEUTRAL":"GEAR "+s.lever, cx, h-10, C.label);
 }

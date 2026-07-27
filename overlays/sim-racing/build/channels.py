@@ -37,11 +37,19 @@ def channels(src):
         ch |= set(PEDAL)
     if reads("str") or "wheel(" in b or "DEG(" in b:
         ch.add("str")
-    if (any(reads(k) for k in ("gear", "lever", "shiftAge", "shiftDir", "shiftProg",
-                               "shiftCount", "prevGear"))
+    # The two gear sources report different things and are calibrated separately
+    # (ADR 0007), so an overlay declares which one it actually reads:
+    #   gear:absolute  - a POSITION. Only an H-shifter can report it.
+    #   gear:direction - a shift EVENT. Paddles report this and nothing else.
+    # `shiftAge`/`shiftProg` are produced by both paths, so on their own they
+    # imply an event timer, not a position.
+    if (any(reads(k) for k in ("gear", "lever", "prevGear"))
             or any(t in b for t in ("gearName(", "drawGate(", "drawKnob(", "gateXY(",
-                                    "knobXY(", "gateUse", "shiftLog", "shiftTimes"))):
-        ch.add("gear")
+                                    "knobXY(", "gateUse"))):
+        ch.add("gear:absolute")
+    if (any(reads(k) for k in ("shiftDir", "shiftCount", "shiftAge", "shiftProg"))
+            or any(t in b for t in ("shiftLog", "shiftTimes"))):
+        ch.add("gear:direction")
     if reads("rpm") or "revStrip(" in b or "revColor(" in b:
         ch.add("rpm")
     if reads("spd"):
@@ -56,7 +64,7 @@ def groups(ch):
         g.append("pedals")
     if "str" in ch:
         g.append("wheel")
-    if "gear" in ch:
+    if any(c.startswith("gear:") for c in ch):
         g.append("shifter")
     return g
 

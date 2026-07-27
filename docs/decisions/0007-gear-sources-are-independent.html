@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>0007 — The H-shifter and paddles are independent sources; paddles never yield a gear</title><style>
+:root{--bg:#fbfbfa;--fg:#22201d;--muted:#6b6862;--line:#e6e3dd;--code-bg:#f0eee9;--accent:#b5651d;--link:#a1571a}
+@media(prefers-color-scheme:dark){:root{--bg:#1a1917;--fg:#e6e3dd;--muted:#9a968e;--line:#332f2a;--code-bg:#26241f;--accent:#d99a5b;--link:#e0a866}}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;margin:0}
+.wrap{max-width:760px;margin:0 auto;padding:64px 28px 120px}
+h1{font-size:2rem;line-height:1.2;margin:0 0 .3em;letter-spacing:-.02em}
+h2{font-size:1.35rem;margin:2.2em 0 .5em;padding-bottom:.25em;border-bottom:1px solid var(--line)}
+h3{font-size:1.08rem;margin:1.8em 0 .4em}
+h1,h2,h3,h4,h5,h6{scroll-margin-top:1.2em}
+p{margin:.7em 0}
+a{color:var(--link);text-decoration:none;border-bottom:1px solid transparent}
+a:hover{border-bottom-color:var(--link)}
+code{background:var(--code-bg);padding:.12em .4em;border-radius:4px;font:.86em/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre{background:var(--code-bg);padding:16px 18px;border-radius:8px;overflow-x:auto;border:1px solid var(--line)}
+pre code{background:none;padding:0;font-size:.85em}
+ul,ol{padding-left:1.4em;margin:.7em 0}
+li{margin:.3em 0}
+blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:var(--code-bg);border-radius:0 6px 6px 0;color:var(--muted)}
+blockquote strong{color:var(--fg)}
+.tablewrap{overflow-x:auto;margin:1.1em 0}
+table{border-collapse:collapse;width:100%;font-size:.92em}
+th,td{border:1px solid var(--line);padding:.5em .7em;text-align:left;vertical-align:top}
+td:first-child{white-space:nowrap}
+th{background:var(--code-bg);font-weight:600}
+hr{border:none;border-top:1px solid var(--line);margin:2em 0}
+strong{font-weight:650}
+</style></head><body><main class="wrap">
+<h1 id="0007-the-h-shifter-and-paddles-are-independent-sources-paddles-never-yield-a-gear">0007 — The H-shifter and paddles are independent sources; paddles never yield a gear</h1>
+<p><strong>Status:</strong> Accepted · <strong>Date:</strong> 2026-07-26</p>
+<h2 id="context">Context</h2>
+<p>SO-0006 shipped gear support with a <strong>single-slot</strong> calibration: <code>S.map.gear</code> held exactly one of <code>{mode:"shifter", buttons}</code> or <code>{mode:"paddles", up, down}</code>. The Rig Setup page nonetheless showed both controls side by side, with no toggle and a Calibrate <em>and</em> Clear button each — so calibrating one silently destroyed the other, and either Clear wiped both. That was chosen to keep the live-read path and the existing gear tests unchanged, not because it matched the hardware.</p>
+<p>It does not match the hardware. On a G923 the paddles are permanently on the wheel and the Driving Force Shifter is a separate unit people leave plugged in and use per-car. Both are just button indices on one gamepad. There was never a reason the map could not hold both, and the UI already promised that it did.</p>
+<p>Underneath sat a second, worse problem. The paddle read path synthesised an absolute gear by integrating ±1 steps (<code>stepSequentialGear</code>), walking a counter from wherever it assumed you were. Its own test recorded the tell: <code>stepSequentialGear(0, -1) === 0</code>, commented <em>"no reverse via paddles"</em>.</p>
+<h2 id="decision">Decision</h2>
+<p><strong>Store both halves independently, and never infer a gear position from paddles.</strong></p>
+<pre><code>S.map.gear = { shifter: { buttons: { R,1..6 -&gt; index } },   // optional
+               paddles: { up, down } }                      // optional</code></pre>
+<p>The two report different physical facts and are read separately:</p>
+<div class="tablewrap"><table><thead><tr><th>Source</th><th>Reports</th><th>Yields</th></tr></thead><tbody><tr><td>H-shifter</td><td><strong>Position</strong> — a gear is a held button</td><td><code>gear</code>, <code>lever</code>, <code>gateUse</code>, and direction by diffing</td></tr><tr><td>Paddles</td><td><strong>Direction</strong> — a pull is an edge</td><td><code>shiftDir</code>, <code>shiftCount</code>, <code>shiftLog</code>, <code>shiftTimes</code>, and nothing else</td></tr></tbody></table></div>
+<p><code>state.gear</code> is non-null <strong>if and only if</strong> an H-shifter is calibrated. With no position source it is <code>null</code> — <em>unknown</em> — never <code>0</code>, because <code>0</code> means "in neutral" and that is a claim nothing observed. <code>stepSequentialGear</code> is deleted.</p>
+<p>Each overlay declares which it reads via <code>uses</code> (<code>gear:absolute</code> / <code>gear:direction</code>, derived by <code>build/channels.py</code>, not hand-authored). Overlays whose <em>subject</em> is the gear position carry <code>requires: ["gear:absolute"]</code> and are stood down in Live mode without an H-shifter, with the reason shown.</p>
+<h2 id="rationale">Rationale</h2>
+<ul><li><strong>An integrated gear cannot be resynced.</strong> Start a session in 3rd, or drop one edge, and every gate overlay reads wrong for the rest of the stream. Nothing in the system can detect it, so nothing can correct it. A wrong gear on stream is worse than an absent one.</li><li><strong>The asymmetry is real and one-directional.</strong> An H-shifter can serve both overlay families honestly — 2→3 <em>is</em> an upshift, measured. Paddles cannot serve the position family at all. So this is not a symmetric "two modes" choice; it is a superset and a subset.</li><li><strong>No arbitration is needed.</strong> Because no overlay consumes both kinds as interchangeable, there is no "which source wins" rule and no runtime mode. The source is a static property of the overlay. This is <em>simpler</em> than the single-slot design it replaces, not more complex.</li><li>Both may be mapped at once and each simply reports the motion that happened; a paddle pull is a real event even while the H-shifter holds a gear.</li></ul>
+<h2 id="consequences">Consequences</h2>
+<ul><li><strong>Unknown must be rendered, not hidden.</strong> <code>gearName(null)</code> is <code>"–"</code>. Overlays where gear is incidental (<code>hud</code>, <code>dash-cluster</code>, <code>cockpit</code>, …) keep running and show <code>"–"</code>; the eight where it is the subject are gated out of Live mode instead, because an empty gate reads as broken rather than honest.</li><li><strong>A pedals-only rig changes behaviour</strong>: its gear digit was <code>"N"</code> and is now <code>"–"</code>. That is the same principle applied consistently — no shifter, no gear — and it is a visible change for users who added no hardware.</li><li>Comparison-driven highlights (<code>g === s.lever</code>) degrade to nothing lit, which is correct and needed no change.</li><li>Gating is now <strong>load-bearing for correctness</strong>, not cosmetics: <code>gate-map</code> and <code>gate-with-trail</code> print a <code>"NO SHIFTER"</code> callout as a backstop.</li><li>Old single-slot calibrations are migrated on read by <code>normalizeGearMap</code>, so no one loses a calibration.</li><li><strong>SO-0032 (dynamic gear count) gets slightly cheaper</strong> — the hardcoded clamp to 6 lived in <code>stepSequentialGear</code> and is gone.</li></ul>
+<h2 id="alternatives-considered">Alternatives considered</h2>
+<ul><li><strong>Last-input-wins arbitration.</strong> Whichever control moved most recently becomes authoritative. Rejected: it makes the shift mode runtime state rather than config, rippling into <code>lever</code>/<code>shiftProg</code> and every overlay reading them — and it solves a conflict that does not exist once overlays declare their source.</li><li><strong>Keep the integration, mark it approximate.</strong> Rejected under the stated principle: if it could be untrue, it is not supported.</li><li><strong>Gate every overlay that shows a gear digit.</strong> Rejected as too blunt — a paddles-only rig would lose <code>hud</code> and <code>dash-cluster</code>, where gear is a minor field beside pedals and rpm.</li></ul>
+</main></body></html>

@@ -683,7 +683,8 @@
       "h": 130
     },
     "uses": [
-      "gear"
+      "gear:absolute",
+      "gear:direction"
     ],
     "telemetry": [],
     "origin": "v3",
@@ -701,11 +702,14 @@
       "h": 150
     },
     "uses": [
-      "gear"
+      "gear:absolute"
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "Gate positions shaded by time spent in each gear, accumulating all session from button state alone."
+    "note": "Gate positions shaded by time spent in each gear, accumulating all session from button state alone.",
+    "requires": [
+      "gear:absolute"
+    ]
   },
   {
     "id": "gate-map",
@@ -719,11 +723,14 @@
       "h": 150
     },
     "uses": [
-      "gear"
+      "gear:absolute"
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "The knob travels the real channels - out to the neutral rail, across, then in. Mid-shift it genuinely reads neutral."
+    "note": "The knob travels the real channels - out to the neutral rail, across, then in. Mid-shift it genuinely reads neutral.",
+    "requires": [
+      "gear:absolute"
+    ]
   },
   {
     "id": "gate-with-trail",
@@ -738,11 +745,14 @@
       "h": 150
     },
     "uses": [
-      "gear"
+      "gear:absolute"
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "The gate-map readout — numbered gates and a GEAR callout — with a fading path behind the knob, so you see the whole throw hugging the H."
+    "note": "The gate-map readout — numbered gates and a GEAR callout — with a fading path behind the knob, so you see the whole throw hugging the H.",
+    "requires": [
+      "gear:absolute"
+    ]
   },
   {
     "id": "gear-donut",
@@ -756,11 +766,14 @@
       "h": 150
     },
     "uses": [
-      "gear"
+      "gear:absolute"
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "Time in each gear as ring segments. Ambient, accumulates all session, needs nothing but buttons."
+    "note": "Time in each gear as ring segments. Ambient, accumulates all session, needs nothing but buttons.",
+    "requires": [
+      "gear:absolute"
+    ]
   },
   {
     "id": "gear-ladder",
@@ -774,11 +787,14 @@
       "h": 160
     },
     "uses": [
-      "gear"
+      "gear:absolute"
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "All gears stacked with the engaged one lit, and nothing lit while the lever is crossing."
+    "note": "All gears stacked with the engaged one lit, and nothing lit while the lever is crossing.",
+    "requires": [
+      "gear:absolute"
+    ]
   },
   {
     "id": "gear-timeline",
@@ -792,11 +808,14 @@
       "h": 130
     },
     "uses": [
-      "gear"
+      "gear:absolute"
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "Gear selection as a scrolling piano roll. A whole lap in one glance, straight off button state."
+    "note": "Gear selection as a scrolling piano roll. A whole lap in one glance, straight off button state.",
+    "requires": [
+      "gear:absolute"
+    ]
   },
   {
     "id": "lever-position",
@@ -811,11 +830,14 @@
       "h": 150
     },
     "uses": [
-      "gear"
+      "gear:absolute"
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "The gate as two axes. Reads as data rather than diagram, and neutral is unmistakable."
+    "note": "The gate as two axes. Reads as data rather than diagram, and neutral is unmistakable.",
+    "requires": [
+      "gear:absolute"
+    ]
   },
   {
     "id": "paddle-pair",
@@ -829,7 +851,7 @@
       "h": 120
     },
     "uses": [
-      "gear"
+      "gear:direction"
     ],
     "telemetry": [],
     "origin": "v3",
@@ -847,7 +869,7 @@
       "h": 140
     },
     "uses": [
-      "gear",
+      "gear:absolute",
       "rpm"
     ],
     "telemetry": [
@@ -868,7 +890,7 @@
       "h": 160
     },
     "uses": [
-      "gear",
+      "gear:absolute",
       "rpm"
     ],
     "telemetry": [
@@ -889,7 +911,7 @@
       "h": 120
     },
     "uses": [
-      "gear",
+      "gear:absolute",
       "rpm"
     ],
     "telemetry": [
@@ -910,7 +932,8 @@
       "h": 170
     },
     "uses": [
-      "gear"
+      "gear:absolute",
+      "gear:direction"
     ],
     "telemetry": [],
     "origin": "v2",
@@ -928,7 +951,7 @@
       "h": 120
     },
     "uses": [
-      "gear"
+      "gear:direction"
     ],
     "telemetry": [],
     "origin": "v3",
@@ -946,7 +969,7 @@
       "h": 90
     },
     "uses": [
-      "gear",
+      "gear:absolute",
       "rpm"
     ],
     "telemetry": [
@@ -967,7 +990,7 @@
       "h": 130
     },
     "uses": [
-      "gear",
+      "gear:direction",
       "rpm"
     ],
     "telemetry": [
@@ -988,7 +1011,7 @@
       "h": 140
     },
     "uses": [
-      "gear"
+      "gear:direction"
     ],
     "telemetry": [],
     "origin": "v3",
@@ -1006,7 +1029,7 @@
       "h": 120
     },
     "uses": [
-      "gear"
+      "gear:direction"
     ],
     "telemetry": [],
     "origin": "v3",
@@ -1024,7 +1047,8 @@
       "h": 110
     },
     "uses": [
-      "gear"
+      "gear:absolute",
+      "gear:direction"
     ],
     "telemetry": [],
     "origin": "v3",
@@ -1044,7 +1068,7 @@
     "uses": [
       "brk",
       "clu",
-      "gear",
+      "gear:absolute",
       "str",
       "thr"
     ],
@@ -1087,7 +1111,7 @@
     "uses": [
       "brk",
       "clu",
-      "gear",
+      "gear:absolute",
       "rpm",
       "spd",
       "str",
@@ -1114,7 +1138,7 @@
     "uses": [
       "brk",
       "clu",
-      "gear",
+      "gear:absolute",
       "str",
       "thr"
     ],
@@ -1135,7 +1159,7 @@
     },
     "uses": [
       "clu",
-      "gear"
+      "gear:absolute"
     ],
     "telemetry": [],
     "origin": "v3",
@@ -1155,7 +1179,7 @@
     "uses": [
       "brk",
       "clu",
-      "gear",
+      "gear:absolute",
       "str",
       "thr"
     ],
@@ -1177,7 +1201,7 @@
     "uses": [
       "brk",
       "clu",
-      "gear",
+      "gear:absolute",
       "str",
       "thr"
     ],
@@ -1199,7 +1223,7 @@
     "uses": [
       "brk",
       "clu",
-      "gear",
+      "gear:absolute",
       "rpm",
       "str",
       "thr"
@@ -1224,7 +1248,7 @@
     "uses": [
       "brk",
       "clu",
-      "gear",
+      "gear:absolute",
       "str",
       "thr"
     ],
@@ -1246,13 +1270,16 @@
     "uses": [
       "brk",
       "clu",
-      "gear",
+      "gear:absolute",
       "str",
       "thr"
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "A lower third with a live H-gate in it. Fully direct, and no other stream has one."
+    "note": "A lower third with a live H-gate in it. Fully direct, and no other stream has one.",
+    "requires": [
+      "gear:absolute"
+    ]
   },
   {
     "id": "hud",
@@ -1268,7 +1295,7 @@
     "uses": [
       "brk",
       "clu",
-      "gear",
+      "gear:absolute",
       "str",
       "thr"
     ],
@@ -1290,7 +1317,7 @@
     "uses": [
       "brk",
       "clu",
-      "gear",
+      "gear:absolute",
       "str",
       "thr"
     ],
@@ -1312,7 +1339,7 @@
     "uses": [
       "brk",
       "clu",
-      "gear",
+      "gear:absolute",
       "rpm",
       "str",
       "thr"
@@ -1336,7 +1363,7 @@
     },
     "uses": [
       "brk",
-      "gear",
+      "gear:absolute",
       "str",
       "thr"
     ],
@@ -1358,7 +1385,7 @@
     "uses": [
       "brk",
       "clu",
-      "gear",
+      "gear:absolute",
       "str",
       "thr"
     ],
@@ -1380,7 +1407,7 @@
     "uses": [
       "brk",
       "clu",
-      "gear",
+      "gear:absolute",
       "rpm",
       "str",
       "thr"
@@ -1405,7 +1432,7 @@
     "uses": [
       "brk",
       "clu",
-      "gear",
+      "gear:absolute",
       "rpm",
       "str",
       "thr"
@@ -1430,7 +1457,7 @@
     "uses": [
       "brk",
       "clu",
-      "gear",
+      "gear:absolute",
       "str",
       "thr"
     ],
@@ -1452,7 +1479,7 @@
     "uses": [
       "brk",
       "clu",
-      "gear",
+      "gear:absolute",
       "str",
       "thr"
     ],

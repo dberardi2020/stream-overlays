@@ -90,7 +90,14 @@ h2 .c{color:var(--mute);font-size:12px;font-weight:400;font-family:"IBM Plex Mon
 .ch{font-size:9.5px;font-weight:600;letter-spacing:.05em;padding:1px 5px;border-radius:3px;
   background:rgba(255,255,255,.05)}
 .ch-thr{color:var(--thr)} .ch-brk{color:var(--brk)} .ch-clu{color:var(--clu)}
-.ch-str{color:var(--str)} .ch-gear,.ch-rpm,.ch-spd{color:var(--gear)}
+.ch-str{color:var(--str)} .ch-gear-absolute,.ch-gear-direction,.ch-rpm,.ch-spd{color:var(--gear)}
+/* Live mode, no H-shifter: an absolute-gear overlay has nothing truthful to draw,
+   so it is stood down with the reason rather than rendered empty (ADR 0007). */
+.card.nosrc .stage-plate{opacity:.28;filter:grayscale(1)}
+.card.nosrc .needsrc{display:block}
+.needsrc{display:none;font-size:11px;color:var(--mute);margin:6px 0 0;
+  border-left:2px solid var(--gear);padding-left:7px}
+.needsrc a{color:var(--clu)}
 /* Contrast-test backdrop behind each preview — a neutral scene, not scenery, so
    you can judge how an overlay reads against different OBS scene colours. A
    transparency checker is the permanent substrate; the chosen scene colour +
@@ -181,6 +188,7 @@ input[type=color]::-webkit-color-swatch-wrapper{padding:0}
       <div class="grp demo-only"><button id="play" class="btn on">Pause</button></div>
       <div class="grp demo-only"><span class="lbl">Speed</span><input id="speed" type="range" min="0.25" max="2" step="0.25" value="1"><span id="speedV" class="lbl">1×</span></div>
       <div class="grp demo-only"><span class="lbl">Shift</span><button id="mode" class="btn">Mode: H</button></div>
+      <div class="grp"><button id="resetAccum" class="btn" title="Clear the accumulated history the cumulative overlays draw from — gate dwell, shift log, traces, shift count">Reset history</button></div>
       <div class="tally"><b id="visN">0</b> shown</div>
     </div>
     <div class="row">
@@ -195,7 +203,7 @@ input[type=color]::-webkit-color-swatch-wrapper{padding:0}
 </div>
 
 <script type="module">
-import { setMode, MODES, pushHistory, tel, hist, gateUse, shiftLog, shiftTimes } from "../engine/draw-kit.js";
+import { setMode, MODES, pushHistory, tel, hist, gateUse, shiftLog, shiftTimes, clock } from "../engine/draw-kit.js";
 import { createDemoDriver } from "../engine/demo-driver.js";
 import { createState } from "../engine/state.js";
 import { createInputReader } from "../engine/live-input.js";
@@ -217,7 +225,11 @@ try {
 // The product gallery shows every migrated overlay; `excluded` are archived-in-manifest
 // and intentionally module-less, so they never render here.
 const SET_ORDER = ["pedals", "wheel", "shifter", "combo"];
-const CHAN_ORDER = ["clu", "brk", "thr", "str", "gear", "rpm", "spd"];
+const CHAN_ORDER = ["clu", "brk", "thr", "str", "gear:absolute", "gear:direction", "rpm", "spd"];
+// Chip label + CSS-safe class for each channel (":" can't ride in a class name).
+const CHAN_LABEL = { "gear:absolute": "GEAR", "gear:direction": "SHIFT" };
+const chanKey = u => u.replace(":", "-");
+const chanLabel = u => CHAN_LABEL[u] || u.toUpperCase();
 const entries = manifest
   .filter(e => e.stage !== "excluded")
   .sort((a, b) => SET_ORDER.indexOf(a.set) - SET_ORDER.indexOf(b.set));
@@ -243,6 +255,20 @@ function resetLiveSingletons() {
   shiftLog.length = 0; shiftTimes.length = 0;
   for (const g in gateUse) gateUse[g] = 0;
 }
+
+/* Several overlays are cumulative — they draw a session, not an instant: gate
+   dwell (gate-heatmap), the shift log (shift-rhythm, shift-point-scatter,
+   shift-pulse), channel history (the traces) and the running shift count. Those
+   only ever grow, so there has to be a way to start over without reloading.
+   Clears the shared accumulators AND the per-state counters they read. */
+function resetAccumulators() {
+  if (source === "live") { resetLiveSingletons(); clock.t = 0; }
+  else driver.reset();                      // the demo driver already clears its own
+  const s = source === "live" ? liveState : driver.state;
+  s.shiftCount = 0; s.shiftDir = 0; s.shiftAge = 99; s.shiftProg = 1;
+  for (const t of tiles) t.mem = {};        // per-overlay scratch (trails, peaks)
+}
+document.getElementById("resetAccum").onclick = resetAccumulators;
 
 /* copy-to-clipboard with a transient "Copied!" on the button itself */
 function wireCopy(btn, text, label) {
@@ -282,7 +308,7 @@ for (const set of SET_ORDER) {
     const chans = (e.uses || [])
       .filter(u => CHAN_ORDER.indexOf(u) >= 0)
       .sort((a, b) => CHAN_ORDER.indexOf(a) - CHAN_ORDER.indexOf(b))
-      .map(u => '<span class="ch ch-' + u + '">' + u.toUpperCase() + "</span>").join("");
+      .map(u => '<span class="ch ch-' + chanKey(u) + '">' + chanLabel(u) + "</span>").join("");
 
     card.innerHTML =
       '<div class="hd"><h3>' + e.name + '</h3><span class="sz">' + e.size.w + "×" + e.size.h + "</span></div>" +
@@ -292,6 +318,8 @@ for (const set of SET_ORDER) {
       "</div>" +
       '<div class="chans">' + chans + "</div>" +
       '<div class="stage-plate"><div class="scene"></div></div>' +
+      '<p class="needsrc">Needs an <b>H-shifter</b> — this reads gear <i>position</i>, ' +
+        'which paddles can\'t report. <a href="setup.html">Calibrate one →</a></p>' +
       '<p class="note">' + (e.note || "") + "</p>" +
       '<div class="foot">' +
         '<div class="acts">' +
@@ -439,6 +467,7 @@ function setSource(next) {
   if (next === source) return;
   source = next;
   if (source === "live") { resetLiveSingletons(); liveInput.reload(); lastLiveKey = ""; }
+  applySourceGating();
   srcBtns.querySelectorAll("[data-src]").forEach(b => b.classList.toggle("on", b.dataset.src === source));
   demoOnly.forEach(g => g.classList.toggle("off", source === "live"));
   liveStatus.style.display = source === "live" ? "" : "none";
@@ -446,18 +475,31 @@ function setSource(next) {
 srcBtns.querySelectorAll("[data-src]").forEach(b => b.onclick = () => setSource(b.dataset.src));
 
 // Reflect readiness (updated each live frame, DOM only touched on change).
+/* Stand down overlays whose required source isn't calibrated. Demo mode always
+   has every channel, so this only ever applies while live. */
+function applySourceGating() {
+  const gate = source === "live" && !liveInput.hasShifter();
+  for (const t of tiles) {
+    const needs = (t.e.requires || []).includes("gear:absolute");
+    t.card.classList.toggle("nosrc", gate && needs);
+  }
+}
+
 function updateLiveStatus() {
   const pad = getPad();
   const key = pad && liveInput.hasCalibration() ? "ok" : pad ? "uncal" : "nopad";
   if (key === lastLiveKey) return;
   lastLiveKey = key;
+  applySourceGating();
   if (key === "ok") { liveStatus.className = "livestat ok"; liveStatus.textContent = "● Live — your rig drives every overlay"; }
   else if (key === "uncal") { liveStatus.className = "livestat"; liveStatus.innerHTML = 'Rig seen, not calibrated — <a href="setup.html">calibrate →</a>'; }
   else { liveStatus.className = "livestat"; liveStatus.innerHTML = 'No rig yet — press a button on it, then <a href="setup.html">calibrate →</a>'; }
 }
 
 // Returning from the Setup tab re-reads a freshly-saved calibration.
-window.addEventListener("focus", () => { if (source === "live") { liveInput.reload(); lastLiveKey = ""; } });
+window.addEventListener("focus", () => {
+  if (source === "live") { liveInput.reload(); lastLiveKey = ""; applySourceGating(); }
+});
 
 /* Backdrop builder: the contrast-test scene behind every preview is a colour +
    opacity composited over a permanent transparency checker. Presets are just

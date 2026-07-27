@@ -27,7 +27,9 @@ export const CH = [
   { k: "thr", c: C.thr, label: "THR", full: "THROTTLE" }
 ];
 export const pct = v => String(Math.round(v * 100));
-export const gearName = g => g === 0 ? "N" : String(g);
+/* `null` = no position source (paddles-only or uncalibrated rig, ADR 0007), and
+   it renders as "–" rather than "N": neutral is a gear, unknown is not. */
+export const gearName = g => g == null ? "–" : g === 0 ? "N" : g < 0 ? "R" : String(g);
 export const DEG = s => Math.round(s.str * 450);
 export const revColor = r => r > 0.92 ? C.brk : r > 0.78 ? C.clu : C.thr;
 export const GATE = { 1: [-1, -1], 2: [-1, 1], 3: [0, -1], 4: [0, 1], 5: [1, -1], 6: [1, 1] };

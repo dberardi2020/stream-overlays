@@ -50,9 +50,9 @@ export function resolveShifterGear(buttons, isDown) {
   return 0;
 }
 
-/* Sequential paddles: a shift is a step, not a position. Clamp a ±1 step into the
-   N(0)..6 range (reverse isn't reachable by paddles). */
-export function stepSequentialGear(gear, dir) {
-  const g = gear + dir;
-  return g < 0 ? 0 : g > 6 ? 6 : g;
-}
+/* Paddles report DIRECTION, never position — there is deliberately no
+   paddles->gear function here. Integrating a gear from ±1 steps requires knowing
+   the gear you started in, and nothing reports that: begin a session in 3rd, or
+   miss one edge, and every downstream gate reads wrong for the rest of the
+   stream with no way to resync. An absolute gear comes from an H-shifter or it
+   does not exist (`gear: null`). See ADR 0007. */

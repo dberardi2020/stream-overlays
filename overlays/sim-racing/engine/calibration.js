@@ -33,6 +33,7 @@
      complete press->release (or sweep->centre) cycle. */
 
 import { mapPedal, mapWheel, resolveShifterGear, GEAR_LABELS } from "./calibration-math.js";
+import { normalizeGearMap } from "./live-input.js";
 import { getPad, isButtonDown, pressedButtons } from "./gamepad.js";
 
 const CHANNELS = [
@@ -150,7 +151,10 @@ export function createCalibration(opts) {
   if (storeKey) {
     try {
       const saved = JSON.parse(localStorage.getItem(storeKey) || "null");
-      if (saved && typeof saved === "object") S.map = saved;
+      if (saved && typeof saved === "object") {
+        if (saved.gear) saved.gear = normalizeGearMap(saved.gear);   // pre-ADR-0007 shape
+        S.map = saved;
+      }
     } catch (e) { /* ignore corrupt storage */ }
   }
 
@@ -431,7 +435,7 @@ export function createCalibration(opts) {
   const persist = () => { if (storeKey) localStorage.setItem(storeKey, JSON.stringify(S.map)); };
 
   const G = {
-    mode: (S.map.gear && S.map.gear.mode) || "shifter",   // which flow to calibrate next
+    mode: "shifter",           // which half the ACTIVE capture flow is filling
     phase: "idle", queue: [], captured: {}, baseline: [], waiting: null, lastLive: NaN
   };
   const GLABEL = { R: "Reverse", up: "upshift", down: "downshift" };
@@ -439,33 +443,48 @@ export function createCalibration(opts) {
   const gSetMsg = t => { gmsgEl.textContent = t || ""; };
   const setReadout = (html, on) => { greadoutEl.innerHTML = html || ""; greadoutEl.classList.toggle("on", !!on); };
 
-  function gStoredSummary() {
+  /* Per-half summary — the two controls are independent sources (ADR 0007), so
+     each reports its own state and neither can describe the other.
+
+     Complete reads "✓ calibrated", matching the Pedals/Wheel footers; the name
+     is not repeated because the sub-head directly above already says it. PARTIAL
+     states keep their detail — the capture flow has a Skip button, so 5/7 gears
+     (or one paddle of two) is reachable, and "calibrated" would be a lie. */
+  function gStoredSummary(which) {
     const g = S.map.gear; if (!g) return null;
-    if (g.mode === "paddles") {
-      const n = (g.up != null ? 1 : 0) + (g.down != null ? 1 : 0);
-      return n === 2 ? "Paddles · up + down" : n === 1 ? "Paddles · 1 of 2" : null;
+    if (which === "paddles") {
+      const p = g.paddles; if (!p) return null;
+      const n = (p.up != null ? 1 : 0) + (p.down != null ? 1 : 0);
+      return n === 2 ? "calibrated" : n === 1 ? "1 of 2" : null;
     }
-    const n = Object.keys(g.buttons || {}).length;
-    return n ? "H-Shifter · " + n + "/7 gears" : null;
+    const n = Object.keys((g.shifter && g.shifter.buttons) || {}).length;
+    if (!n) return null;
+    return n === GEAR_LABELS.length ? "calibrated" : n + "/" + GEAR_LABELS.length + " gears";
   }
+  // Complete halves get the tick; partial ones read as plainly unfinished.
+  const gIsComplete = which => gStoredSummary(which) === "calibrated";
 
   /* The gate (or paddle pair) — the product's own H-pattern language. Cells carry
      `set` (calibrated) and `target` (the gear being captured); the live/engaged
      gear is toggled separately each frame (applyLiveHighlight), so this only
      rebuilds on a structural change (calibrate / mode switch / capture step). */
   const gTarget = () => G.phase !== "idle" ? G.queue[0] : null;
+  const gShifterMap = () => (S.map.gear && S.map.gear.shifter) || null;
+  const gPaddleMap  = () => (S.map.gear && S.map.gear.paddles) || null;
   function gCell(label) {
-    const g = S.map.gear;
-    const set = g && g.mode === "shifter" && g.buttons && g.buttons[label] != null;
-    return '<div class="gate-cell' + (set ? " set" : "") + (gTarget() === label ? " target" : "") +
+    const sh = gShifterMap();
+    const set = !!(sh && sh.buttons && sh.buttons[label] != null);
+    return '<div class="gate-cell' + (set ? " set" : "") +
+      (G.mode === "shifter" && gTarget() === label ? " target" : "") +
       '" data-g="' + label + '">' + label + '</div>';
   }
   function gPad(key, arrow, name) {
-    const g = S.map.gear;
-    const set = g && g.mode === "paddles" && g[key] != null;
-    return '<div class="g923cal-pad' + (set ? " set" : "") + (gTarget() === key ? " target" : "") +
+    const p = gPaddleMap();
+    const set = !!(p && p[key] != null);
+    return '<div class="g923cal-pad' + (set ? " set" : "") +
+      (G.mode === "paddles" && gTarget() === key ? " target" : "") +
       '" data-p="' + key + '"><span class="ar">' + arrow + '</span>' + name +
-      '<span class="pv">' + (set ? "btn " + g[key] : "—") + '</span></div>';
+      '<span class="pv">' + (set ? "btn " + p[key] : "—") + '</span></div>';
   }
   function renderGearVisual() {
     // Both controls always render; only the stored one shows "set" cells.
@@ -482,11 +501,11 @@ export function createCalibration(opts) {
   }
 
   function renderGearStatus() {
-    const mode = S.map.gear && S.map.gear.mode, sum = gStoredSummary();
     for (const k of ["shifter", "paddles"]) {
-      const bound = mode === k;
-      gstatusEls[k].innerHTML = bound && sum ? '<span class="ok">✓</span> ' + sum : "not set";
-      gclearBtns[k].hidden = !bound;   // button stays "Calibrate" in both states
+      const sum = gStoredSummary(k);
+      gstatusEls[k].innerHTML = !sum ? "not set"
+        : gIsComplete(k) ? '<span class="ok">✓</span> calibrated' : sum;
+      gclearBtns[k].hidden = !sum;     // each Clear only ever offers to clear its own half
     }
     renderGearVisual();
     setReadout("", false);
@@ -530,12 +549,13 @@ export function createCalibration(opts) {
     const caps = G.captured, has = Object.keys(caps).length > 0;
     G.phase = "idle"; G.queue = [];
     if (has) {
-      S.map.gear = G.mode === "paddles"
-        ? { mode: "paddles", up: caps.up, down: caps.down }
-        : { mode: "shifter", buttons: caps };
-    } else {
-      delete S.map.gear;                 // captured nothing — leave it uncalibrated
-    }
+      // Write ONLY this half. The other control is an independent source and
+      // must survive untouched (ADR 0007) — a rig can have both, and clobbering
+      // one while calibrating the other is what this replaced.
+      S.map.gear = S.map.gear || {};
+      if (G.mode === "paddles") S.map.gear.paddles = { up: caps.up, down: caps.down };
+      else                      S.map.gear.shifter = { buttons: caps };
+    }                                    // captured nothing — leave this half as it was
     persist();
     gactiveEl.hidden = true; gactionEls.forEach(e => e.hidden = false);
     renderGearStatus();
@@ -547,16 +567,32 @@ export function createCalibration(opts) {
   gcalBtns.paddles.addEventListener("click", () => startGear("paddles"));
   gskipBtn.addEventListener("click", () => { if (G.phase !== "idle") gAdvance(); });
   gcancelBtn.addEventListener("click", () => { resetGearCapture(); renderGearStatus(); gSetMsg("Cancelled."); });
-  const clearGear = () => { delete S.map.gear; persist(); renderGearStatus(); gSetMsg("Cleared."); };
-  gclearBtns.shifter.addEventListener("click", clearGear);
-  gclearBtns.paddles.addEventListener("click", clearGear);
+  const clearGear = which => () => {
+    if (S.map.gear) {
+      delete S.map.gear[which];
+      if (!S.map.gear.shifter && !S.map.gear.paddles) delete S.map.gear;   // both gone
+    }
+    persist(); renderGearStatus();
+    gSetMsg(which === "paddles" ? "Paddles cleared." : "H-Shifter cleared.");
+  };
+  gclearBtns.shifter.addEventListener("click", clearGear("shifter"));
+  gclearBtns.paddles.addEventListener("click", clearGear("paddles"));
 
   // Live engaged-gear highlight + readout while idle; button auto-capture mid-flow.
+  /* Both halves read live at once — they are separate physical controls, so
+     testing one must not require un-calibrating the other. */
+  const gLiveRead = pad => {
+    const sh = gShifterMap(), p = gPaddleMap();
+    return {
+      gear: sh && sh.buttons ? resolveShifterGear(sh.buttons, i => isButtonDown(pad, i)) : null,
+      up:   !!(p && p.up   != null && isButtonDown(pad, p.up)),
+      down: !!(p && p.down != null && isButtonDown(pad, p.down))
+    };
+  };
   function gLiveSig(pad) {
-    const g = S.map.gear;
-    if (!pad || !g) return "none";
-    if (g.mode === "shifter") return "s" + resolveShifterGear(g.buttons, i => isButtonDown(pad, i));
-    return "p" + (g.up != null && isButtonDown(pad, g.up)) + (g.down != null && isButtonDown(pad, g.down));
+    if (!pad || !S.map.gear) return "none";
+    const r = gLiveRead(pad);
+    return r.gear + "|" + r.up + "|" + r.down;
   }
   function applyLiveHighlight(pad) {
     const sig = gLiveSig(pad);
@@ -566,18 +602,21 @@ export function createCalibration(opts) {
     ggateEls.paddles.querySelectorAll(".live").forEach(e => e.classList.remove("live"));
     const g = S.map.gear;
     if (!pad) { setReadout(g ? "connect a wheel to test" : "", false); return; }
-    if (g && g.mode === "shifter") {
-      const gear = resolveShifterGear(g.buttons, i => isButtonDown(pad, i));
-      if (gear !== 0) { const c = ggateEls.shifter.querySelector('[data-g="' + (gear < 0 ? "R" : gear) + '"]'); if (c) c.classList.add("live"); }
-      setReadout("in gear <b>" + (gear < 0 ? "R" : gear === 0 ? "N" : gear) + "</b>", gear !== 0);
-    } else if (g && g.mode === "paddles") {
-      const up = g.up != null && isButtonDown(pad, g.up), down = g.down != null && isButtonDown(pad, g.down);
-      const u = ggateEls.paddles.querySelector('[data-p="up"]'), d = ggateEls.paddles.querySelector('[data-p="down"]');
-      if (u) u.classList.toggle("live", up); if (d) d.classList.toggle("live", down);
-      setReadout(up ? "<b>▲ upshift</b>" : down ? "<b>▼ downshift</b>" : "neutral", up || down);
-    } else {
-      setReadout("", false);
+    if (!g) { setReadout("", false); return; }
+
+    const r = gLiveRead(pad);
+    if (r.gear !== null && r.gear !== 0) {
+      const c = ggateEls.shifter.querySelector('[data-g="' + (r.gear < 0 ? "R" : r.gear) + '"]');
+      if (c) c.classList.add("live");
     }
+    const u = ggateEls.paddles.querySelector('[data-p="up"]'), d = ggateEls.paddles.querySelector('[data-p="down"]');
+    if (u) u.classList.toggle("live", r.up); if (d) d.classList.toggle("live", r.down);
+
+    // A paddle pull is a momentary event and wins the readout while held; the
+    // H-shifter's held position is the resting truth otherwise.
+    if (r.up || r.down) setReadout(r.up ? "<b>▲ upshift</b>" : "<b>▼ downshift</b>", true);
+    else if (r.gear !== null) setReadout("in gear <b>" + (r.gear < 0 ? "R" : r.gear === 0 ? "N" : r.gear) + "</b>", r.gear !== 0);
+    else setReadout("", false);
   }
   function pollGear(pad) {
     if (G.phase === "idle") { applyLiveHighlight(pad); return; }
@@ -670,11 +709,23 @@ export function createCalibration(opts) {
   renderGearStatus();
   refreshStatus();
 
+  /* Wipe every channel — pedals, wheel and both gear halves — and drop the stored
+     map entirely, so the next load starts from genuinely nothing. Mostly a testing
+     affordance: the per-box Clear buttons are the normal path. */
+  function clearAll() {
+    cancelAxis(); resetGearCapture();
+    S.map = {}; S.used = [];
+    if (storeKey) localStorage.removeItem(storeKey);
+    state.real = false; fireLive();
+    renderRows(); renderGearStatus(); refreshStatus();
+  }
+
   return {
     poll,
     isCalibrating: () => S.phase !== "idle" || G.phase !== "idle",
     isLive: () => !!state.real,
     hasCalibration: hasAllPedals,
+    clearAll,
     show: showAll
   };
 }

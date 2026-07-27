@@ -16,9 +16,11 @@ import assert from "node:assert/strict";
 
 import { isButtonDown, pressedButtons } from "../overlays/sim-racing/engine/gamepad.js";
 import {
-  resolveShifterGear, stepSequentialGear, gearValue, GEAR_LABELS
+  resolveShifterGear, gearValue, GEAR_LABELS
 } from "../overlays/sim-racing/engine/calibration-math.js";
-import { readGear, applyGear } from "../overlays/sim-racing/engine/live-input.js";
+import {
+  readGear, readPaddleEdges, applyGear, normalizeGearMap, hasShifter, hasPaddles
+} from "../overlays/sim-racing/engine/live-input.js";
 import { createState } from "../overlays/sim-racing/engine/state.js";
 import { shiftLog, shiftTimes, gateUse, clock, tel, mode, setMode, MODES } from "../overlays/sim-racing/engine/draw-kit.js";
 
@@ -83,45 +85,57 @@ test("resolveShifterGear returns the held gear, 0 for neutral", () => {
   assert.equal(resolveShifterGear(null, () => true), 0);               // uncalibrated -> neutral
 });
 
-test("stepSequentialGear clamps to N(0)..6", () => {
-  assert.equal(stepSequentialGear(0, +1), 1);
-  assert.equal(stepSequentialGear(6, +1), 6);   // no 7th
-  assert.equal(stepSequentialGear(0, -1), 0);   // no reverse via paddles
-  assert.equal(stepSequentialGear(3, -1), 2);
+/* ---------- gear map shape + migration (ADR 0007) ---------- */
+
+test("normalizeGearMap upgrades the pre-ADR-0007 single-slot shape", () => {
+  assert.deepEqual(normalizeGearMap({ mode: "shifter", buttons: { 1: 6 } }),
+    { shifter: { buttons: { 1: 6 } } });
+  assert.deepEqual(normalizeGearMap({ mode: "paddles", up: 4, down: 5 }),
+    { paddles: { up: 4, down: 5 } });
+  const current = { shifter: { buttons: { 1: 6 } }, paddles: { up: 4, down: 5 } };
+  assert.equal(normalizeGearMap(current), current, "already-current maps pass through");
+  assert.equal(normalizeGearMap(null), null);
+});
+
+test("both halves can be calibrated at once — neither displaces the other", () => {
+  const both = { shifter: { buttons: { 1: 6 } }, paddles: { up: 4, down: 5 } };
+  assert.ok(hasShifter(both) && hasPaddles(both));
+  assert.ok(hasShifter({ shifter: { buttons: { 1: 6 } } }));
+  assert.ok(!hasPaddles({ shifter: { buttons: { 1: 6 } } }));
+  assert.ok(!hasShifter({ paddles: { up: 4, down: 5 } }));
 });
 
 /* ---------- live-input readGear ---------- */
 
 test("readGear (H-shifter) reads the absolute held gear", () => {
-  const gearMap = { mode: "shifter", buttons: { R: 12, 1: 6, 2: 7, 3: 8 } };
-  const s = createState();
-  const mem = { up: false, down: false };
-  assert.equal(readGear(s, gearMap, padWith([8]), mem), 3);
-  assert.equal(readGear(s, gearMap, padWith([]), mem), 0);       // neutral
-  assert.equal(readGear(s, gearMap, padWith([12]), mem), -1);    // reverse
+  const gearMap = { shifter: { buttons: { R: 12, 1: 6, 2: 7, 3: 8 } } };
+  assert.equal(readGear(gearMap, padWith([8])), 3);
+  assert.equal(readGear(gearMap, padWith([])), 0);       // neutral IS observed here
+  assert.equal(readGear(gearMap, padWith([12])), -1);    // reverse
 });
 
-test("readGear (paddles) steps once per rising edge, and clamps", () => {
-  const gearMap = { mode: "paddles", up: 4, down: 5 };
-  const s = createState();     // gear 0
+test("readGear returns null — never 0 — when no H-shifter is calibrated", () => {
+  // The core of ADR 0007: 0 asserts "in neutral", which paddles cannot observe.
+  assert.equal(readGear({ paddles: { up: 4, down: 5 } }, padWith([4])), null);
+  assert.equal(readGear(null, padWith([])), null);
+});
+
+test("readPaddleEdges fires once per pull, not once per frame held", () => {
+  const gearMap = { paddles: { up: 4, down: 5 } };
   const mem = { up: false, down: false };
 
-  s.gear = readGear(s, gearMap, padWith([4]), mem);   // up: 0 -> 1
-  assert.equal(s.gear, 1);
-  s.gear = readGear(s, gearMap, padWith([4]), mem);   // still held, no new edge -> stays 1
-  assert.equal(s.gear, 1);
-  s.gear = readGear(s, gearMap, padWith([]),  mem);   // release
-  s.gear = readGear(s, gearMap, padWith([4]), mem);   // new edge -> 2
-  assert.equal(s.gear, 2);
-  s.gear = readGear(s, gearMap, padWith([5]), mem);   // down edge -> 1
-  assert.equal(s.gear, 1);
+  assert.deepEqual(readPaddleEdges(gearMap, padWith([4]), mem), { up: true, down: false });
+  assert.deepEqual(readPaddleEdges(gearMap, padWith([4]), mem), { up: false, down: false }, "held, not re-fired");
+  readPaddleEdges(gearMap, padWith([]), mem);                       // release
+  assert.deepEqual(readPaddleEdges(gearMap, padWith([4]), mem), { up: true, down: false }, "new pull, new edge");
+  assert.deepEqual(readPaddleEdges(gearMap, padWith([5]), mem), { up: false, down: true });
 });
 
 /* ---------- live-input applyGear bookkeeping (mirrors demo-driver) ---------- */
 
 test("applyGear logs a shift and sets the throw on gear change (H-pattern)", () => {
   resetSingletons();
-  const gearMap = { mode: "shifter", buttons: { 1: 6 } };
+  const gearMap = { shifter: { buttons: { 1: 6 } } };
   const s = createState();                 // gear 0, shiftCount 0, shiftAge 99
   const mem = { up: false, down: false };
 
@@ -140,7 +154,7 @@ test("applyGear logs a shift and sets the throw on gear change (H-pattern)", () 
 
 test("applyGear ages the throw and settles the lever while the gear is held", () => {
   resetSingletons();
-  const gearMap = { mode: "shifter", buttons: { 1: 6 } };
+  const gearMap = { shifter: { buttons: { 1: 6 } } };
   const s = createState();
   const mem = { up: false, down: false };
 
@@ -154,15 +168,51 @@ test("applyGear ages the throw and settles the lever while the gear is held", ()
   near(gateUse[1], 0.4, "gate dwell accrues for the settled lever");
 });
 
-test("applyGear (paddles) settles the lever immediately — no absolute throw", () => {
+test("applyGear (paddles) reports direction and NEVER invents a gear", () => {
   resetSingletons();
-  const gearMap = { mode: "paddles", up: 4, down: 5 };
+  const gearMap = { paddles: { up: 4, down: 5 } };
+  const s = createState();
+  s.gear = null; s.lever = null;          // as restGear leaves an uncalibrated rig
+  const mem = { up: false, down: false };
+
+  applyGear(s, gearMap, padWith([4]), 1 / 60, mem);   // upshift
+  assert.equal(s.shiftDir, 1, "direction is the real measurement");
+  assert.equal(s.shiftCount, 1);
+  assert.equal(shiftLog[0].dir, 1);
+  assert.equal(s.gear, null, "no position source — gear stays unknown, not 0/neutral");
+  assert.equal(s.lever, null, "and there is no lever to place");
+
+  applyGear(s, gearMap, padWith([5]), 1 / 60, mem);   // downshift (4 released, 5 pulled)
+  assert.equal(s.shiftDir, -1);
+  assert.equal(s.shiftCount, 2);
+  assert.equal(s.gear, null);
+});
+
+test("paddles accrue no gate dwell — dwell is a position measurement", () => {
+  resetSingletons();
+  const s = createState();
+  s.gear = null; s.lever = null;
+  const mem = { up: false, down: false };
+
+  applyGear(s, { paddles: { up: 4, down: 5 } }, padWith([4]), 0.5, mem);
+  applyGear(s, { paddles: { up: 4, down: 5 } }, padWith([4]), 0.5, mem);
+  for (const k of Object.keys(gateUse)) near(gateUse[k], 0, `gateUse.${k} stays 0 without an H-shifter`);
+});
+
+test("both sources mapped: each reports its own motion, neither suppresses the other", () => {
+  resetSingletons();
+  const gearMap = { shifter: { buttons: { 1: 6, 2: 7 } }, paddles: { up: 4, down: 5 } };
   const s = createState();
   const mem = { up: false, down: false };
 
-  applyGear(s, gearMap, padWith([4]), 1 / 60, mem);   // upshift 0 -> 1
+  applyGear(s, gearMap, padWith([6]), 1 / 60, mem);        // H-shifter into 1st
   assert.equal(s.gear, 1);
-  assert.equal(s.lever, 1, "sequential lever is never held at neutral mid-throw (paddles aren't absolute)");
+  assert.equal(s.shiftCount, 1);
+
+  applyGear(s, gearMap, padWith([6, 4]), 1 / 60, mem);     // still in 1st, paddle pulled
+  assert.equal(s.gear, 1, "the held gear is unchanged — the paddle did not move the lever");
+  assert.equal(s.shiftDir, 1);
+  assert.equal(s.shiftCount, 2, "but the paddle pull is its own logged event");
 });
 
 test("applyGear never mutates the global draw-kit mode (live must not clobber the demo control)", () => {
@@ -172,15 +222,56 @@ test("applyGear never mutates the global draw-kit mode (live must not clobber th
   const s = createState();
   const mem = { up: false, down: false };
 
-  applyGear(s, { mode: "paddles", up: 4, down: 5 }, padWith([4]), 1 / 60, mem);
+  applyGear(s, { paddles: { up: 4, down: 5 } }, padWith([4]), 1 / 60, mem);
 
   assert.equal(mode().id, before, "live gear read left the global mode untouched");
-  assert.equal(s.lever, 1, "yet it still animated as sequential from its own local mode lookup");
+  near(s.shiftProg, 0, "yet it still timed the shift from its own local mode lookup");
+});
+
+test("crossing neutral is ONE shift, not two — the real H-pattern path", () => {
+  resetSingletons();
+  const gearMap = { shifter: { buttons: { 1: 6, 2: 7, 3: 8 } } };
+  const s = createState();
+  s.gear = null;                                      // as restGear leaves it before the first poll
+  const mem = { up: false, down: false, engaged: null };
+
+  applyGear(s, gearMap, padWith([7]), 1 / 60, mem);   // already sitting in 2nd when we first look
+  assert.equal(s.shiftCount, 0, "finding the rig already in gear is not a shift");
+
+  applyGear(s, gearMap, padWith([]),  1 / 60, mem);   // 2 -> N, mid-shift
+  assert.equal(s.gear, 0, "position still reports neutral — the gate must show it");
+  assert.equal(s.shiftCount, 0, "leaving a gear is not itself a shift");
+
+  applyGear(s, gearMap, padWith([8]), 1 / 60, mem);   // N -> 3, shift completes
+  assert.equal(s.gear, 3);
+  assert.equal(s.shiftCount, 1, "one physical shift, one event");
+  assert.equal(s.shiftDir, 1, "direction measured 2->3, not N->3");
+  assert.equal(s.prevGear, 2, "from the last ENGAGED gear, not from neutral");
+  assert.equal(shiftLog.length, 1, "no phantom entries");
+
+  applyGear(s, gearMap, padWith([]),  1 / 60, mem);   // 3 -> N
+  applyGear(s, gearMap, padWith([6]), 1 / 60, mem);   // N -> 1st
+  assert.equal(s.shiftCount, 2);
+  assert.equal(s.shiftDir, -1, "3 -> 1 is a downshift");
+});
+
+test("re-engaging the SAME gear after neutral logs nothing", () => {
+  resetSingletons();
+  const gearMap = { shifter: { buttons: { 2: 7 } } };
+  const s = createState();
+  s.gear = null;
+  const mem = { up: false, down: false, engaged: null };
+
+  applyGear(s, gearMap, padWith([7]), 1 / 60, mem);   // found already in 2nd
+  applyGear(s, gearMap, padWith([]),  1 / 60, mem);   // slip to neutral
+  applyGear(s, gearMap, padWith([7]), 1 / 60, mem);   // back into 2nd
+  assert.equal(s.shiftCount, 0, "you never changed gear");
+  assert.equal(shiftLog.length, 0);
 });
 
 test("applyGear puts reverse at -1 and never accrues gate dwell for it", () => {
   resetSingletons();
-  const gearMap = { mode: "shifter", buttons: { R: 12 } };
+  const gearMap = { shifter: { buttons: { R: 12 } } };
   const s = createState();
   const mem = { up: false, down: false };
 

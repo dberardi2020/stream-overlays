@@ -42,6 +42,13 @@ a:hover{text-decoration:underline}
 .tag{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;border:1px solid var(--line);color:var(--mute)}
 .tag.later{color:var(--clu);border-color:rgba(255,176,32,.5)}
 .hint{font-size:11.5px;color:var(--mute);line-height:1.55}
+.resetrow{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+button.danger{font:inherit;font-size:12px;padding:5px 11px;border-radius:5px;cursor:pointer;
+  background:transparent;color:var(--brk);border:1px solid var(--brk);opacity:.85}
+button.danger:hover{opacity:1}
+/* Armed: one more click commits. No native confirm() — a modal dialog would
+   freeze an OBS Browser Source with no way to dismiss it. */
+button.danger.armed{background:var(--brk);color:#12151a;font-weight:600;opacity:1}
 .hint b{color:var(--ink)}
 ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font-size:12.3px}
 #file-warning{display:none;color:var(--clu);background:rgba(255,176,32,.09);border:1px solid rgba(255,176,32,.45);border-radius:8px;padding:11px 13px;margin-bottom:16px;line-height:1.6}
@@ -98,6 +105,17 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
     <div id="mount-shifter"></div>
   </div>
 
+  <div class="card" id="reset">
+    <h2>Start over</h2>
+    <p class="hint">Wipes <b>every</b> channel in this browser — pedals, wheel and both shifter controls — and
+      forgets the saved calibration entirely. The <b>Clear</b> button inside each box is the normal way to redo
+      just one thing; this is the full reset.</p>
+    <div class="resetrow">
+      <button id="clearAll" class="danger">Clear all calibration</button>
+      <span id="clearAllMsg" class="hint"></span>
+    </div>
+  </div>
+
   <div class="card soon">
     <h2>Telemetry <span class="tag later">later</span></h2>
     <p>RPM, speed, and gear-from-sim are <b>telemetry</b>, not wheel input — a G923 doesn't expose them. Deferred to a
@@ -144,6 +162,30 @@ function frame() {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+/* Clear all — two-step rather than a confirm() dialog, which would hard-block an
+   OBS Browser Source. Disarms itself after 4s so it can't be hit by a stray click. */
+const clearBtn = document.getElementById("clearAll");
+const clearMsg = document.getElementById("clearAllMsg");
+let armed = 0;
+clearBtn.onclick = () => {
+  if (!armed) {
+    armed = setTimeout(disarm, 4000);
+    clearBtn.classList.add("armed");
+    clearBtn.textContent = "Click again to erase everything";
+    clearMsg.textContent = "This cannot be undone.";
+    return;
+  }
+  disarm();
+  cal.clearAll();
+  clearMsg.textContent = "Cleared — every channel is back to “not set”.";
+};
+function disarm() {
+  clearTimeout(armed); armed = 0;
+  clearBtn.classList.remove("armed");
+  clearBtn.textContent = "Clear all calibration";
+  clearMsg.textContent = "";
+}
 </script>
 </body>
 </html>
