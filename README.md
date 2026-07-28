@@ -7,7 +7,7 @@
 
 Browser **overlays for streamers** that read your hardware in the browser and composite over your scene in **OBS**. Everything is a **static file** and every setting lives **in the URL**, so there is no install, no account, and nothing to host but plain files. The first vertical is **sim racing** — live **throttle / brake / clutch / steering / gears** from a **Logitech G923**, drawn as a catalogue of small canvas overlays.
 
-![The Stream Overlays landing page: the headline "Your rig, live on your stream." beside four overlays — Needle Gauges showing clutch, brake and throttle arcs; Gate with Trail and Lever Position both reading NEUTRAL with the lever centred; and Pedal Blocks — above a three-step find, set up, use flow.](docs/assets/landing.png)
+![The Stream Overlays landing page: the headline "Your rig, live on your stream." beside four overlays — Needle Gauges with the clutch and throttle arcs live and the brake at rest; Gate with Trail and Lever Position both reading NEUTRAL with the knob on the centre rail; and Pedal Blocks, clutch and throttle lit, brake dark — above a three-step find, set up, use flow.](docs/assets/landing.png)
 
 > **Status: works, not yet hosted.** The catalogue holds **73 overlays** (`overlays/sim-racing/catalogue.json`, the source of truth); all **69** non-excluded ones are migrated to the one-file-per-overlay module architecture and pixel-checked against a golden render (see [Testing](#testing)). Pedals, wheel, H-shifter and paddles all bind to a real G923 and are verified on hardware. What is missing is **hosting** — you run it from a local static server today, so the overlay URLs only work while that server is up.
 
