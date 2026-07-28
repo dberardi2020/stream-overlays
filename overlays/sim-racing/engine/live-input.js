@@ -45,6 +45,13 @@ const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
    all, because its position is measured (see applyGear). */
 const PADDLE_MODE = MODES.find(m => m.id === "PADDLE");
 
+/* How long the knob takes to travel ONE observed leg of the gate — gate to rail,
+   or rail to gate. Short: it is catching the lever up, never predicting it, so a
+   long duration would just lag reality. Not the H-pattern "throw" it replaces;
+   that timed a whole invented 1->2 transit and started after the shift finished
+   (see applyGear). Each leg here spans two positions we actually measured. */
+const LEG_SECONDS = 0.12;
+
 /* Gear map shape (see ADR 0007):
      { shifter: { buttons: { R,1..6 -> index } },   // optional
        paddles: { up, down } }                      // optional
@@ -146,15 +153,21 @@ export function applyGear(state, gearMap, pad, dt, mem) {
       // First look at the rig: whatever it is holding, we did not watch it get
       // there. Sitting in 3rd at session start is not a shift into 3rd.
       state.gear = gear;
+      state.prevGear = gear;
+      mem.legAge = LEG_SECONDS;                     // already there; no travel to draw
       if (gear !== 0) mem.engaged = gear;
     } else if (gear !== state.gear) {
+      /* The lever MOVED, and this is the frame we saw it. Start a leg from where
+         it was to where it now is — including to and from neutral, which is a
+         real position on the gate, not a gap between gears. */
+      state.prevGear = state.gear;
+      mem.legAge = 0;
       state.gear = gear;
       if (gear !== 0) {                             // engaged — the shift completes here
         // From the last gear actually engaged; falling back to 0 because if we
         // never held one, the neutral we were sitting in WAS observed.
         const from = mem.engaged != null ? mem.engaged : 0;
         if (from !== gear) {
-          state.prevGear = from;
           logShift(state, gear > from ? 1 : -1);
           shifted = true;
         }
@@ -169,22 +182,21 @@ export function applyGear(state, gearMap, pad, dt, mem) {
   if (!shifted) state.shiftAge += dt;
 
   if (absolute) {
-    /* A real H-shifter reports POSITION every frame, so nothing here is animated.
-       The throw animation exists for the demo driver, whose scripted gear jumps
-       1 -> 2 with no intermediate: the transit has to be invented there. Yours is
-       measured — you physically moved 1 -> N -> 2 and each step was reported as it
-       happened.
+    /* `lever` is the measured gear — no waiting out a throw, so the readout reads
+       neutral exactly while the lever is in neutral.
 
-       Re-deriving `lever` from a throw timer replays that journey a second time:
-       on engaging 2nd, shiftAge resets, shiftProg drops to 0, and `knobXY`
-       interpolates from prevGear — drawing the knob back at 1st before walking it
-       to 2nd, with the readout showing N throughout. Hence "1, N, back to 1, then
-       2" on a shift that had already finished.
+       `shiftProg` drives only where knobXY DRAWS the knob, and it runs per leg:
+       gate -> rail, then rail -> gate. Each leg spans two positions we actually
+       observed, along the route the gate physically constrains, and starts on the
+       frame the movement was seen. That is interpolation between measurements,
+       not invention — unlike the old H-pattern throw, which spanned 1 -> 2 as a
+       single invented transit and began only once the shift had already finished,
+       snapping the knob back to the old gear to replay it.
 
-       So the lever IS the gear, and shiftProg is pinned at 1 (settled) which makes
-       knobXY take its early return and plot the true position. `shiftAge` keeps
-       counting for the shift-flash overlays, which is a real elapsed time. */
-    state.shiftProg = 1;
+       `shiftAge` is separate and keeps counting: the shift-flash overlays key off
+       it, and time-since-shift is a real elapsed measurement. */
+    mem.legAge = mem.legAge == null ? LEG_SECONDS : mem.legAge + dt;
+    state.shiftProg = clamp01(mem.legAge / LEG_SECONDS);
     state.lever = state.gear;
     if (state.lever > 0) gateUse[state.lever] += dt;   // reverse (-1) never accrues gate dwell
   } else {
@@ -213,7 +225,7 @@ export function createInputReader(opts) {
     } catch { return {}; }
   };
   let map = load();
-  let paddleMem = { up: false, down: false, engaged: null };   // paddle edges + last engaged gear, across frames
+  let paddleMem = { up: false, down: false, engaged: null, legAge: null };   // paddle edges + last engaged gear, across frames
   const hasCalibration = () => PEDALS.every(p => map[p.key]);
   const hasGear = () => hasShifter(map.gear) || hasPaddles(map.gear);
 
@@ -222,7 +234,7 @@ export function createInputReader(opts) {
   function restGear() {
     state.gear = null; state.lever = null; state.prevGear = null;
     state.shiftDir = 0; state.shiftProg = 1;
-    paddleMem.up = false; paddleMem.down = false; paddleMem.engaged = null;
+    paddleMem.up = false; paddleMem.down = false; paddleMem.engaged = null; paddleMem.legAge = null;
   }
 
   return {
@@ -232,7 +244,7 @@ export function createInputReader(opts) {
     // hasShifter(), since paddles can never stand in for a position read.
     hasShifter: () => hasShifter(map.gear),
     hasPaddles: () => hasPaddles(map.gear),
-    reload() { map = load(); paddleMem = { up: false, down: false, engaged: null }; },
+    reload() { map = load(); paddleMem = { up: false, down: false, engaged: null, legAge: null }; },
     poll(dt) {
       const d = dt > 0 ? dt : FRAME_DT;
       const pad = getPad();

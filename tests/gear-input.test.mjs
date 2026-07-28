@@ -146,7 +146,7 @@ test("applyGear logs the shift and places the lever immediately (H-pattern)", ()
   assert.equal(s.shiftCount, 1);
   near(s.shiftAge, 0, "shiftAge resets on change — the flash overlays key off it");
   assert.equal(s.lever, 1, "the lever IS the measured gear; there is no throw to wait out");
-  near(s.shiftProg, 1, "pinned settled, so knobXY plots the true position and never interpolates");
+  assert.ok(s.shiftProg < 1, "a leg is underway — the knob is travelling to the new position");
   assert.equal(shiftLog.length, 1);
   assert.equal(shiftLog[0].dir, 1);
   assert.equal(shiftTimes.length, 1);
@@ -166,17 +166,23 @@ test("a live H-shifter never replays the transit it already made", () => {
 
   applyGear(s, gearMap, padWith([6]), 1 / 60, mem);   // found in 1st
   assert.equal(s.lever, 1);
+  near(s.shiftProg, 1, "already there on first sight — nothing to travel");
 
   applyGear(s, gearMap, padWith([]), 1 / 60, mem);    // 1 -> N, physically between gears
   assert.equal(s.lever, 0, "neutral is reported, because that is where the lever is");
+  assert.equal(s.prevGear, 1, "leg one: gate 1 -> the neutral rail");
+  assert.ok(s.shiftProg < 1, "and it is drawn travelling, not teleporting");
 
   applyGear(s, gearMap, padWith([7]), 1 / 60, mem);   // N -> 2nd, shift completes
   assert.equal(s.gear, 2);
   assert.equal(s.lever, 2, "lands on 2nd — never back on 1st, and never a mid-throw neutral");
-  near(s.shiftProg, 1, "settled, so the knob is drawn at gate 2 rather than animated from gate 1");
+  assert.equal(s.prevGear, 0,
+    "leg two starts at NEUTRAL, not at 1st — the knob travels through the gate rather than " +
+    "replaying a 1->2 transit that already happened");
 
-  applyGear(s, gearMap, padWith([7]), 1 / 60, mem);   // next frame, still in 2nd
+  applyGear(s, gearMap, padWith([7]), 0.5, mem);      // hold past the leg
   assert.equal(s.lever, 2, "and it stays there");
+  near(s.shiftProg, 1, "leg complete — the knob has arrived at gate 2");
 });
 
 test("gate dwell accrues while a gear is held, and shiftAge keeps timing", () => {
@@ -271,8 +277,10 @@ test("crossing neutral is ONE shift, not two — the real H-pattern path", () =>
   applyGear(s, gearMap, padWith([8]), 1 / 60, mem);   // N -> 3, shift completes
   assert.equal(s.gear, 3);
   assert.equal(s.shiftCount, 1, "one physical shift, one event");
-  assert.equal(s.shiftDir, 1, "direction measured 2->3, not N->3");
-  assert.equal(s.prevGear, 2, "from the last ENGAGED gear, not from neutral");
+  assert.equal(s.shiftDir, 1, "direction measured from the last ENGAGED gear: 2->3, not N->3");
+  assert.equal(s.prevGear, 0,
+    "prevGear is the previous POSITION (the neutral just left), which is what the knob " +
+    "animates from — distinct from the engaged gear the direction came from");
   assert.equal(shiftLog.length, 1, "no phantom entries");
 
   applyGear(s, gearMap, padWith([]),  1 / 60, mem);   // 3 -> N
