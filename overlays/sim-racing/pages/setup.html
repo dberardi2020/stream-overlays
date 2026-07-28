@@ -16,11 +16,19 @@
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{background:var(--asphalt);color:var(--ink);font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;
-  font-size:13.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
-.wrap{max-width:720px;margin:0 auto;padding:24px 18px 100px}
+  font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+/* Two columns once there is room for them. A single 720px column left most of a
+   desktop empty while the boxes themselves felt cramped; `auto-fit` collapses
+   back to one column below ~900px, so narrow windows are unaffected. The header
+   and the wide cards span the full width — see .card.wide. */
+.wrap{max-width:1160px;margin:0 auto;padding:24px 20px 100px;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
+  gap:16px;align-items:start}
+.wrap > h1,.wrap > .lede,.wrap > .devstatus,.wrap > #file-warning{grid-column:1/-1}
+.card.wide{grid-column:1/-1}               /* needs the width, or is a step list */
 h1{font-family:Oxanium,monospace;font-weight:800;font-size:24px;margin:0 0 5px}
-.lede{color:var(--mute);margin:0 0 18px;font-size:12.8px}
-.devstatus{font-size:12.5px;color:var(--mute);margin:0 0 16px;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.lede{color:var(--mute);margin:0 0 4px;font-size:13.4px;max-width:78ch}
+.devstatus{font-size:13px;color:var(--mute);margin:0 0 4px;font-variant-numeric:tabular-nums;letter-spacing:.01em}
 .devstatus.on{color:var(--thr)}
 .lede code,.card code{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px}
 .lede b{color:var(--ink)}
@@ -35,9 +43,9 @@ a:hover{text-decoration:underline}
 .sitenav-links a{font-size:12px;color:var(--mute);padding:5px 11px;border-radius:7px;border:1px solid transparent;transition:.13s}
 .sitenav-links a:hover{color:var(--ink);background:var(--panel-2);text-decoration:none}
 .sitenav-links a[aria-current]{color:var(--str);border-color:var(--line-2);background:var(--panel)}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:15px 16px;margin-bottom:16px}
-.card h2{font-family:Oxanium,monospace;font-weight:600;font-size:15px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
-.card p{color:var(--mute);font-size:12.3px;margin:.3em 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:17px 18px;margin:0}
+.card h2{font-family:Oxanium,monospace;font-weight:600;font-size:16px;margin:0 0 5px;display:flex;align-items:center;gap:8px}
+.card p{color:var(--mute);font-size:13px;margin:.35em 0}
 .card.soon{opacity:.72}
 .tag{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;border:1px solid var(--line);color:var(--mute)}
 .tag.later{color:var(--clu);border-color:rgba(255,176,32,.5)}
@@ -70,9 +78,16 @@ body.obs .sitenav,
 body.obs #obs,
 body.obs .card.soon{display:none}
 body.obs{font-size:16px}
-body.obs .wrap{max-width:900px;padding:22px 22px 60px}
+/* Explicitly back to one column: the desktop page is a grid, and the Interact
+   window is far too narrow to split. This must stay a single column. */
+body.obs .wrap{display:block;max-width:900px;padding:22px 22px 60px}
 body.obs h1{font-size:31px}
 body.obs .lede,body.obs .devstatus{font-size:15px}
+/* The grid zeroes these margins and caps the lede's measure, because `gap` owns
+   the spacing there. Neither applies in one-column OBS — restore the original
+   rhythm so this view is byte-for-byte what it was. */
+body.obs .lede{margin:0 0 18px;max-width:none}
+body.obs .devstatus{margin:0 0 16px}
 body.obs .card{padding:19px 21px;margin-bottom:19px;border-radius:13px}
 body.obs .card h2{font-size:19px}
 body.obs .card p{font-size:14.5px}
@@ -138,7 +153,7 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
     <div id="mount-wheel"></div>
   </div>
 
-  <div class="card">
+  <div class="card wide">
     <h2>Shifter</h2>
     <p>Calibrate an <b>H-Shifter</b> (shift into each gear) or <b>Paddles / a Sequential shifter</b> (capture upshift +
       downshift — both report as the same up/down pair).</p>
@@ -162,7 +177,7 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
       later milestone (SO-0007); telemetry overlays run on demo data until a sim feed exists.</p>
   </div>
 
-  <div class="card" id="obs">
+  <div class="card wide" id="obs">
     <h2>Using it in OBS</h2>
 
     <div class="facts">
