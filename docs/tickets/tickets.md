@@ -52,7 +52,7 @@ Pre-public candidates not yet committed to the On-deck sequence.
 | ID | Pri | Type | Title |
 |---|---|---|---|
 | [SO-0007](#so-0007) | P2 | Feature | Telemetry data source (rpm / spd / gear-from-sim) — deferred |
-| [SO-0034](#so-0034) | P2 | Bug | QA goldens captured with fallback fonts — not portable across machines |
+| [SO-0034](#so-0034) | P2 | Bug | `terminal` golden fails cross-machine on text antialiasing (font loading fixed) |
 | [SO-0035](#so-0035) | P3 | Chore | Gallery Mode button does nothing in Live — relabel or hide |
 | [SO-0027](#so-0027) | P2 | Chore | Ensure integration test coverage is sufficient across the repo |
 | [SO-0026](#so-0026) | P2 | Chore | Integration + browser test coverage for the live input path |
@@ -276,8 +276,28 @@ collection" instead of, or alongside, the merge. That trades a plugin dependency
 Reference: the setup-only collection that survives (`engine/obs-collection.js`) is the working example of the
 format — the source/scene/item builders there are directly reusable.
 
-### SO-0034 — QA goldens are captured with fallback fonts, so they aren't portable {#so-0034}
+### SO-0034 — `terminal` fails cross-machine on text antialiasing {#so-0034}
 **P2 · Bug · qa**
+
+**Partly fixed (2026-07-27); reopened narrower.** The font-loading half is done — faces are now requested by
+name and verified, and vendored into `qa/fonts/` so QA needs no network. See the commit and
+`qa/fonts/README.md`.
+
+**The original diagnosis below was wrong about the symptom.** `terminal`'s 1.47% failure is *not* font
+substitution: it persists with the real font loaded (1348px / 1.465% with, vs 2499px / 2.716% in a fallback).
+What the font bug actually caused was **order-dependence** — `acceptance.mjs` reuses one page across all 69
+navigations, so the first overlay to draw text triggered the lazy load too late for itself while caching the
+face for every overlay after it. Whichever overlays sorted early rendered in a fallback. Real bug, now fixed,
+but not this one.
+
+What remains: `terminal` is the glyph-densest overlay and differs ~1.47% between machines **with identical
+fonts** — cross-platform subpixel antialiasing and hinting against a golden captured elsewhere. Options are to
+raise the tolerance for glyph-dense overlays (the harness already comments that they "legitimately differ
+~0.5%"), diff with a text-insensitive metric, or accept per-machine baselines. Note that **recapturing is not
+possible from an arbitrary machine**: `capture-golden.mjs` renders through the *prototype* `catalogue.html`,
+passed as a runtime arg and deliberately absent from this repo.
+
+<details><summary>Original (superseded) diagnosis</summary>
 
 `qa/render.html` does `await document.fonts.ready` before drawing, commented *"render with the real font, not
 a fallback"*. It does the opposite. Nothing on the page has requested IBM Plex Mono at that point, so there
@@ -297,6 +317,8 @@ needs a **full golden recapture**, agreed across both machines, and it makes QA 
 Fonts (silently re-falling-back offline and in CI). Vendoring the fonts into `qa/` would close that hole and
 is probably the right shape. Not urgent — it is a QA-fidelity bug, not a product one — but the goldens are
 currently only meaningful on the machine that captured them, which quietly halves their value.
+
+</details>
 
 ### SO-0035 — The gallery's Mode button does nothing in Live {#so-0035}
 **P3 · Chore · gallery**
