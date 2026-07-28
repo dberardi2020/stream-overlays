@@ -29,12 +29,25 @@
   var nav = document.querySelector(".sitenav-links");
   if (!nav) return;
 
-  var here = location.pathname.replace(/\/index\.html$/, "/");
-  [["/pages/admin.html", "Admin"], ["/pages/debug.html", "Debug"]].forEach(function (d) {
-    if (nav.querySelector('a[href="' + d[0] + '"]')) return;   // page already links it
+  /* This script is included from two depths — index.html at the site root and
+     pages/*.html one below — so neither a root-absolute nor a single relative
+     path works for both. Derive the site root from the script's own URL, which
+     is always <root>/pages/dev-nav.js, so the links resolve wherever the site
+     is mounted (a project page served from /<repo>/ included). */
+  var self = document.currentScript && document.currentScript.src;
+  var base = self ? self.replace(/pages\/dev-nav\.js(\?.*)?$/, "") : location.href;
+
+  [["pages/admin.html", "Admin"], ["pages/debug.html", "Debug"]].forEach(function (d) {
+    var url = new URL(d[0], base);
+    // Already linked? Compare RESOLVED urls — pages link relatively, so a
+    // literal attribute match would miss and duplicate the link.
+    var linked = Array.prototype.some.call(nav.querySelectorAll("a"), function (a) {
+      return a.href === url.href;
+    });
+    if (linked) return;
     var a = document.createElement("a");
-    a.href = d[0]; a.textContent = d[1]; a.dataset.dev = "1";
-    if (here === d[0]) a.setAttribute("aria-current", "page");
+    a.href = url.href; a.textContent = d[1]; a.dataset.dev = "1";
+    if (location.pathname === url.pathname) a.setAttribute("aria-current", "page");
     nav.appendChild(a);
   });
 })();
