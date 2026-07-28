@@ -161,11 +161,13 @@ input[type=color]::-webkit-color-swatch-wrapper{padding:0}
 .cfg-url{font-size:10.5px;line-height:1.5;color:var(--mute);word-break:break-all;
   border-top:1px solid var(--line);padding-top:8px;margin-top:9px}
 .cfg-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
-.cfg-src{font-size:10px;color:var(--mute)}
-.cfg-foot .reset{font-family:inherit;font-size:10.5px;color:var(--mute);background:none;
-  border:none;padding:0;cursor:pointer;text-decoration:underline}
-.cfg-foot .reset:hover{color:var(--ink)}
-.cfg-foot .reset[disabled]{opacity:.35;cursor:default;text-decoration:none}
+.cfg-src{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);opacity:.7}
+/* Where this overlay's plate comes from, stated rather than inferred. The
+   three are genuinely different answers — "as designed" survives a change to
+   the global, which is the case the old two-state version could not express. */
+.cfg-src-btns .btn{font-size:10.5px;padding:3px 8px;border-radius:5px}
+.cfg-src-btns .btn[disabled]{opacity:.3;cursor:default}
+.cfg-src-btns .btn[disabled]:hover{color:var(--mute);border-color:var(--line);background:var(--panel-2)}
 .empty{color:var(--mute);padding:40px 0;text-align:center}
 #err{color:var(--brk);background:rgba(242,69,61,.08);border:1px solid rgba(242,69,61,.4);
   border-radius:8px;padding:10px 12px;margin-bottom:16px;display:none}
@@ -238,7 +240,7 @@ input[type=color]::-webkit-color-swatch-wrapper{padding:0}
   <div class="bar editor">
     <div class="editor-hd">
       <b>Plate</b> — the background an overlay paints itself and carries into OBS.
-      <b>As designed</b> lets each one use the plate it was built with; any other choice
+      <b>As Designed</b> lets each one use the plate it was built with; any other choice
       applies to all of them. Individual cards can override either.
     </div>
     <div class="row">
@@ -343,8 +345,22 @@ let savedDefault = loadDefault();
    either strip the 29 that were designed with a backing, or impose one on the
    40 that were designed without. Any other value overrides every overlay. */
 let globalPlate = savedDefault;
-const cardPlates = new Map();          // id -> plate, only for overridden cards
-const effPlate = e => cardPlates.get(e.id) || globalPlate || designedPlate(e);
+
+/* Each card names its own source rather than having one inferred from whether
+   a global happens to be set. "designed" is a real choice, not just a fallback:
+   it survives someone setting a global, which the inferred version could not
+   express. Default is "global", so the Plate control still reaches everything
+   at once — and since the global itself defaults to "as designed", an untouched
+   gallery shows every overlay exactly as it was built. */
+const cardSrc = new Map();             // id -> "designed" | "global" | "own"
+const cardPlates = new Map();          // id -> plate, only for "own"
+const srcOf = e => cardSrc.get(e.id) || "global";
+function effPlate(e) {
+  const src = srcOf(e);
+  if (src === "own") return cardPlates.get(e.id) || designedPlate(e);
+  if (src === "designed") return designedPlate(e);
+  return globalPlate || designedPlate(e);   // "global", which may itself be as-designed
+}
 
 function obsLink(e) {
   const p = effPlate(e);
@@ -511,8 +527,12 @@ for (const set of SET_ORDER) {
           '<span class="val" data-val="radius"></span></div>' +
         '<div class="cfg-url" data-cfg-url></div>' +
         '<div class="cfg-foot">' +
-          '<span class="cfg-src" data-cfg-src></span>' +
-          '<button class="reset" data-act="reset">Use global</button>' +
+          '<span class="cfg-src" data-cfg-src>Source</span>' +
+          '<span class="segmented cfg-src-btns">' +
+            '<button class="btn" data-src-plate="designed">As Designed</button>' +
+            '<button class="btn" data-src-plate="global">Global</button>' +
+            '<button class="btn" data-src-plate="own">Custom</button>' +
+          "</span>" +
         "</div>" +
       "</div>";
 
@@ -529,8 +549,7 @@ for (const set of SET_ORDER) {
     // Browser Source (resolves to whatever origin is serving this page).
     // Pin the scale explicitly: self-documenting, and immune to the default moving.
     const urlOut = card.querySelector("[data-cfg-url]");
-    const srcOut = card.querySelector("[data-cfg-src]");
-    const resetBtn = card.querySelector('[data-act="reset"]');
+    const srcBtnEls = [...card.querySelectorAll("[data-src-plate]")];
     const hexIn = card.querySelector('[data-cfg="bgHex"]');
     const alphaIn = card.querySelector('[data-cfg="bgA"]');
     const radiusIn = card.querySelector('[data-cfg="radius"]');
@@ -541,7 +560,7 @@ for (const set of SET_ORDER) {
        controls, and builds the link — so the picture and the URL cannot disagree. */
     function syncCard() {
       const p = effPlate(e);
-      const own = cardPlates.has(e.id);
+      const src = srcOf(e);
       // The preview itself needs no work here: the render loop reads effPlate()
       // every frame, so a card follows its source until it overrides it.
       hexIn.value = p.bgHex.startsWith("#") ? p.bgHex : "#" + p.bgHex;
@@ -551,18 +570,23 @@ for (const set of SET_ORDER) {
       card.querySelector('[data-val="radius"]').textContent = p.radius + "px";
       radiusRow.classList.toggle("hide", p.bgA === 0);
       urlOut.textContent = obsLink(e).replace(location.origin, "");
-      // Name the actual source, so it is always clear which of the three is
-      // in force and what "Reset" will hand you back to.
-      srcOut.textContent = own ? "overriding"
-        : globalPlate ? "following the global plate"
-        : e.plate ? "as designed" : "no plate";
-      resetBtn.textContent = globalPlate ? "Use global" : "Use designed";
-      resetBtn.disabled = !own;
-      disc.classList.toggle("set", own);
+      srcBtnEls.forEach(b => b.classList.toggle("on", b.dataset.srcPlate === src));
+      // An overlay with no designed plate has nothing to offer under that
+      // choice, so say so rather than letting it look like a live option.
+      const designedBtn = srcBtnEls.find(b => b.dataset.srcPlate === "designed");
+      designedBtn.disabled = !e.plate;
+      designedBtn.title = e.plate ? "The plate this overlay was built with"
+                                  : "This overlay was designed with no plate";
+      // The sliders describe the plate in force; they only *set* anything on Custom.
+      [hexIn, alphaIn, radiusIn].forEach(i => { i.disabled = src !== "own"; });
+      disc.classList.toggle("set", src !== "global");
     }
     cardSyncs.push(syncCard);
 
+    // Moving a slider is itself a choice to go Custom, seeded from what is
+    // currently showing so the first drag never jumps.
     const takeOver = () => {
+      cardSrc.set(e.id, "own");
       cardPlates.set(e.id, plateOf(hexIn.value, +alphaIn.value / 100, +radiusIn.value,
         effPlate(e).edgeA));
       syncCard();
@@ -570,7 +594,17 @@ for (const set of SET_ORDER) {
     hexIn.addEventListener("input", takeOver);
     alphaIn.addEventListener("input", takeOver);
     radiusIn.addEventListener("input", takeOver);
-    resetBtn.addEventListener("click", () => { cardPlates.delete(e.id); syncCard(); });
+    srcBtnEls.forEach(b => b.addEventListener("click", () => {
+      const next = b.dataset.srcPlate;
+      // Entering Custom keeps whatever is on screen, so it is a starting point
+      // rather than a reset to some unrelated default.
+      if (next === "own" && !cardPlates.has(e.id)) {
+        const p = effPlate(e);
+        cardPlates.set(e.id, plateOf(p.bgHex, p.bgA, p.radius, p.edgeA));
+      }
+      cardSrc.set(e.id, next);
+      syncCard();
+    }));
 
     const panel = card.querySelector(".cfg");
     disc.addEventListener("click", () => {
@@ -772,7 +806,7 @@ window.addEventListener("focus", () => {
 /* The gallery-wide plate — the background each overlay paints itself and
    carries into OBS, not a simulated scene.
 
-   "As designed" is the default and means *no* global value: every overlay uses
+   "As Designed" is the default and means *no* global value: every overlay uses
    its own catalogue plate (SO-0038), which for 29 of them is the backing they
    used to draw internally and for the other 40 is nothing at all. Picking any
    other preset applies it to every overlay, overriding what they were designed
@@ -787,7 +821,7 @@ const bdReset = document.getElementById("bdReset");
 const bdSave = document.getElementById("bdSave");
 // `designed: true` is the no-global state, not a colour — hence no hex/alpha.
 const PRESETS = [
-  { label: "As designed", designed: true },
+  { label: "As Designed", designed: true },
   { label: "None",  hex: "#000000", a: 0 },
   { label: "Black", hex: "#000000", a: 100 },
   { label: "Dark",  hex: "#33373e", a: 100 },
