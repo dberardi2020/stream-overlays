@@ -73,13 +73,26 @@ test("overlays import hidden — the whole point of the collection being cheap",
   }
 });
 
-test("the Rig Setup source is the deliberate exception: visible, and never shut down", () => {
+test("the Rig Setup source is the deliberate exception: visible, locked, never shut down", () => {
   // It has to hold the gamepad. A page OBS has shut down cannot.
   const c = build();
   const setup = browsers(c).find(s => /Rig Setup/.test(s.name));
   assert.equal(setup.settings.shutdown, false);
   const item = c.sources.find(s => s.name === "SO · Setup").settings.items[0];
   assert.equal(item.visible, true);
+  assert.equal(item.locked, true, "visible and never copied — so lock it against a stray drag");
+});
+
+test("overlays are NOT locked — a pasted copy must never arrive immovable", () => {
+  // They are hidden, so there is nothing to drag; and `locked` would plausibly
+  // ride along on copy/paste, which costs more than the nudge it prevents.
+  const c = build();
+  for (const sc of scenes(c)) {
+    if (sc.name === "SO · Setup") continue;
+    for (const item of sc.settings.items) {
+      assert.equal(item.locked, false, sc.name + " / " + item.name);
+    }
+  }
 });
 
 test("overlays are stacked centred, so unhiding any one lands it in frame", () => {

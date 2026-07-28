@@ -87,10 +87,15 @@ function browserSource(name, url, w, h, shutdown) {
   };
 }
 
-function sceneItem(src, id, x, y, visible) {
+/* `locked` guards a scene item's transform against preview dragging. Deliberately
+   OFF for the overlays: they are hidden, so there is nothing to drag in the first
+   place, and the flag would very likely ride along on copy/paste — leaving every
+   overlay you paste into your own scene immovable, which is worse than the nudge
+   it prevents. The Setup source is visible and never copied, so it locks. */
+function sceneItem(src, id, x, y, visible, locked) {
   return {
     name: src.name, source_uuid: src.uuid,
-    visible: visible !== false, locked: false, rot: 0.0,
+    visible: visible !== false, locked: locked === true, rot: 0.0,
     pos: { x, y }, scale: { x: 1.0, y: 1.0 },
     align: 5, bounds_type: 0, bounds_align: 0,
     bounds: { x: 0.0, y: 0.0 },
@@ -133,7 +138,7 @@ export function buildCollection(manifest, baseUrl, scale, collectionName) {
     new URL("setup.html?obs=1", baseUrl).href, 900, 1000, false
   );
   sources.push(setupSrc);
-  scenes.push(scene("SO · Setup", [sceneItem(setupSrc, 1, PAD, PAD, true)]));
+  scenes.push(scene("SO · Setup", [sceneItem(setupSrc, 1, PAD, PAD, true, true)]));
 
   for (const set of SET_SCENES) {
     const items = manifest.filter(e => e.set === set);
