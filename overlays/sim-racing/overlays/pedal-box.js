@@ -1,12 +1,11 @@
 /* Overlay module — see the contract in ADR 0005.
    Draw body byte-for-byte from the prototype. */
 
-import { C, CH, pct, glass, mono } from "../engine/draw-kit.js";
+import { C, CH, pct, mono } from "../engine/draw-kit.js";
 
 export const id = "pedal-box";
 
 export function draw(ctx, w, h, s, mem) {
-  glass(ctx, 0.5, 0.5, w - 1, h - 1, 8);
   const slot = (w - 20) / 3;
   CH.forEach((ch, i) => {
     const v = s[ch.k], cx = 10 + slot * i + slot / 2, hy = 20, arm = 66;

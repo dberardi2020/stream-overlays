@@ -77,7 +77,13 @@
     ],
     "telemetry": [],
     "origin": "live",
-    "note": "Same history, filled areas. Overlap between throttle and brake shows as a mixed band."
+    "note": "Same history, filled areas. Overlap between throttle and brake shows as a mixed band.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 7,
+      "edge": 0.14
+    }
   },
   {
     "id": "hairline",
@@ -159,7 +165,13 @@
     ],
     "telemetry": [],
     "origin": "derived",
-    "note": "The pedals from Cockpit, broken out: three blocks that depress and light up. Diegetic, no numbers."
+    "note": "The pedals from Cockpit, broken out: three blocks that depress and light up. Diegetic, no numbers.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 10,
+      "edge": 0.14
+    }
   },
   {
     "id": "numerals",
@@ -219,7 +231,13 @@
     ],
     "telemetry": [],
     "origin": "live",
-    "note": "Side view, hinged like the real G923. Closest to literally showing your feet."
+    "note": "Side view, hinged like the real G923. Closest to literally showing your feet.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 8,
+      "edge": 0.14
+    }
   },
   {
     "id": "pedal-glow",
@@ -299,7 +317,13 @@
     ],
     "telemetry": [],
     "origin": "live",
-    "note": "Four second history. The one that actually teaches - trail braking has a shape."
+    "note": "Four second history. The one that actually teaches - trail braking has a shape.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 7,
+      "edge": 0.14
+    }
   },
   {
     "id": "segment-ladder",
@@ -359,7 +383,13 @@
     ],
     "telemetry": [],
     "origin": "live",
-    "note": "Monospace block bars. On-brand if your channel leans developer, and trivially themeable."
+    "note": "Monospace block bars. On-brand if your channel leans developer, and trivially themeable.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 5,
+      "edge": 0.14
+    }
   },
   {
     "id": "vertical-bars",
@@ -399,7 +429,13 @@
     ],
     "telemetry": [],
     "origin": "live",
-    "note": "History scrolls downward instead of sideways. Sits nicely down a screen edge."
+    "note": "History scrolls downward instead of sideways. Sits nicely down a screen edge.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 7,
+      "edge": 0.14
+    }
   },
   {
     "id": "angle-histogram",
@@ -615,7 +651,13 @@
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "Four seconds of history. Corrections and wobble become shapes you can point at."
+    "note": "Four seconds of history. Corrections and wobble become shapes you can point at.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 7,
+      "edge": 0.14
+    }
   },
   {
     "id": "wheel",
@@ -709,7 +751,13 @@
     "note": "Gate positions shaded by time spent in each gear, accumulating all session from button state alone.",
     "requires": [
       "gear:absolute"
-    ]
+    ],
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 8,
+      "edge": 0.14
+    }
   },
   {
     "id": "gate-map",
@@ -730,7 +778,13 @@
     "note": "The knob travels the real channels - out to the neutral rail, across, then in. Mid-shift it genuinely reads neutral.",
     "requires": [
       "gear:absolute"
-    ]
+    ],
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 8,
+      "edge": 0.14
+    }
   },
   {
     "id": "gate-with-trail",
@@ -752,7 +806,13 @@
     "note": "The gate-map readout — numbered gates and a GEAR callout — with a fading path behind the knob, so you see the whole throw hugging the H.",
     "requires": [
       "gear:absolute"
-    ]
+    ],
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 8,
+      "edge": 0.14
+    }
   },
   {
     "id": "gear-donut",
@@ -794,7 +854,13 @@
     "note": "All gears stacked with the engaged one lit, and nothing lit while the lever is crossing.",
     "requires": [
       "gear:absolute"
-    ]
+    ],
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 8,
+      "edge": 0.14
+    }
   },
   {
     "id": "gear-timeline",
@@ -815,7 +881,13 @@
     "note": "Gear selection as a scrolling piano roll. A whole lap in one glance, straight off button state.",
     "requires": [
       "gear:absolute"
-    ]
+    ],
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 7,
+      "edge": 0.14
+    }
   },
   {
     "id": "lever-position",
@@ -837,7 +909,13 @@
     "note": "The gate as two axes. Reads as data rather than diagram, and neutral is unmistakable.",
     "requires": [
       "gear:absolute"
-    ]
+    ],
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 8,
+      "edge": 0.14
+    }
   },
   {
     "id": "paddle-pair",
@@ -937,7 +1015,13 @@
     ],
     "telemetry": [],
     "origin": "v2",
-    "note": "Counted position with a directional chevron. Honest about being a count - it needs a reset button in real use."
+    "note": "Counted position with a directional chevron. Honest about being a count - it needs a reset button in real use.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 8,
+      "edge": 0.14
+    }
   },
   {
     "id": "shift-counter",
@@ -997,7 +1081,13 @@
       "rpm"
     ],
     "origin": "v3",
-    "note": "Every shift plotted against the rpm you took it at. Consistency becomes a cluster - but rpm comes from the game."
+    "note": "Every shift plotted against the rpm you took it at. Consistency becomes a cluster - but rpm comes from the game.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 7,
+      "edge": 0.14
+    }
   },
   {
     "id": "shift-pulse",
@@ -1033,7 +1123,13 @@
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "Every shift as a tick on a timeline, up above the line and down below. Cadence without any position guessing."
+    "note": "Every shift as a tick on a timeline, up above the line and down below. Cadence without any position guessing.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 7,
+      "edge": 0.14
+    }
   },
   {
     "id": "throw-timer",
@@ -1052,7 +1148,13 @@
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "Time the lever spent between gears, measured button-release to button-press. Smooth shifting becomes a number."
+    "note": "Time the lever spent between gears, measured button-release to button-press. Smooth shifting becomes a number.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 7,
+      "edge": 0.14
+    }
   },
   {
     "id": "ambient-trio",
@@ -1122,7 +1224,13 @@
       "spd"
     ],
     "origin": "v3",
-    "note": "A vertical timing tower down the frame edge. The speed and rev rows need telemetry; the rest do not."
+    "note": "A vertical timing tower down the frame edge. The speed and rev rows need telemetry; the rest do not.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 6,
+      "edge": 0.14
+    }
   },
   {
     "id": "case-column",
@@ -1144,7 +1252,13 @@
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "Built tall for a vertical panel. Everything stacked, nothing cramped, nothing inferred."
+    "note": "Built tall for a vertical panel. Everything stacked, nothing cramped, nothing inferred.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 10,
+      "edge": 0.14
+    }
   },
   {
     "id": "clutch-and-gate",
@@ -1163,7 +1277,13 @@
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "Clutch travel beside the gate. Shows whether you are actually clutching or forcing it - both values off the rig."
+    "note": "Clutch travel beside the gate. Shows whether you are actually clutching or forcing it - both values off the rig.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 8,
+      "edge": 0.14
+    }
   },
   {
     "id": "cockpit",
@@ -1185,7 +1305,13 @@
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "Top-down driver - wheel, feet, hand on the lever. Fully diegetic and fully direct."
+    "note": "Top-down driver - wheel, feet, hand on the lever. Fully diegetic and fully direct.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 9,
+      "edge": 0.14
+    }
   },
   {
     "id": "corner-card",
@@ -1207,7 +1333,13 @@
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "Compact square for a screen corner. Everything present, nothing oversized."
+    "note": "Compact square for a screen corner. Everything present, nothing oversized.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 9,
+      "edge": 0.14
+    }
   },
   {
     "id": "dash-cluster",
@@ -1232,7 +1364,13 @@
       "rpm"
     ],
     "origin": "v3",
-    "note": "The classic. Rev arc and gear centre, pedals and wheel around it - the arc needs the game."
+    "note": "The classic. Rev arc and gear centre, pedals and wheel around it - the arc needs the game.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 10,
+      "edge": 0.14
+    }
   },
   {
     "id": "engineer-view",
@@ -1254,7 +1392,13 @@
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "Numbers with sparklines. Ugly on purpose, and the most information per pixel on this page."
+    "note": "Numbers with sparklines. Ugly on purpose, and the most information per pixel on this page.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 5,
+      "edge": 0.14
+    }
   },
   {
     "id": "gate-strip",
@@ -1279,7 +1423,13 @@
     "note": "A lower third with a live H-gate in it. Fully direct, and no other stream has one.",
     "requires": [
       "gear:absolute"
-    ]
+    ],
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 8,
+      "edge": 0.14
+    }
   },
   {
     "id": "hud",
@@ -1323,7 +1473,13 @@
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "Gear, pedals and wheel with nothing borrowed from the game. The one you can ship today."
+    "note": "Gear, pedals and wheel with nothing borrowed from the game. The one you can ship today.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 10,
+      "edge": 0.14
+    }
   },
   {
     "id": "lower-third",
@@ -1348,7 +1504,13 @@
       "rpm"
     ],
     "origin": "v1",
-    "note": "A wide strip for the bottom of frame. Never covers the racing line, always readable."
+    "note": "A wide strip for the bottom of frame. Never covers the racing line, always readable.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 8,
+      "edge": 0.14
+    }
   },
   {
     "id": "minimal-edge",
@@ -1441,7 +1603,13 @@
       "rpm"
     ],
     "origin": "v1",
-    "note": "Inputs left, gearbox right, divided by a rule. Easy to rearrange, easy to theme."
+    "note": "Inputs left, gearbox right, divided by a rule. Easy to rearrange, easy to theme.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 8,
+      "edge": 0.14
+    }
   },
   {
     "id": "ticker",
@@ -1485,6 +1653,12 @@
     ],
     "telemetry": [],
     "origin": "v3",
-    "note": "All four axes on one graph with a gear track underneath. The engineer's view, entirely from the rig."
+    "note": "All four axes on one graph with a gear track underneath. The engineer's view, entirely from the rig.",
+    "plate": {
+      "bg": "08090c",
+      "bga": 0.55,
+      "radius": 8,
+      "edge": 0.14
+    }
   }
 ]

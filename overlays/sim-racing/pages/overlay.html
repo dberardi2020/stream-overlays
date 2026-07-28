@@ -91,12 +91,17 @@ canvas.width  = Math.round(W * scale * dpr);
 canvas.height = Math.round(H * scale * dpr);
 ctx.scale(scale * dpr, scale * dpr);
 
-// Optional contrast plate baked from the URL (?bg=&bga=&radius=). Off by default,
-// so the page stays fully transparent unless asked.
+// Optional contrast plate baked from the URL (?bg=&bga=&radius=&edge=). Off by
+// default, so the page stays fully transparent unless asked.
 if (params.bgA > 0) {
   stage.style.background = hexToRgba(params.bgHex, params.bgA);
   stage.style.borderRadius = params.radius + "px";
   canvas.style.borderRadius = params.radius + "px";
+  // An inset ring rather than a border: it must not change the element's box,
+  // because the Browser Source size is the overlay's size and nothing else.
+  if (params.edgeA > 0) {
+    stage.style.boxShadow = "inset 0 0 0 1px " + hexToRgba("ffffff", params.edgeA);
+  }
 }
 
 /* ---- live input only, no fake data ---- */

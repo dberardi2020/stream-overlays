@@ -3,12 +3,11 @@
    overlay: each block depresses and lights up with press. Diegetic — magnitude
    reads from fill + travel, no numerals (matches the cockpit source). */
 
-import { C, CH, glass, mono } from "../engine/draw-kit.js";
+import { C, CH, mono } from "../engine/draw-kit.js";
 
 export const id = "pedal-blocks";
 
 export function draw(ctx, w, h, s, mem) {
-  glass(ctx, 0.5, 0.5, w - 1, h - 1, 10);
 
   const bw = 34, bh = 46, r = 5, travel = 11, gap = 48;
   const cx = w / 2;

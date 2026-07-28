@@ -1,12 +1,11 @@
 /* Overlay module — see the contract in ADR 0005.
    Draw body byte-for-byte from the prototype. */
 
-import { C, CH, pct, glass, mono } from "../engine/draw-kit.js";
+import { C, CH, pct, mono } from "../engine/draw-kit.js";
 
 export const id = "terminal";
 
 export function draw(ctx, w, h, s, mem) {
-  glass(ctx, 0.5, 0.5, w - 1, h - 1, 5);
   const CELLS = 16;
   mono(ctx, 13, 500); ctx.textAlign = "left"; ctx.textBaseline = "middle";
   CH.forEach((ch, i) => {

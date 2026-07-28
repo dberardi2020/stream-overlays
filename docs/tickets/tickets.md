@@ -50,7 +50,6 @@ Pre-public candidates not yet committed to the On-deck sequence.
 | ID | Pri | Type | Title |
 |---|---|---|---|
 | [SO-0007](#so-0007) | P2 | Feature | Telemetry data source (rpm / spd / gear-from-sim) — deferred |
-| [SO-0038](#so-0038) | P2 | Chore | 29 overlays bake their own backing — move it to the plate |
 | [SO-0034](#so-0034) | P2 | Bug | `terminal` golden fails cross-machine on text antialiasing (font loading fixed) |
 | [SO-0035](#so-0035) | P3 | Chore | Gallery Mode button does nothing in Live — relabel or hide |
 | [SO-0027](#so-0027) | P2 | Chore | Ensure integration test coverage is sufficient across the repo |
@@ -85,6 +84,7 @@ are in the docs.*
 
 | ID | Title | Closed |
 |---|---|---|
+| SO-0038 | **29 overlays baked their own backing — moved it to the plate.** Each drew a full-canvas `glass(.5,.5,w-1,h-1,r)` inside its own `draw()`, so it stacked on the [SO-0003](#so-0003) plate instead of replacing it: set a plate and those 29 came out darker than the other 40, and no setting could make them genuinely transparent over a scene. Long predated the plate work — the plate only made it visible. Found by rendering every module to a bare canvas against the demo lap and measuring coverage (29 of 69), then confirmed exactly against the source: 29 full-canvas `glass()` calls, and 5 others that are internal sub-panels and were left alone. Removed the 29 calls (and their now-unused imports) and moved each overlay's backing to a **`plate` field on its catalogue entry** — `{bg: "08090c", bga: 0.55, radius: <its own>, edge: 0.14}`, the exact values `glass()` used. `glass()` was a fill *and* a 1px `rgba(255,255,255,0.14)` rim, so the plate gained an **`edge` URL param** (default 0, applied as an *inset* ring so it cannot change the Browser Source box) — without it those 29 would have quietly lost their border. The gallery's global plate gained an **"As designed"** default meaning *no global value*: each overlay uses its own. That is the default because no single value is right for all 69 — forcing one would either strip the 29 built with a backing or impose one on the 40 built without (`hairline` is deliberately the least intrusive thing on the page). Any other global choice overrides every overlay; a per-card override still wins over both. Verified end to end: `?bg=08090c&bga=0.55&radius=7&edge=0.14` renders `rgba(8,9,12,0.55)`, 7px corners and a 1px inset rim at the unchanged 500×240 — pixel-identical to what `glass()` drew. **27 goldens retired** (`gate-with-trail` and `pedal-blocks` already had none): deliberate redesign invalidates a golden whose purpose was fidelity to the prototype, per the SO-0022 precedent. 115 node + 227 pytest green; qa 69/69 painted, 40 pixel-faithful. | 2026-07-28 |
 | SO-0003 | **Configure → URL generator**, realising [ADR 0001](../decisions/0001-config-in-the-url.md) (config in the URL, never in storage). Closed a gap open since the renderer was written: `overlay.html` had always accepted a plate it paints itself (`?bg=&bga=&radius=`), and **nothing in the product could produce those params** — while the gallery's BACKDROP control, which looked like it configured exactly that, was a preview-only contrast test that never reached OBS. So a setting that appeared to change your stream silently didn't. Resolved by making them **one setting**: BACKDROP became **Plate**, the gallery-wide default that drives both the preview *and* the copied link, with a **per-overlay override** (colour, opacity, radius) behind a `▾` on each card. It lives in its own box, separate from the filter/demo rows above it — those steer the gallery, this changes what the overlays *are*, and mixing them is what let the old control read as another preview toggle. **Save as default** persists the global plate to `localStorage` so the gallery opens with it, and **Reset** returns to that saved default (or to no plate when none is saved); the stored value is a *gallery preference*, not overlay config, so [ADR 0001](../decisions/0001-config-in-the-url.md) still holds — the copied link carries every value explicitly. Radius is **hidden, not disabled**, when opacity is 0: it has nothing to round, and a greyed control invites clicking while explaining nothing. Default is **None/transparent** — an opaque default would have baked a plate into every link copied without touching a control — so an untouched card emits the same minimal `?style=…&scale=…` it always did. Plate params are omitted entirely at alpha 0, matching `overlay.html`'s own rule that it paints nothing below that. **Scale was deliberately not made a lever** (export stays 2×, revisit if it bites) and **padding is deferred to [SO-0037](#so-0037)**. The preview draws checker → plate → overlay into the canvas rather than styling it: that puts the plate at the overlay's exact rectangle, makes the transparency checker mean one thing only (the surround is flat matting, since checkering it too made the same pattern mean opposite things in one picture), and is immune to browser extensions that force canvas backgrounds transparent — which was observed on the dev machine and would otherwise have desynced preview from URL. 115 node + 227 pytest green; verified in-browser that global changes and per-card overrides move the pixels and the link together. | 2026-07-28 |
 | SO-0006 | **Shifter / gear live calibration + input** — the last v0 input-binding requirement, closed on real hardware. `gamepad.js` + `calibration.js` extended to capture gear buttons; a Shifter box on the setup page calibrates an **H-shifter** (one button per position) and **paddles / sequential** (an up/down pair) as **independent sources** ([ADR 0007](../decisions/0007-gear-sources-are-independent.md)) — each calibrated and cleared without touching the other, old single-source maps migrated on read. G923 + Driving Force Shifter mapped: **R,1–6 → buttons 11–17**, **paddles → 4 (up) / 5 (down)**. Driving it found four things no headless test could: both controls couldn't coexist (fixed by the split); every shift logged twice (a real H-pattern crosses neutral, so 2→N→3 counted a phantom down- then upshift — a shift is now a transition between two *engaged* gears); the knob replayed finished shifts (`prevGear` is now the previous *position*, and a leg starts when movement is observed); and the demo couldn't have caught any of it (its lap stepped gear-to-gear with no neutral — it now crosses neutral, and both paths run one shared `engine/gear-motion.js`). `stepSequentialGear` **deleted**: paddles report direction only, and `state.gear` is `null` rather than `0` without an H-shifter, because `0` claims "in neutral". **Hardware round-trip confirmed 2026-07-28** — a 60 Hz trace over 1–6 up, 6–1 down, R and neutral showed every engagement lighting its gate cell and tracking the readout, neutral genuinely present between every pair of gears, and the paddles returning to N rather than inventing a position. | 2026-07-28 |
 | SO-0024 | **Dev/debug input inspector page** (`pages/debug.html`, localhost-only) — the diagnostic for the hardware seam: live raw **axes** + **buttons** (indices + values), the loaded calibration map, and the resolved channel state. Made wheel/shifter issues visible instead of guessed, and was the tool that de-risked SO-0006's central unknown (how the G923 shifter actually reports gears) and carried the PC-side hardware handoff. | 2026-07-28 |
@@ -267,6 +267,12 @@ format — the source/scene/item builders there are directly reusable.
 name and verified, and vendored into `qa/fonts/` so QA needs no network. See the commit and
 `qa/fonts/README.md`.
 
+> **The symptom is currently masked, not fixed (2026-07-28).** `terminal` was one of the 29 overlays whose
+> backing moved to the plate in SO-0038, so **its golden was retired along with the other 26** and `npm run qa`
+> now reports PASS. Nothing about the antialiasing difference was addressed — the comparison simply no longer
+> happens. When `terminal`'s golden is recaptured, expect the ~1.47% delta to return, and do not read the
+> current green as evidence this is done.
+
 **The original diagnosis below was wrong about the symptom.** `terminal`'s 1.47% failure is *not* font
 substitution: it persists with the real font loaded (1348px / 1.465% with, vs 2499px / 2.716% in a fallback).
 What the font bug actually caused was **order-dependence** — `acceptance.mjs` reuses one page across all 69
@@ -344,38 +350,6 @@ Open questions, in the order they'd sink it:
 Pairs with [SO-0004](#so-0004) (the OBS fallback ladder) and [SO-0033](#so-0033) (bulk overlay import) — all
 three are "make the OBS side less manual". Sequence after those only if the index question in (2) comes back
 favourable.
-
-### SO-0038 — 29 overlays bake their own backing {#so-0038}
-**P2 · Chore · overlays · design**
-
-**29 of 69** overlays paint a full-canvas backing inside their own `draw()`, at recurring alpha tiers
-(8%, 33%, 58%, plus a few rounded ones whose corners read 0%). Measured by rendering each module to a bare
-canvas against the demo lap, so this is the drawing itself, not a preview artefact:
-
-- **pedals (6)** — `filled-trace`, `pedal-blocks`, `pedal-box`, `rolling-trace`, `terminal`, `waterfall`
-- **wheel (1)** — `steering-trace`
-- **shifter (10)** — `gate-heatmap`, `gate-map`, `gate-with-trail`, `gear-ladder`, `gear-timeline`,
-  `lever-position`, `sequential-column`, `shift-point-scatter`, `shift-rhythm`, `throw-timer`
-- **combo (12)** — `broadcast-tower`, `case-column`, `clutch-and-gate`, `cockpit`, `corner-card`,
-  `dash-cluster`, `engineer-view`, `gate-strip`, `input-cluster`, `lower-third`, `split-panel`, `unified-trace`
-
-**The problem.** They are *translucent*, so they do not replace the plate from [SO-0003](#so-0003) — they stack
-on it. Set a plate and those 29 come out darker than the other 40, and no setting can make them genuinely
-transparent over a scene. This long predates the plate work; the plate only made it visible.
-
-**The fix is not "delete the backings".** Those overlays were designed to read against a stream and mostly
-need *something*. Strip the fill from `draw()` and move it to a **suggested plate** on the catalogue entry
-(colour + opacity + radius), which the gallery seeds a card with. The overlay then looks as designed out of
-the box, through the one mechanism the user can see, change, turn off, and export — instead of a background
-baked where nothing can reach it. A per-entry `plate` field pairs with the admin editor (SO-0015) for tuning.
-
-**The cost, and why it is not a quick fix:** changing what these overlays draw invalidates their `qa/` goldens
-— 29 of them, the harness that proves the migration was pixel-faithful to the prototype. Retiring a golden on
-deliberate redesign has precedent (`gate-with-trail`, `pedal-blocks` already have none, per SO-0022), and
-[goldens cannot be recaptured from an arbitrary machine](#so-0034) — `capture-golden.mjs` needs the prototype
-`catalogue.html`, deliberately absent from the repo. So this wants doing on a machine that can re-baseline, in
-one deliberate pass. Natural home is [SO-0019](#so-0019), the overlay quality pass, rather than a change made
-on the way to hosting.
 
 ### SO-0037 — Plate padding {#so-0037}
 **P3 · Feature · configure**

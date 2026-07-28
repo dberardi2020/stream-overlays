@@ -3,14 +3,13 @@
    readouts (gear numbers + GEAR callout) on top of the decaying knob trail.
    `bind(ctx, s)` wires the module-global ctx/state the helpers use. */
 
-import { C, GATE, bind, drawGate, drawKnob, gateXY, glass, knobXY, mono, txt } from "../engine/draw-kit.js";
+import { C, GATE, bind, drawGate, drawKnob, gateXY, knobXY, mono, txt } from "../engine/draw-kit.js";
 
 export const id = "gate-with-trail";
 
 export function draw(ctx, w, h, s, mem) {
   bind(ctx, s);
 
-  glass(.5,.5,w-1,h-1,8);
   const cx=w/2, cy=h/2-4, sx=44, sy=36;
   drawGate(cx,cy,sx,sy);
 

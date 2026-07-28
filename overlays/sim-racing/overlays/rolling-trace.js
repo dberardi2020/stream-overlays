@@ -1,12 +1,11 @@
 /* Overlay module — see the contract in ADR 0005.
    Draw body byte-for-byte from the prototype. */
 
-import { C, CH, pct, glass, mono, traceOf } from "../engine/draw-kit.js";
+import { C, CH, pct, mono, traceOf } from "../engine/draw-kit.js";
 
 export const id = "rolling-trace";
 
 export function draw(ctx, w, h, s, mem) {
-  glass(ctx, 0.5, 0.5, w - 1, h - 1, 7);
   const pl = 8, pr = 46, pt = 10, pb = 10, gw = w - pl - pr, gh = h - pt - pb;
   ctx.strokeStyle = C.faint; ctx.lineWidth = 1;
   for (const f of [0.25,0.5,0.75]){

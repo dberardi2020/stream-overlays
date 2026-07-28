@@ -20,7 +20,12 @@ export function readParams(search) {
     scale: numParam("scale", 2, 0.5, 6),
     bgHex: params.get("bg") || "000000",
     bgA: numParam("bga", 0, 0, 1),
-    radius: numParam("radius", 8, 0, 40)
+    radius: numParam("radius", 8, 0, 40),
+    /* The plate's hairline rim. Off by default so a plain colour plate is just
+       that; overlays that used to draw their own backing carry it explicitly,
+       because the old `glass()` helper was a fill *and* a 1px edge and losing
+       the edge would have quietly restyled them. */
+    edgeA: numParam("edge", 0, 0, 1)
   };
 }
 

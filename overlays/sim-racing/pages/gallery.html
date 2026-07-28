@@ -237,8 +237,9 @@ input[type=color]::-webkit-color-swatch-wrapper{padding:0}
        preview toggle. -->
   <div class="bar editor">
     <div class="editor-hd">
-      <b>Plate</b> — the background every overlay paints itself and carries into OBS.
-      Sets the default for all of them; any card can override it.
+      <b>Plate</b> — the background an overlay paints itself and carries into OBS.
+      <b>As designed</b> lets each one use the plate it was built with; any other choice
+      applies to all of them. Individual cards can override either.
     </div>
     <div class="row">
       <div class="grp"><span class="lbl">Preset</span><span id="bdPresets" class="segmented"></span></div>
@@ -303,14 +304,24 @@ const obsSize = e => ({ w: Math.round(e.size.w * OBS_SCALE), h: Math.round(e.siz
    at its default, because the card advertises a Browser Source size derived
    from it and the two must not drift (see the note above). */
 const DEF = readParams("");
-const plateOf = (hex, a, r) => ({ bgHex: hex, bgA: a, radius: r });
-const SHIPPED = plateOf(DEF.bgHex, DEF.bgA, DEF.radius);
+const plateOf = (hex, a, r, edge) => ({ bgHex: hex, bgA: a, radius: r, edgeA: edge || 0 });
+const NO_PLATE = plateOf(DEF.bgHex, DEF.bgA, DEF.radius, DEF.edgeA);
 // Normalise the "#" away: url-config's default is bare ("000000") while an
 // <input type=color> always reports it prefixed, and comparing them raw makes
 // an untouched gallery look modified.
 const bareHex = h => String(h).replace("#", "").toLowerCase();
-const samePlate = (a, b) => bareHex(a.bgHex) === bareHex(b.bgHex) &&
-  a.bgA === b.bgA && a.radius === b.radius;
+const samePlate = (a, b) => !!a === !!b && (!a || (bareHex(a.bgHex) === bareHex(b.bgHex) &&
+  a.bgA === b.bgA && a.radius === b.radius && a.edgeA === b.edgeA));
+
+/* SO-0038 — an overlay may ship a *designed* plate: the backing 29 of them used
+   to paint inside their own draw(), lifted out to the catalogue so it runs
+   through the one mechanism you can see, change, turn off and export. Overlays
+   without one are genuinely transparent by design (`hairline` is deliberately
+   the least intrusive thing on the page) — which is why there is no single
+   global default that could be right for all 69. */
+const designedPlate = e => e.plate
+  ? plateOf(e.plate.bg, e.plate.bga, e.plate.radius, e.plate.edge)
+  : NO_PLATE;
 
 /* The user's saved default, if they have one. This is a *gallery* preference,
    not overlay config — ADR 0001 keeps the latter in the URL because it has to
@@ -321,27 +332,30 @@ function loadDefault() {
   try {
     const s = JSON.parse(localStorage.getItem(PLATE_KEY) || "null");
     if (s && typeof s.bgHex === "string" && Number.isFinite(s.bgA) && Number.isFinite(s.radius)) {
-      return plateOf(s.bgHex, s.bgA, s.radius);
+      return plateOf(s.bgHex, s.bgA, s.radius, s.edgeA);
     }
   } catch { /* corrupt or unavailable storage just means "no saved default" */ }
   return null;
 }
 let savedDefault = loadDefault();
-// Transparent unless the user saved otherwise: an opaque default would bake a
-// plate into every link copied without touching a control.
-let globalPlate = savedDefault || SHIPPED;
+/* null means "as designed" — each overlay uses its own plate. That is the
+   default because no single value is right for all 69: forcing one would
+   either strip the 29 that were designed with a backing, or impose one on the
+   40 that were designed without. Any other value overrides every overlay. */
+let globalPlate = savedDefault;
 const cardPlates = new Map();          // id -> plate, only for overridden cards
-const effPlate = id => cardPlates.get(id) || globalPlate;
+const effPlate = e => cardPlates.get(e.id) || globalPlate || designedPlate(e);
 
-function obsLink(id) {
-  const p = effPlate(id);
-  const q = ["style=" + id, "scale=" + OBS_SCALE];
+function obsLink(e) {
+  const p = effPlate(e);
+  const q = ["style=" + e.id, "scale=" + OBS_SCALE];
   // overlay.html paints no plate at alpha 0, so colour, opacity and radius would
   // all be dead weight in the URL — and would imply a background that never renders.
   if (p.bgA > 0) {
     q.push("bg=" + p.bgHex.replace("#", ""));
     q.push("bga=" + Math.round(p.bgA * 100) / 100);
     if (p.radius !== DEF.radius) q.push("radius=" + p.radius);
+    if (p.edgeA !== DEF.edgeA) q.push("edge=" + p.edgeA);
   }
   return new URL("overlay.html?" + q.join("&"), location.href).href;
 }
@@ -360,10 +374,11 @@ const CHECKER = (() => {
 
 /* The plate's rounded rectangle — the same shape overlay.html gets from
    border-radius, so the preview shows the corners you will actually ship. */
-function platePath(ctx, w, h, r) {
+function platePath(ctx, w, h, r, inset) {
+  const o = inset || 0;
   const rad = Math.max(0, Math.min(r, w / 2, h / 2));
   ctx.beginPath();
-  ctx.roundRect(0, 0, w, h, rad);
+  ctx.roundRect(o, o, w, h, rad);
 }
 
 const CHAN_ORDER = ["clu", "brk", "thr", "str", "gear:absolute", "gear:direction", "rpm", "spd"];
@@ -525,25 +540,31 @@ for (const set of SET_ORDER) {
     /* One draw of the truth: the effective plate paints the preview, fills the
        controls, and builds the link — so the picture and the URL cannot disagree. */
     function syncCard() {
-      const p = effPlate(e.id);
+      const p = effPlate(e);
       const own = cardPlates.has(e.id);
       // The preview itself needs no work here: the render loop reads effPlate()
-      // every frame, so a card follows the global until it overrides it.
+      // every frame, so a card follows its source until it overrides it.
       hexIn.value = p.bgHex.startsWith("#") ? p.bgHex : "#" + p.bgHex;
       alphaIn.value = Math.round(p.bgA * 100);
       radiusIn.value = p.radius;
       card.querySelector('[data-val="bgA"]').textContent = Math.round(p.bgA * 100) + "%";
       card.querySelector('[data-val="radius"]').textContent = p.radius + "px";
       radiusRow.classList.toggle("hide", p.bgA === 0);
-      urlOut.textContent = obsLink(e.id).replace(location.origin, "");
-      srcOut.textContent = own ? "overriding the global plate" : "following the global plate";
+      urlOut.textContent = obsLink(e).replace(location.origin, "");
+      // Name the actual source, so it is always clear which of the three is
+      // in force and what "Reset" will hand you back to.
+      srcOut.textContent = own ? "overriding"
+        : globalPlate ? "following the global plate"
+        : e.plate ? "as designed" : "no plate";
+      resetBtn.textContent = globalPlate ? "Use global" : "Use designed";
       resetBtn.disabled = !own;
       disc.classList.toggle("set", own);
     }
     cardSyncs.push(syncCard);
 
     const takeOver = () => {
-      cardPlates.set(e.id, plateOf(hexIn.value, +alphaIn.value / 100, +radiusIn.value));
+      cardPlates.set(e.id, plateOf(hexIn.value, +alphaIn.value / 100, +radiusIn.value,
+        effPlate(e).edgeA));
       syncCard();
     };
     hexIn.addEventListener("input", takeOver);
@@ -614,13 +635,22 @@ function loop(now) {
     // composites: scene, then the overlay's own background, then its drawing.
     t.ctx.fillStyle = CHECKER;
     t.ctx.fillRect(0, 0, w, h);
-    const plate = effPlate(t.e.id);
+    const plate = effPlate(t.e);
     const rounded = plate.bgA > 0;
     if (rounded) {
       t.ctx.save();
       platePath(t.ctx, w, h, plate.radius);
       t.ctx.fillStyle = hexToRgba(plate.bgHex, plate.bgA);
       t.ctx.fill();
+      // The hairline rim, inset half a pixel so a 1px stroke lands inside the
+      // plate rather than straddling its edge — what glass() used to do.
+      if (plate.edgeA > 0) {
+        t.ctx.save();
+        platePath(t.ctx, w - 1, h - 1, plate.radius, 0.5);
+        t.ctx.strokeStyle = hexToRgba("ffffff", plate.edgeA);
+        t.ctx.lineWidth = 1; t.ctx.stroke();
+        t.ctx.restore();
+      }
       // overlay.html rounds the canvas too when a plate is on, so the drawing
       // is clipped to the same corners — match it rather than flatter it.
       t.ctx.clip();
@@ -739,13 +769,14 @@ window.addEventListener("focus", () => {
   if (source === "live") { liveInput.reload(); lastLiveKey = ""; applySourceGating(); }
 });
 
-/* Backdrop builder: the gallery-wide default plate — the background each
-   overlay paints itself and carries into OBS, not a simulated scene. It is a
-   colour + opacity over a permanent transparency checker, so "None" (opacity 0)
-   means a genuinely transparent overlay and emits no params at all. Presets are
-   shortcuts: None the default, Black/White the extremes, Dark/Light the soft
-   pair; the picker + slider dial anything between. Cards that have set their own
-   plate keep it — the global is the default, not an override. */
+/* The gallery-wide plate — the background each overlay paints itself and
+   carries into OBS, not a simulated scene.
+
+   "As designed" is the default and means *no* global value: every overlay uses
+   its own catalogue plate (SO-0038), which for 29 of them is the backing they
+   used to draw internally and for the other 40 is nothing at all. Picking any
+   other preset applies it to every overlay, overriding what they were designed
+   with. Cards that set their own plate keep it either way. */
 const bdColor = document.getElementById("bdColor");
 const bdAlpha = document.getElementById("bdAlpha");
 const bdAlphaV = document.getElementById("bdAlphaV");
@@ -754,7 +785,9 @@ const bdRadiusV = document.getElementById("bdRadiusV");
 const bdRadiusGrp = document.getElementById("bdRadiusGrp");
 const bdReset = document.getElementById("bdReset");
 const bdSave = document.getElementById("bdSave");
+// `designed: true` is the no-global state, not a colour — hence no hex/alpha.
 const PRESETS = [
+  { label: "As designed", designed: true },
   { label: "None",  hex: "#000000", a: 0 },
   { label: "Black", hex: "#000000", a: 100 },
   { label: "Dark",  hex: "#33373e", a: 100 },
@@ -765,26 +798,40 @@ const presetBtns = [];
 const bdHost = document.getElementById("bdPresets");
 PRESETS.forEach(p => {
   const b = document.createElement("button");
-  b.className = "btn"; b.textContent = p.label; b.dataset.hex = p.hex; b.dataset.a = p.a;
-  b.onclick = () => { bdColor.value = p.hex; bdAlpha.value = p.a; applyBackdrop(); };
+  b.className = "btn"; b.textContent = p.label;
+  if (p.designed) { b.dataset.designed = "1"; b.title = "Each overlay uses the plate it was designed with"; }
+  else { b.dataset.hex = p.hex; b.dataset.a = p.a; }
+  b.onclick = () => {
+    if (p.designed) { globalPlate = null; applyBackdrop(); return; }
+    bdColor.value = p.hex; bdAlpha.value = p.a; applyBackdrop(true);
+  };
   bdHost.appendChild(b); presetBtns.push(b);
 });
-/* Read the controls into globalPlate, then redraw everything that depends on
-   it. Called on every input and after any programmatic change, so the controls,
-   the previews and the links are never derived from anything but this. */
-function applyBackdrop() {
-  const hex = bdColor.value, a = +bdAlpha.value;
-  globalPlate = plateOf(hex, a / 100, +bdRadius.value);
-  bdAlphaV.textContent = a + "%";
-  bdRadiusV.textContent = globalPlate.radius + "px";
+
+/* Redraw everything that depends on globalPlate. `fromControls` means the user
+   moved a control, which necessarily leaves "as designed" — you cannot dial a
+   colour and still be deferring to each overlay. */
+function applyBackdrop(fromControls) {
+  if (fromControls) globalPlate = plateOf(bdColor.value, +bdAlpha.value / 100, +bdRadius.value, 0);
+  const on = !!globalPlate;
+  const a = on ? Math.round(globalPlate.bgA * 100) : 0;
+  bdAlphaV.textContent = on ? a + "%" : "—";
+  bdRadiusV.textContent = on ? globalPlate.radius + "px" : "—";
+  // The colour/opacity/radius controls describe a global value; with none set
+  // there is nothing for them to describe.
+  [bdColor, bdAlpha, bdRadius].forEach(i => { i.disabled = !on; });
   // Radius has nothing to round without a plate, so it is hidden rather than
   // disabled — see the .cfg-row.hide note.
-  bdRadiusGrp.classList.toggle("hide", a === 0);
-  // light up a preset only when the current colour+opacity exactly matches it
-  presetBtns.forEach(b => b.classList.toggle("on", b.dataset.hex.toLowerCase() === hex.toLowerCase() && +b.dataset.a === a));
-  const target = savedDefault || SHIPPED;
+  bdRadiusGrp.classList.toggle("hide", on && a === 0);
+  // Light a preset only when it is exactly what is in force.
+  presetBtns.forEach(b => {
+    if (b.dataset.designed) { b.classList.toggle("on", !on); return; }
+    b.classList.toggle("on", on &&
+      bareHex(b.dataset.hex) === bareHex(globalPlate.bgHex) && +b.dataset.a === a);
+  });
+  const target = savedDefault || null;
   bdReset.disabled = samePlate(globalPlate, target);
-  bdReset.title = savedDefault ? "Back to your saved default" : "Back to no plate";
+  bdReset.title = savedDefault ? "Back to your saved default" : "Back to each overlay's designed plate";
   bdSave.disabled = !!savedDefault && samePlate(globalPlate, savedDefault);
   // Every card that follows the global needs its preview and link redrawn.
   cardSyncs.forEach(fn => fn());
@@ -792,28 +839,35 @@ function applyBackdrop() {
 
 // Push a plate *into* the controls, then let applyBackdrop read it back out.
 function setControls(p) {
-  bdColor.value = p.bgHex.startsWith("#") ? p.bgHex : "#" + p.bgHex;
-  bdAlpha.value = Math.round(p.bgA * 100);
-  bdRadius.value = p.radius;
+  globalPlate = p;
+  if (p) {
+    bdColor.value = p.bgHex.startsWith("#") ? p.bgHex : "#" + p.bgHex;
+    bdAlpha.value = Math.round(p.bgA * 100);
+    bdRadius.value = p.radius;
+  }
   applyBackdrop();
 }
 
-bdColor.oninput = applyBackdrop;
-bdAlpha.oninput = applyBackdrop;
-bdRadius.oninput = applyBackdrop;
+// Moving any control means the user is choosing a global value, not deferring.
+bdColor.oninput = () => applyBackdrop(true);
+bdAlpha.oninput = () => applyBackdrop(true);
+bdRadius.oninput = () => applyBackdrop(true);
 
-bdReset.onclick = () => setControls(savedDefault || SHIPPED);
+bdReset.onclick = () => setControls(savedDefault);   // null = back to as-designed
 bdSave.onclick = () => {
-  savedDefault = plateOf(globalPlate.bgHex, globalPlate.bgA, globalPlate.radius);
-  try { localStorage.setItem(PLATE_KEY, JSON.stringify(savedDefault)); }
-  catch { /* private mode or full storage — the setting still applies this session */ }
+  savedDefault = globalPlate && plateOf(globalPlate.bgHex, globalPlate.bgA,
+    globalPlate.radius, globalPlate.edgeA);
+  try {
+    if (savedDefault) localStorage.setItem(PLATE_KEY, JSON.stringify(savedDefault));
+    else localStorage.removeItem(PLATE_KEY);   // "as designed" is a savable choice too
+  } catch { /* private mode or full storage — the setting still applies this session */ }
   bdSave.textContent = "Saved";
   clearTimeout(bdSave._t);
   bdSave._t = setTimeout(() => { bdSave.textContent = "Save as default"; applyBackdrop(); }, 1400);
   applyBackdrop();
 };
 
-setControls(globalPlate);   // shipped default, or whatever the user saved
+setControls(globalPlate);   // as designed, or whatever the user saved
 
 refresh();
 </script>

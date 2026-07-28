@@ -1,14 +1,13 @@
 /* Overlay module — see the contract in ADR 0005.
    Draw body byte-for-byte from the prototype. `bind(ctx, s)` wires the module-global ctx/state the helpers use. */
 
-import { C, bind, clock, glass, mono, shiftTimes, txt } from "../engine/draw-kit.js";
+import { C, bind, clock, mono, shiftTimes, txt } from "../engine/draw-kit.js";
 
 export const id = "shift-rhythm";
 
 export function draw(ctx, w, h, s, mem) {
   bind(ctx, s);
 
-  glass(.5,.5,w-1,h-1,7);
   const mid=h/2, span=12;
   ctx.beginPath(); ctx.moveTo(12,mid); ctx.lineTo(w-12,mid);
   ctx.strokeStyle=C.faint; ctx.lineWidth=1; ctx.stroke();

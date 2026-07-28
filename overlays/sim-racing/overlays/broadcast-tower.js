@@ -1,7 +1,7 @@
 /* Overlay module — see the contract in ADR 0005.
    Draw body byte-for-byte from the prototype. `bind(ctx, s)` wires the module-global ctx/state the helpers use. */
 
-import { C, DEG, bind, gearName, glass, mono, oxa, pct, revStrip, tel, txt } from "../engine/draw-kit.js";
+import { C, DEG, bind, gearName, mono, oxa, pct, revStrip, tel, txt } from "../engine/draw-kit.js";
 
 export const id = "broadcast-tower";
 
@@ -9,7 +9,6 @@ export function draw(ctx, w, h, s, mem) {
   bind(ctx, s);
   const t = tel;   // telemetry (rpm/spd) is a separate object, like the prototype
 
-  glass(.5,.5,w-1,h-1,6);
   const row=(y,label,val,col,frac)=>{
     ctx.fillStyle="rgba(255,255,255,0.05)"; ctx.fillRect(10,y,w-20,30);
     ctx.fillStyle=col; ctx.globalAlpha=0.22; ctx.fillRect(10,y,(w-20)*frac,30); ctx.globalAlpha=1;

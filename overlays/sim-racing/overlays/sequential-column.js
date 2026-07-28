@@ -1,14 +1,13 @@
 /* Overlay module — see the contract in ADR 0005.
    Draw body byte-for-byte from the prototype. `bind(ctx, s)` wires the module-global ctx/state the helpers use. */
 
-import { C, bind, glass, mono, txt } from "../engine/draw-kit.js";
+import { C, bind, mono, txt } from "../engine/draw-kit.js";
 
 export const id = "sequential-column";
 
 export function draw(ctx, w, h, s, mem) {
   bind(ctx, s);
 
-  glass(.5,.5,w-1,h-1,8);
   const pop=Math.max(0,1-s.shiftAge/0.3);
   for(let g=6;g>=1;g--){
     const y=28+(6-g)*20, on=g===s.gear;

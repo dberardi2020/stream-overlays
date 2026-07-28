@@ -1,12 +1,11 @@
 /* Overlay module — see the contract in ADR 0005.
    Draw body byte-for-byte from the prototype. */
 
-import { CH, glass, hist, traceOf } from "../engine/draw-kit.js";
+import { CH, hist, traceOf } from "../engine/draw-kit.js";
 
 export const id = "waterfall";
 
 export function draw(ctx, w, h, s, mem) {
-  glass(ctx, 0.5, 0.5, w - 1, h - 1, 7);
   const pl = 10, pr = 10, gw = w - pl - pr;
   const { n } = traceOf("thr", 150);
   for (const ch of CH){

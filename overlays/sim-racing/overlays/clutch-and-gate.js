@@ -1,14 +1,13 @@
 /* Overlay module — see the contract in ADR 0005.
    Draw body byte-for-byte from the prototype. `bind(ctx, s)` wires the module-global ctx/state the helpers use. */
 
-import { C, bind, drawGate, drawKnob, glass, mono, txt } from "../engine/draw-kit.js";
+import { C, bind, drawGate, drawKnob, mono, txt } from "../engine/draw-kit.js";
 
 export const id = "clutch-and-gate";
 
 export function draw(ctx, w, h, s, mem) {
   bind(ctx, s);
 
-  glass(.5,.5,w-1,h-1,8);
   const cx=w/2+20, cy=h/2, sx=38, sy=32;
   drawGate(cx,cy,sx,sy,5);
   drawKnob(cx,cy,sx,sy,9);
