@@ -123,6 +123,27 @@ The 3 `Wheel` variants and the `bars`/`history` clusters. Family metadata exists
 
 The engine calibrates pedals + steering only; it does **not** capture the H-shifter (gear/lever). This is **direct HID input, not telemetry**, so it's part of the **v0 input-binding requirement** — the shifter overlays can't run live without it. Extend `gamepad.js` (read the shifter's gear buttons) + `calibration.js` (a "shift into each gear, capture the button" step) and add that step to the setup page (SO-0017). The pedals+steering flow is known-good (ported from the actively-used version); the shifter capture is new and **needs a real-G923 round-trip to verify** — build the framework, confirm button mapping on hardware.
 
+**Update (2026-07-27/28) — hardware round-trip done on the PC; branch `feature/so-0006-split-gear-sources`.**
+The G923 + Driving Force Shifter map captured off real hardware: **R,1–6 → buttons 11,12,13,14,15,16,17**
+(contiguous), **paddles → buttons 4 (up) / 5 (down)**. Calibration reads back and persists correctly. Driving
+it found four things no headless test could:
+
+1. **Both controls could not coexist** — one calibration destroyed the other, and either Clear wiped both.
+   Fixed by splitting the map; the paddles-can't-report-position principle became
+   [ADR 0007](../decisions/0007-gear-sources-are-independent.md), which also deleted `stepSequentialGear`.
+2. **Every shift logged twice** — a real H-pattern crosses neutral, so 2 → N → 3 counted a phantom downshift
+   then a phantom upshift. Visibly jittery. A shift is now a transition between two *engaged* gears.
+3. **The knob replayed finished shifts** — engaging a gear reset the throw timer, so `knobXY` interpolated
+   from the *last engaged* gear, snapping back to the old gate before walking to the new one ("1st, N, back to
+   1st, finally 2nd"). `prevGear` is now the previous *position* and a leg starts when movement is observed.
+4. **The demo could not have caught any of it** — the scripted lap stepped gear-to-gear with no neutral, so it
+   never exercised the crossing path. The lap now crosses neutral and both paths run one shared
+   `engine/gear-motion.js`.
+
+**Still owed:** watching the live round-trip end to end on the rig — gate cells lighting the engaged gear, the
+readout tracking, and gear-driven overlays responding in the gallery's Live mode. Everything above is verified
+by tests and by reading back stored calibration, but the moving picture has not been confirmed by eye.
+
 ### SO-0007 — Telemetry data source (rpm / spd / gear-from-sim) {#so-0007}
 **P2 · Feature · telemetry · deferred (far-off)**
 
@@ -237,6 +258,11 @@ The site is dark-only today — each page hardcodes the `--asphalt`/`--ink` dark
 **P3 · Chore · input**
 
 A sequential shifter (an aftermarket lever, or a wheel's sequential mode) — does it register as two momentary **up/down buttons** (the same HID model as paddles) or as an axis/rocker? Best guess: **up/down buttons**, i.e. identical to the paddle model, so it would ride SO-0006's existing "Paddles" (sequential) capture path and group with the **Shifter**, not the wheel — an absolute H-shifter is the odd one out (one button per position). Confirm on real hardware (none on hand — untestable now), then finalise the label (likely "Paddles / sequential") and the grouping (SO-0029, done). Blocks nothing; a correctness + labelling check on SO-0006's sequential path. **Update (2026-07-24):** the setup UI now ships this assumption — the Shifter box treats **paddles / sequential as one control** (labelled "Paddles / sequential", captured as a single up/down pair), separate from the absolute H-shifter. What remains is the hardware confirmation that a real sequential lever reports as those two momentary buttons (not an axis/rocker); if it doesn't, the capture path — not the grouping — is what changes.
+
+**Update (2026-07-27) — half-confirmed.** The G923's **paddles** capture cleanly as two distinct momentary
+buttons (4 = up, 5 = down) through the existing pair path, so the model and grouping hold for paddles. A real
+**sequential lever** is still untested — none on hand — so whether one reports as the same two momentary
+buttons remains open. That is now the only thing left in this ticket.
 
 ### SO-0031 — Live overlay previews on setup: shelved, revisit post-launch {#so-0031}
 **P3 · Idea · setup/UX**
