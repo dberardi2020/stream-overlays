@@ -20,6 +20,7 @@
 
 import { createDemoLap, idx, scriptedGearAt } from "./demo-lap.js";
 import { tel, hist, shiftLog, shiftTimes, gateUse, clock, mode, HIST_MAX } from "./draw-kit.js";
+import { applyAbsoluteGear, createGearMemory } from "./gear-motion.js";
 
 const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
 
@@ -41,6 +42,7 @@ export function createDemoDriver() {
     real: true
   };
 
+  let gearMem = createGearMemory();
   const driver = { state, speed: 1, playing: true, tick, reset };
 
   function reset() {
@@ -49,6 +51,7 @@ export function createDemoDriver() {
     shiftTimes.length = 0;
     for (const k of Object.keys(gateUse)) gateUse[k] = 0;
     clock.t = 0; clock.lapTime = 0;
+    gearMem = createGearMemory();
     tel.rpm = 0; tel.spd = 0;
   }
 
@@ -62,29 +65,19 @@ export function createDemoDriver() {
     tel.rpm = T.rpm[i];
     tel.spd = T.spd[i];
 
-    const g = scriptedGearAt(gearEvents, clock.lapTime);
-    if (g !== state.gear) {
-      state.prevGear = state.gear;
-      state.shiftDir = g > state.gear ? 1 : -1;
-      state.gear = g;
-      state.shiftAge = 0;
-      state.shiftCount++;
-      shiftLog.push({ rpm: tel.rpm, dir: state.shiftDir });
-      shiftTimes.push({ t: clock.t, dir: state.shiftDir });
-      if (shiftLog.length > 60) shiftLog.shift();
-      if (shiftTimes.length > 40) shiftTimes.shift();
-    } else {
-      state.shiftAge += dt;
-    }
+    /* Exactly the bookkeeping the live rig runs — same function, not a copy of it
+       (gear-motion.js). The scripted lap crosses neutral between gears like real
+       hardware does, so the demo exercises the same paths and previews honestly;
+       it used to step 4 -> 3 -> 2 with no intermediate, which quietly made every
+       gear overlay look smoother in the gallery than it could ever look live. */
+    applyAbsoluteGear(state, scriptedGearAt(gearEvents, clock.lapTime), dt, gearMem);
 
+    /* The synthetic clutch dip stays demo-only: a G923's clutch is a real pedal
+       read on the live path, so there is nothing to fake there. */
     const m = mode();
-    state.shiftProg = clamp01(m.throw ? state.shiftAge / m.throw : 1);
-    state.lever = (m.absolute && state.shiftProg < 1) ? 0 : state.gear;
     state.clu = (m.cluDur && state.shiftAge < m.cluDur)
       ? Math.sin(Math.PI * (state.shiftAge / m.cluDur)) * m.cluPeak
       : 0;
-
-    if (state.lever > 0) gateUse[state.lever] += dt;
 
     hist.thr.push(state.thr);
     hist.brk.push(state.brk);

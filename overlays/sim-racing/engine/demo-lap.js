@@ -44,6 +44,36 @@ export function scriptedGearAt(gearEvents, t) {
   return g;
 }
 
+/* Seconds the lever spends crossing neutral between two gears. A real H-pattern
+   shift is roughly this; what matters is that it is non-zero. */
+export const NEUTRAL_SECONDS = 0.16;
+
+/* Put the neutral back into the schedule. Every real H-pattern shift crosses
+   neutral, so a lap that steps 4 -> 3 -> 2 with nothing in between describes a
+   gearbox that does not exist — and, worse, made the demo unable to reproduce
+   anything that only happens on a crossing. Two bugs lived in that gap until a
+   real G923 found them. The demo is the gallery's preview of the product, so it
+   has to produce the shape of data the product actually receives.
+
+   Mutates in place, assumes `events` is sorted. Never places a neutral before
+   the preceding event, so gears closer together than NEUTRAL_SECONDS just get a
+   shorter crossing rather than an out-of-order schedule. */
+export function insertNeutrals(events) {
+  const out = [];
+  for (let i = 0; i < events.length; i++) {
+    const e = events[i];
+    if (i > 0) {
+      const prev = events[i - 1];
+      const t = Math.max(prev.t + 0.01, e.t - NEUTRAL_SECONDS);
+      if (t < e.t) out.push({ t, gear: 0 });
+    }
+    out.push(e);
+  }
+  events.length = 0;
+  events.push(...out);
+  return events;
+}
+
 /* Returns the filled arrays + gear schedule. `A` is input (thr/brk/str), `T` is
    telemetry (rpm/spd) — kept apart exactly as the prototype has it. */
 export function createDemoLap() {
@@ -89,6 +119,7 @@ export function createDemoLap() {
   }
   gearEvents.push({ t: 0, gear: 4 });
   gearEvents.sort((a, b) => a.t - b.t);
+  insertNeutrals(gearEvents);
 
   smooth(A.thr, 4); smooth(A.brk, 4); smooth(A.str, 7);
 

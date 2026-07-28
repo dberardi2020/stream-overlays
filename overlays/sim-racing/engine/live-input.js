@@ -32,7 +32,8 @@
    unit); each simply reports the motion that actually happened. */
 import { mapPedal, mapWheel, resolveShifterGear } from "./calibration-math.js";
 import { getPad, isButtonDown } from "./gamepad.js";
-import { tel, shiftLog, shiftTimes, gateUse, clock, MODES } from "./draw-kit.js";
+import { MODES, clock } from "./draw-kit.js";
+import { applyAbsoluteGear, logShift, createGearMemory } from "./gear-motion.js";
 
 export const CALIBRATION_KEY = "g923.calibration.v2";
 const FRAME_DT = 1 / 60;   // fallback when a caller doesn't pass a real delta
@@ -45,12 +46,6 @@ const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
    all, because its position is measured (see applyGear). */
 const PADDLE_MODE = MODES.find(m => m.id === "PADDLE");
 
-/* How long the knob takes to travel ONE observed leg of the gate — gate to rail,
-   or rail to gate. Short: it is catching the lever up, never predicting it, so a
-   long duration would just lag reality. Not the H-pattern "throw" it replaces;
-   that timed a whole invented 1->2 transit and started after the shift finished
-   (see applyGear). Each leg here spans two positions we actually measured. */
-const LEG_SECONDS = 0.12;
 
 /* Gear map shape (see ADR 0007):
      { shifter: { buttons: { R,1..6 -> index } },   // optional
@@ -116,95 +111,29 @@ export function readPaddleEdges(gearMap, pad, mem) {
   return edges;
 }
 
-/* Apply a resolved gear to the state + shared shifter singletons, exactly as
-   demo-driver.js's tick does: log the change, age the shift, derive the throw
-   (shiftProg) and the gate-animated lever, accumulate gate dwell. Exported so
-   the bookkeeping is unit-testable without a live pad. */
-function logShift(state, dir) {
-  state.shiftDir = dir;
-  state.shiftAge = 0;
-  state.shiftCount++;
-  shiftLog.push({ rpm: tel.rpm, dir });
-  shiftTimes.push({ t: clock.t, dir });
-  if (shiftLog.length > 60) shiftLog.shift();
-  if (shiftTimes.length > 40) shiftTimes.shift();
-}
-
+/* One frame of gear input. The absolute bookkeeping lives in gear-motion.js and
+   is shared with the demo driver — see the note there on why these are no longer
+   two parallel copies. This function's own job is only to decide WHICH sources
+   are live and hand each its measurement. */
 export function applyGear(state, gearMap, pad, dt, mem) {
   const absolute = hasShifter(gearMap);
-  const gear = readGear(gearMap, pad);              // null unless an H-shifter is mapped
   const edges = readPaddleEdges(gearMap, pad, mem);
   let shifted = false;
 
-  /* Position source. A shift is a transition between two ENGAGED gears: on a real
-     H-pattern every shift physically crosses neutral (2 -> N -> 3), so counting
-     each change of `gear` would log two events per shift — a phantom downshift
-     into neutral and a phantom upshift out of it. That is real jitter: doubled
-     shiftCount, flapping shiftDir, a shiftLog full of noise.
+  if (absolute) shifted = applyAbsoluteGear(state, readGear(gearMap, pad), dt, mem);
 
-     So `gear` still tracks the live position every frame (the gate correctly
-     reads NEUTRAL mid-shift), but the EVENT is logged only on engagement, with
-     its direction measured from the last gear actually engaged.
-
-     demo-driver.js keeps the simpler form deliberately: its scripted lap steps
-     gear-to-gear and never passes through neutral, so the two cannot diverge. */
-  if (gear !== null) {
-    if (state.gear === null) {
-      // First look at the rig: whatever it is holding, we did not watch it get
-      // there. Sitting in 3rd at session start is not a shift into 3rd.
-      state.gear = gear;
-      state.prevGear = gear;
-      mem.legAge = LEG_SECONDS;                     // already there; no travel to draw
-      if (gear !== 0) mem.engaged = gear;
-    } else if (gear !== state.gear) {
-      /* The lever MOVED, and this is the frame we saw it. Start a leg from where
-         it was to where it now is — including to and from neutral, which is a
-         real position on the gate, not a gap between gears. */
-      state.prevGear = state.gear;
-      mem.legAge = 0;
-      state.gear = gear;
-      if (gear !== 0) {                             // engaged — the shift completes here
-        // From the last gear actually engaged; falling back to 0 because if we
-        // never held one, the neutral we were sitting in WAS observed.
-        const from = mem.engaged != null ? mem.engaged : 0;
-        if (from !== gear) {
-          logShift(state, gear > from ? 1 : -1);
-          shifted = true;
-        }
-        mem.engaged = gear;
-      }
-    }
-  }
-  // Direction source: independent of the above — a paddle pull is its own event.
+  // Direction source: independent of the above — a paddle pull is its own event,
+  // real even while the H-shifter holds a gear.
   if (edges.up)   { logShift(state, +1); shifted = true; }
   if (edges.down) { logShift(state, -1); shifted = true; }
 
-  if (!shifted) state.shiftAge += dt;
-
-  if (absolute) {
-    /* `lever` is the measured gear — no waiting out a throw, so the readout reads
-       neutral exactly while the lever is in neutral.
-
-       `shiftProg` drives only where knobXY DRAWS the knob, and it runs per leg:
-       gate -> rail, then rail -> gate. Each leg spans two positions we actually
-       observed, along the route the gate physically constrains, and starts on the
-       frame the movement was seen. That is interpolation between measurements,
-       not invention — unlike the old H-pattern throw, which spanned 1 -> 2 as a
-       single invented transit and began only once the shift had already finished,
-       snapping the knob back to the old gear to replay it.
-
-       `shiftAge` is separate and keeps counting: the shift-flash overlays key off
-       it, and time-since-shift is a real elapsed measurement. */
-    mem.legAge = mem.legAge == null ? LEG_SECONDS : mem.legAge + dt;
-    state.shiftProg = clamp01(mem.legAge / LEG_SECONDS);
-    state.lever = state.gear;
-    if (state.lever > 0) gateUse[state.lever] += dt;   // reverse (-1) never accrues gate dwell
-  } else {
-    // Paddles report an event, not a position — here the animation is all there is.
-    state.shiftProg = clamp01(PADDLE_MODE.throw ? state.shiftAge / PADDLE_MODE.throw : 1);
-    // No position source. Clear the gear outright rather than leaving whatever
-    // it last held (createState seeds 0, and a stale 0 reads as "in neutral").
+  if (!absolute) {
+    // No position source: gear is unknown, never 0 (ADR 0007). A paddle reports
+    // an event, so here the shift animation is all there is — and it has to be
+    // derived AFTER the edges above, or it reads a shiftAge they just reset.
     state.gear = null; state.prevGear = null; state.lever = null;
+    if (!shifted) state.shiftAge += dt;
+    state.shiftProg = clamp01(PADDLE_MODE.throw ? state.shiftAge / PADDLE_MODE.throw : 1);
   }
 }
 
