@@ -7,11 +7,13 @@
 
 Browser **overlays for streamers** that read your hardware in the browser and composite over your scene in **OBS**. Everything is a **static file** and every setting lives **in the URL**, so there is no install, no account, and nothing to host but plain files. The first vertical is **sim racing** — live **throttle / brake / clutch / steering / gears** from a **Logitech G923**, drawn as a catalogue of small canvas overlays.
 
-![Data flow: the browser reads the G923 wheel via the Gamepad API; the engine normalises it into channel values through per-wheel calibration; an overlay module draws those channels to a transparent canvas; OBS composites the canvas over the stream scene.](docs/assets/data-flow.svg)
+![The Stream Overlays landing page: the headline "Your rig, live on your stream." beside four overlays animating over a demo lap — Needle Gauges, Gate with Trail showing GEAR 4, Lever Position, and Pedal Blocks — above a three-step find, set up, use flow.](docs/assets/landing.png)
 
 > **Status: works, not yet hosted.** The catalogue holds **73 overlays** (`overlays/sim-racing/catalogue.json`, the source of truth); all **69** non-excluded ones are migrated to the one-file-per-overlay module architecture and pixel-checked against a golden render (see [Testing](#testing)). Pedals, wheel, H-shifter and paddles all bind to a real G923 and are verified on hardware. What is missing is **hosting** — you run it from a local static server today, so the overlay URLs only work while that server is up.
 
 ## Model, in five words
+
+![Data flow: the browser reads the G923 wheel via the Gamepad API; the engine normalises it into channel values through per-wheel calibration; an overlay module draws those channels to a transparent canvas; OBS composites the canvas over the stream scene.](docs/assets/data-flow.svg)
 
 - **Overlay** — one canvas renderer, selected by its **immutable id**: `?style=bowtie`. Ids are never
   reused or renumbered, so a URL you pasted into OBS keeps working.
