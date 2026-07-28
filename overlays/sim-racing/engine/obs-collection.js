@@ -23,6 +23,13 @@
  * The collection format is OBS's own and is not a documented public API, so this
  * targets the widely-compatible subset: sources carry both `name` and `uuid`, and
  * scene items reference both, since which one OBS honours varies by version.
+ *
+ * **Verified importing cleanly** via Scene Collection → Import on Windows,
+ * 2026-07-27. The unit tests cover what would be silently wrong in a file that
+ * imports fine (sizes, scale agreement, shutdown, dangling item references); they
+ * cannot cover acceptance, so that is what this note is for. If a future OBS
+ * rejects it, the fields most likely at fault are the `*_ver` stamps and the
+ * scene item shape — those are the parts pinned to a version.
  */
 
 const CANVAS = { w: 1920, h: 1080 };
