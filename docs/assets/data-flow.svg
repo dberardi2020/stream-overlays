@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="150" viewBox="0 0 640 150" role="img" aria-label="Data flow: the browser reads the G923 wheel via the Gamepad API; the engine normalises it into channel values through per-wheel calibration; an overlay module draws those channels to a transparent canvas; OBS composites the canvas over the stream scene." font-family="IBM Plex Mono, ui-monospace, monospace" font-size="12">
+  <style>
+    .box{fill:none;stroke:#64b5ff;stroke-width:1.5}
+    .lbl{fill:#1b1e24}.sub{fill:#5f6672;font-size:10px}
+    .arr{stroke:#8b929e;stroke-width:1.5;marker-end:url(#a)}
+    @media (prefers-color-scheme: dark){.lbl{fill:#c9cdd6}.sub{fill:#878d9a}}
+  </style>
+  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8b929e"/></marker></defs>
+  <rect class="box" x="8"   y="46" width="120" height="58" rx="8"/><text class="lbl" x="68"  y="70" text-anchor="middle">G923 wheel</text><text class="sub" x="68"  y="88" text-anchor="middle">Gamepad API</text>
+  <rect class="box" x="176" y="46" width="120" height="58" rx="8"/><text class="lbl" x="236" y="70" text-anchor="middle">engine</text><text class="sub" x="236" y="88" text-anchor="middle">calibrate → 0..1</text>
+  <rect class="box" x="344" y="46" width="120" height="58" rx="8"/><text class="lbl" x="404" y="70" text-anchor="middle">overlay module</text><text class="sub" x="404" y="88" text-anchor="middle">draw(ctx,…)</text>
+  <rect class="box" x="512" y="46" width="120" height="58" rx="8"/><text class="lbl" x="572" y="70" text-anchor="middle">OBS</text><text class="sub" x="572" y="88" text-anchor="middle">Browser Source</text>
+  <line class="arr" x1="128" y1="75" x2="174" y2="75"/>
+  <line class="arr" x1="296" y1="75" x2="342" y2="75"/>
+  <line class="arr" x1="464" y1="75" x2="510" y2="75"/>
+</svg>

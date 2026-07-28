@@ -7,24 +7,7 @@
 
 Browser **overlays for streamers** that read your hardware in the browser and composite over your scene in **OBS**. Everything is a **static file** and every setting lives **in the URL**, so there is no install, no account, and nothing to host but plain files. The first vertical is **sim racing** — live **throttle / brake / clutch / steering / gears** from a **Logitech G923**, drawn as a catalogue of small canvas overlays.
 
-<p align="center">
-<svg width="640" height="150" viewBox="0 0 640 150" role="img" aria-label="Data flow: the browser reads the G923 wheel via the Gamepad API; the engine normalises it into channel values through per-wheel calibration; an overlay module draws those channels to a transparent canvas; OBS composites the canvas over the stream scene." xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="12">
-  <style>
-    .box{fill:none;stroke:#64b5ff;stroke-width:1.5;rx:8}
-    .lbl{fill:#c9cdd6}.sub{fill:#878d9a;font-size:10px}
-    .arr{stroke:#5f6672;stroke-width:1.5;marker-end:url(#a)}
-    @media (prefers-color-scheme: light){.lbl{fill:#1b1e24}.sub{fill:#5f6672}}
-  </style>
-  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#5f6672"/></marker></defs>
-  <rect class="box" x="8"   y="46" width="120" height="58" rx="8"/><text class="lbl" x="68"  y="70" text-anchor="middle">G923 wheel</text><text class="sub" x="68"  y="88" text-anchor="middle">Gamepad API</text>
-  <rect class="box" x="176" y="46" width="120" height="58" rx="8"/><text class="lbl" x="236" y="70" text-anchor="middle">engine</text><text class="sub" x="236" y="88" text-anchor="middle">calibrate → 0..1</text>
-  <rect class="box" x="344" y="46" width="120" height="58" rx="8"/><text class="lbl" x="404" y="70" text-anchor="middle">overlay module</text><text class="sub" x="404" y="88" text-anchor="middle">draw(ctx,…)</text>
-  <rect class="box" x="512" y="46" width="120" height="58" rx="8"/><text class="lbl" x="572" y="70" text-anchor="middle">OBS</text><text class="sub" x="572" y="88" text-anchor="middle">Browser Source</text>
-  <line class="arr" x1="128" y1="75" x2="174" y2="75"/>
-  <line class="arr" x1="296" y1="75" x2="342" y2="75"/>
-  <line class="arr" x1="464" y1="75" x2="510" y2="75"/>
-</svg>
-</p>
+![Data flow: the browser reads the G923 wheel via the Gamepad API; the engine normalises it into channel values through per-wheel calibration; an overlay module draws those channels to a transparent canvas; OBS composites the canvas over the stream scene.](docs/assets/data-flow.svg)
 
 > **Status: works, not yet hosted.** The catalogue holds **73 overlays** (`overlays/sim-racing/catalogue.json`, the source of truth); all **69** non-excluded ones are migrated to the one-file-per-overlay module architecture and pixel-checked against a golden render (see [Testing](#testing)). Pedals, wheel, H-shifter and paddles all bind to a real G923 and are verified on hardware. What is missing is **hosting** — you run it from a local static server today, so the overlay URLs only work while that server is up.
 
