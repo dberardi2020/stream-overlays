@@ -123,12 +123,17 @@ export function createDemoLap() {
 
   smooth(A.thr, 4); smooth(A.brk, 4); smooth(A.str, 7);
 
+  /* Telemetry runs off the last ENGAGED gear, never the neutral between two of
+     them. The schedule crosses neutral now (see insertNeutrals), and neutral has
+     no ratio — RATIO[0] is 0, which would read as infinite drive and make the car
+     accelerate HARDER mid-shift. Holding the outgoing gear keeps the speed/rpm
+     curve exactly what it was before neutrals existed. */
   const RATIO = [0, 3.30, 2.25, 1.66, 1.30, 1.05, 0.86];
   let speed = 22;
   for (let i = 0; i < N; i++) {
     const t = i / HZ;
     let g = 4;
-    for (const e of gearEvents) { if (e.t <= t) g = e.gear; else break; }
+    for (const e of gearEvents) { if (e.t <= t) { if (e.gear !== 0) g = e.gear; } else break; }
     speed = Math.max(6, Math.min(88,
       speed + (A.thr[i] * 26 / (0.7 + RATIO[g]) - A.brk[i] * 42 - 1.4) / HZ));
     T.spd[i] = speed;
