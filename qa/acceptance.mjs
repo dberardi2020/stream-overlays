@@ -3,6 +3,18 @@
  * Renders every migrated overlay in real headless Chromium at the fixed state in
  * qa/fixture.json (qa/render.html), and checks two things:
  *   1. non-blank — the real-pixel successor to the node mock's blank-tile guard;
+ *   NOTE ON GOLDEN PROVENANCE (SO-0038). Goldens come from two sources now.
+ *   40 were captured from the prototype and still test what they always did:
+ *   that the module port is pixel-faithful to it, so a diff isolates to a
+ *   mis-ported helper. The other 29 were re-baselined from the *modules*, in
+ *   this repo, because those overlays deliberately no longer match the
+ *   prototype — their baked backing moved to the plate. Recapturing them from
+ *   the prototype would restore a baseline the product intends to differ from.
+ *   Those 29 are therefore a regression baseline (catches unintended change)
+ *   rather than a fidelity baseline (proves the port was right). Both are
+ *   worth having; they are not the same guarantee, and the difference should
+ *   not be quietly forgotten.
+ *
  *   2. faithfulness — pixel-diff against qa/golden/<id>.png, captured from the
  *      prototype at the same state. Since draw bodies are byte-for-byte, a diff
  *      isolates to a mis-ported helper. Overlays with no golden yet are noted, not

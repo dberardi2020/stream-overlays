@@ -18,9 +18,11 @@ product — those live in the repo docs and this links to them:
 | Overlay modules (canvas draw) | `overlays/sim-racing/overlays/*.js` | **Yes — real canvas pixels** |
 | Live overlay page | `pages/overlay.html?style=<id>` | **Yes — needs a real wheel + OBS** |
 | Demo driver (animated preview state) | `engine/demo-lap.js` + `engine/demo-driver.js` | No — pure, node-testable; reproduces `qa/fixture.json` |
-| Gallery page | `pages/gallery.html` | **Yes — 68 live canvases in a real browser** |
+| Gallery page | `pages/gallery.html` | **Yes — 69 live canvases in a real browser** |
 | Admin page (curate + export catalogue.json) | `pages/admin.html` | **Yes — edit/persist/export in a real browser** |
-| Configure / landing | *not built yet* (SO-0003/9/10) | Yes, when they exist |
+| Landing page | `index.html` | **Yes — hero teaser animates in a real browser** |
+| Setup / calibration | `pages/setup.html` | **Yes — needs a real wheel** |
+| Debug inspector | `pages/debug.html` (localhost only) | **Yes — raw axes/buttons from a real wheel** |
 
 ## How to run
 
@@ -35,7 +37,11 @@ node qa/acceptance.mjs --keep       # + PNGs and .diff.png in qa/renders/
 node qa/acceptance.mjs --open       # headed + slowed, for eyeballing
 #   Skips cleanly (exit 0) if Playwright/chromium absent. Enable: npm i && npx playwright install chromium
 
-# Regenerate the golden baseline FROM THE PROTOTYPE (path is a runtime arg, never committed):
+# Regenerate the golden baseline FROM THE PROTOTYPE (path is a runtime arg, never committed).
+# CAUTION: this rewrites ALL goldens + the fixture. 29 overlays deliberately no longer match the
+# prototype (SO-0038 moved their baked backing to the plate), so a blanket recapture would
+# reintroduce a baseline the product intends to differ from. Re-baseline those from the modules:
+#   node qa/acceptance.mjs --keep   then copy qa/renders/<id>.png -> qa/golden/<id>.png
 node qa/capture-golden.mjs <path-to-prototype-catalogue.html>   # writes qa/golden/*.png + qa/fixture.json
 
 # Layer 3 — agentic browser pass (Claude for Chrome)
@@ -49,21 +55,21 @@ Run the layers a change touches; these must stay true.
 
 - [ ] `node --test` green — maths + every migrated overlay paints (mock) + **the demo driver reproduces `qa/fixture.json` exactly** (`tests/demo-driver.test.mjs`) + **the live-input contract** (pedals keyed exactly as `calibration.js` persists them — `tests/live-input.test.mjs`) + **the gear/shifter layer** (button reads, gear maths, and `readGear`/`applyGear` bookkeeping that mirrors the demo driver — `tests/gear-input.test.mjs`).
 - [ ] `pytest` green — manifest valid; `set` agrees with `uses`; no orphan modules.
-- [ ] `node qa/acceptance.mjs` green — every migrated overlay paints in **real** Chromium **and** is pixel-faithful to its prototype golden (any new overlay whose helper is mis-ported fails here).
+- [ ] `node qa/acceptance.mjs` green — every overlay paints in **real** Chromium **and** matches its golden. Two provenances: **40** goldens come from the prototype (a mis-ported helper fails here), **29** were re-baselined from the modules after SO-0038 moved their baked backing to the plate — those catch unintended change but cannot prove the original port was right.
 - [ ] `overlay.html?style=bowtie` served over **http** (never `file://`).
 - [ ] Overlay page background stays **transparent** (OBS composites over it).
 - [ ] A bad `?style=` shows an honest "unknown overlay", not a silent default.
 - [ ] Adding an overlay = module + manifest entry, and both test layers still pass.
-- [ ] `pages/gallery.html` (over http) — all 68 non-excluded tiles paint and animate; set/stage filters, search, and pause/speed/shift controls work; `excluded` overlays are absent; each "Open in OBS →" points at `overlay.html?style=<id>`.
-- [ ] `pages/admin.html` (over http) — all **72** entries show (incl. the 4 module-less as "no module"); editing stage/hidden/note marks the card dirty and bumps the count; edits persist across reload (localStorage); **Export** downloads valid `catalogue.json` (2-space, entries in original order) with edits applied; **Revert all** returns to the committed state. It reads `catalogue.json` and never writes it — the export→commit loop is the only way a change reaches the repo.
-- [ ] **Gallery visual pass (a real browser, human or agentic eye — not just "did it paint")** — the deterministic layers prove pixels exist; they do **not** judge layout or chrome. Screenshot the gallery at a **narrow** width (~760px) and a **wide** one, and check: the grid is multi-column (cards aren't full-width with a small overlay marooned in them); control buttons are cohesive with a clear active state; **capitalization is consistent** (Title-Case filter labels, capitalized placeholder). The **Backdrop builder** composites a colour + opacity over a permanent transparency checker: presets (Black / Dark / Light / White / Checker) set it, the picker + opacity slider dial anything, opacity 0 shows pure checker, and a matching colour+opacity lights its preset. Skipping this is how button/caps/layout regressions ship green — it's a required layer for any UI page, not optional polish.
+- [ ] `pages/gallery.html` (over http) — all 69 non-excluded tiles paint and animate; set/stage filters, search, and pause/speed/shift controls work; `excluded` overlays are absent; each "Open in OBS →" points at `overlay.html?style=<id>`.
+- [ ] `pages/admin.html` (over http) — all **73** entries show (incl. the 4 module-less as "no module"); editing stage/hidden/note marks the card dirty and bumps the count; edits persist across reload (localStorage); **Export** downloads valid `catalogue.json` (2-space, entries in original order) with edits applied; **Revert all** returns to the committed state. It reads `catalogue.json` and never writes it — the export→commit loop is the only way a change reaches the repo.
+- [ ] **Gallery visual pass (a real browser, human or agentic eye — not just "did it paint")** — the deterministic layers prove pixels exist; they do **not** judge layout or chrome. Screenshot the gallery at a **narrow** width (~760px) and a **wide** one, and check: the grid is multi-column (cards aren't full-width with a small overlay marooned in them); control buttons are cohesive with a clear active state; **capitalization is consistent** (Title-Case filter labels, capitalized placeholder). The **Plate** box (its own panel, below the filter bar) sets the background an overlay paints *itself* and exports: presets are **As Designed / None / Black / Dark / Light / White**, where As Designed is the default and means each overlay uses its catalogue plate. Changing it must move **both** the preview pixels and the copied OBS link — a change that moves only one is the exact bug SO-0003 existed to kill. Each card's `▾` names its own source (As Designed / Global / Custom); Radius hides rather than greys when there is no plate to round. Skipping this is how button/caps/layout regressions ship green — it's a required layer for any UI page, not optional polish.
 
 ## Gotchas (QA-side)
 
 - **http required** everywhere — `file://` blocks `fetch` + ES modules (and the Gamepad API needs a secure context). See [ADR 0002](../docs/decisions/0002-static-first-hosting.md).
 - **Fonts** (Oxanium, IBM Plex Mono) load from Google Fonts; the harness `await document.fonts.ready` before drawing, and polls `painted>0` because the first navigation can race first-paint.
 - **Telemetry overlays render but can't run *live*** yet (no rpm/spd source — SO-0007). Not a bug.
-- **The shifter now HAS a live path (SO-0006).** Once an H-shifter or paddles is calibrated on the setup page, `live-input.js` reads the gear buttons each frame and reproduces the demo driver's shift bookkeeping, so shifter overlays animate live. But the button→gear *mapping* is only **unit-proven** — the actual G923 shifter round-trip (real buttons, real OBS browser) is un-mockable and still owed on hardware before this can be called done.
+- **The shifter live path is hardware-verified (SO-0006).** Once an H-shifter or paddles is calibrated on the setup page, `live-input.js` reads the gear buttons each frame and reproduces the demo driver's shift bookkeeping. Confirmed on a real G923 + Driving Force Shifter (R,1–6 → buttons 11–17; paddles 4/5). **The H-pattern crosses neutral on every change** — a real shift is 2 → N → 3, not 2 → 3 — which is why a shift counts only as a transition between two *engaged* gears, and why the demo lap crosses neutral too. Still un-verified: the same loop inside **OBS's own browser** (separate storage, needs its own calibration) and a real **sequential lever** (SO-0030).
 - **The calibration read/write contract is keyed by the LONG channel names** (`throttle`/`brake`/`clutch`/`steering`) — what `calibration.js` persists; `live-input.js` reads the same keys. `tests/live-input.test.mjs` loads a calibration-shaped map so the two can't drift. They did once: pedals were read under `thr`/`brk`/`clu`, so a real calibration never satisfied Live and it rested silently — invisible headless (no gamepad short-circuits `poll()`), only biting on hardware.
 - The 4 `excluded` overlays are archived-in-manifest, intentionally module-less — expect no module for them.
 - **Canvas text has subpixel rendering variance** across page contexts, so glyph-dense overlays (e.g. `terminal`) diff ~0.5% while looking identical. Tolerance is 0.6% with an AA-aware pixelmatch threshold; a real mis-port is a wrong shape at many percent. Don't tighten to chase glyph noise; do investigate any diff whose `.diff.png` shows a *structural* change (missing element, wrong position/colour), not edge scatter.
@@ -73,10 +79,19 @@ Run the layers a change touches; these must stay true.
 
 ## QA roadmap (this system is self-improving)
 
-- **Done: faithfulness golden-diff, full coverage.** All 72 goldens captured from the prototype and
-  committed (`qa/golden/`), `qa/fixture.json` is the frozen state, `qa/acceptance.mjs` pixel-diffs each
-  overlay against its golden. **68/68 non-excluded overlays pixel-faithful.** The baseline is frozen —
-  the prototype can be deleted without losing it. Re-capture only to intentionally re-baseline
-  (`qa/capture-golden.mjs <prototype-path>`).
-- **Owed (SO-0006): the live shifter round-trip on a real G923.** Both sides are now built — the gear **capture UI** (`calibration.js` Shifter section on `setup.html`, writing `map.gear`) and the **read side** + bookkeeping (`live-input.js`, unit + integration covered). What's still un-mockable: the button→gear *mapping* and the whole capture→persist→read→animate loop over a real H-shifter/paddles in a real browser (and OBS's browser once). Until that passes, SO-0006 is "built, hardware-unverified." The **debug inspector** (`pages/debug.html`, SO-0024) is the tool for that pass — it shows exactly which button each gear fires.
+- **Done: faithfulness golden-diff, full coverage.** Goldens are committed (`qa/golden/`) with
+  `qa/fixture.json` as the frozen state, and `qa/acceptance.mjs` pixel-diffs every overlay against
+  its golden: **69/69 passing**. The baseline no longer depends on the prototype existing.
+  **Provenance is now split (SO-0038):** 40 goldens still come from the prototype; 29 were
+  re-baselined from the modules, because those overlays deliberately no longer match the prototype
+  after their baked backing moved out to the plate. Recapturing those 29 with
+  `qa/capture-golden.mjs` would *reintroduce* a baseline the product intends to differ from — don't.
+  The remaining 40 are the stronger check and should still be recaptured from the prototype if ever
+  re-baselined.
+- **Done (SO-0006): the live shifter round-trip, on real hardware (2026-07-28).** A 60 Hz trace over
+  1–6 up, 6–1 down, R and neutral confirmed each engaged gear lights its gate cell, the readout
+  tracks, neutral is genuinely present between every pair of gears, and the paddles return to N
+  rather than inventing a position. What is still un-verified is the same loop inside **OBS's own
+  browser** (it has separate storage, so it needs its own calibration) and a real **sequential
+  lever** (SO-0030) — no such hardware on hand.
 - Layer 3 fresh-eyes persona pass at the first hosted-site milestone (expensive; milestones only).

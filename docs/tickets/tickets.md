@@ -150,30 +150,32 @@ what leaked was an email address, not a credential.
 
 **Structural gaps**
 
-4. **GitHub description is empty.** The standard says one sentence, names the tech, ends with a period, and
-   "Do not skip this." Homepage URL and topics are also unset.
-5. **README has no visual.** Item 4 of the required spine is a visual with real alt text — this is a
-   *visual* product with 69 overlays and the README shows none of them. The most valuable single fix for a
-   stranger landing cold.
-6. **`llms.txt` is materially stale** — it still says "three overlays are migrated, the rest of the
+4. ~~**GitHub description is empty**~~ — **done.** Description set, plus ten topics. Homepage stays empty
+   until there is a host (SO-0008).
+5. ~~**README has no visual**~~ — **this finding was wrong.** The README already carried an inline SVG
+   data-flow diagram with a proper `aria-label`; the audit grepped for Markdown `![` and missed it.
+   The README *was* rewritten to the house shape (badges, `## Model, in five words`, `## Requirements`),
+   and its Status block and Roadmap were badly stale — claiming a configure page and landing page still
+   to come when both had shipped.
+6. ~~**`llms.txt` is materially stale**~~ — **done.** — it still says "three overlays are migrated, the rest of the
    72-overlay catalogue is pending". All 69 non-excluded overlays have been migrated since SO-0001. This is
    the file pointed at coding agents, so it is wrong in the worst possible place.
-7. **Stale counts elsewhere**: `docs/technical/testing.md` and `tickets.md` say "72 entries";
+7. ~~**Stale counts elsewhere**~~ — **done.**: `docs/technical/testing.md` and `tickets.md` say "72 entries";
    `index.html` says "68 overlays". Current is 73 catalogue entries / 69 non-excluded.
-8. **`.pytest_cache/` is not in `.gitignore`** (`__pycache__/` is). Untracked today, so it is hygiene rather
-   than a leak.
+8. ~~**`.pytest_cache/` is not in `.gitignore`**~~ — **done.**
 
 **Judgement calls to make before flipping**
 
-9. **Does `docs/tickets/` go public?** The standard reserves `tickets/tickets.md`, so it is sanctioned — but
-   this board carries frank internal narrative ("where I was wrong", superseded diagnoses, shelved-branch
-   names). Decide whether that reads as admirable engineering transparency or as debris. Leaning: keep it,
-   it is genuinely good, but reread the Done column as a stranger first.
-10. **QA coverage regressed by design.** SO-0038 retired 27 goldens; the harness now checks 40 of 69. The
-    README's `## Testing` claims should not overstate that, and recapturing on a machine with the prototype
-    would be better done before strangers read it.
-11. **Debris sweep** (runbook step 5): `TODO`/`FIXME`, dead files, the dead-end branch `3178ed9`, and the
-    merged `wip/demo-honest-gear` branch — tidying was deferred earlier and this is the moment.
+9. ~~**Does `docs/tickets/` go public?**~~ — **decided: yes.** The board ships, frank narrative included.
+10. ~~**QA coverage regressed by design**~~ — **resolved, but not the way the audit assumed.** The
+    prototype is not on this machine, and recapturing from it would have been *wrong* anyway: those 29
+    overlays deliberately no longer match it. They were re-baselined from the modules instead, which makes
+    them a regression baseline rather than a fidelity one — a real difference, now documented in
+    `acceptance.mjs`, `testing.md` and `product-map.md` rather than left implicit. Back to **69/69**.
+    Also removed 4 orphan goldens for `excluded` overlays that no module can ever render.
+11. ~~**Debris sweep**~~ — **done.** No `TODO`/`FIXME`/`XXX`/`HACK` in tracked source, no stray debug
+    prints, no unreferenced files, no untracked junk. The three merged branches were deleted as part of
+    the history rewrite.
 12. **Post-flip**: update this repo's row in the cross-repo manifest (it still reads private), then load the
     public URL logged out and confirm README, badges and links render for a stranger.
 
