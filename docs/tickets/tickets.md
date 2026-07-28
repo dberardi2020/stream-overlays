@@ -8,25 +8,21 @@ Rows are pointers; anything needing more than a sentence has a block in **Detail
 
 ## In progress
 
-| ID | Pri | Type | Title |
-|---|---|---|---|
-| [SO-0006](#so-0006) | P1 | Feature | Shifter / gear live calibration + input (v0 input binding) |
-| [SO-0024](#so-0024) | P2 | Chore | Dev/debug input inspector page (localhost-only) |
+*(none)*
+
+**Input binding is done.** **SO-0006** closed on hardware (2026-07-28), which was the last
+v0 input-binding requirement — pedals, wheel, H-shifter and paddles all bind live off a real G923.
 
 ## On deck
 
-The committed next few, in intended order. Remaining of the
-[ADR 0006](../decisions/0006-setup-surface-pure-overlay.md) binding overhaul, then the configure page and hosting.
-**Input binding is a v0 requirement** — including the H-shifter/gear (SO-0006), which is direct HID,
-not telemetry. **Telemetry (SO-0007) is explicitly deferred** — a far-off goal — but the setup page
-and overlay are designed to leave a slot for it. The overlay quality pass (SO-0019) is **shelved
-behind input binding + the configure page** — still committed, just no longer the active focus
-(it's polish, not a launch blocker).
+The committed next few, in intended order: the quality pass, then hosting. The
+[ADR 0006](../decisions/0006-setup-surface-pure-overlay.md) binding overhaul and the URL generator
+(SO-0003) are both **complete**, so nothing functional stands between here and go-live —
+what remains is polish and deployment. **Telemetry (SO-0007) is explicitly deferred** — a far-off
+goal — but the setup page and overlay are designed to leave a slot for it.
 
 | ID | Pri | Type | Title |
 |---|---|---|---|
-| [SO-0003](#so-0003) | P2 | Feature | Configure page → URL generator |
-| [SO-0023](#so-0023) | P2 | Feature | Overlay capability requirements + setup-fit checks |
 | [SO-0019](#so-0019) | P1 | Chore | Overlay quality pass — cull half-baked, upgrade the rough |
 | [SO-0008](#so-0008) | P1 | Chore | Hosting + deploy pipeline |
 
@@ -44,6 +40,8 @@ Pre-public candidates not yet committed to the On-deck sequence.
 |---|---|---|---|
 | [SO-0004](#so-0004) | P2 | Feature | OBS gamepad fallback — interactive ladder (guidance already shipped) |
 | [SO-0033](#so-0033) | P3 | Feature | Bulk overlay import — merge into an existing OBS scene collection |
+| [SO-0036](#so-0036) | P3 | Idea | Calibration import/export — can a browser export import into OBS's Web View? |
+| [SO-0037](#so-0037) | P3 | Feature | Plate padding — breathing room around an overlay, and the size contract it moves |
 | [SO-0025](#so-0025) | P2 | Chore | Site style kit — encode design tokens, point every page at it |
 | [SO-0028](#so-0028) | P3 | Idea | Light vs dark mode support |
 
@@ -52,6 +50,7 @@ Pre-public candidates not yet committed to the On-deck sequence.
 | ID | Pri | Type | Title |
 |---|---|---|---|
 | [SO-0007](#so-0007) | P2 | Feature | Telemetry data source (rpm / spd / gear-from-sim) — deferred |
+| [SO-0038](#so-0038) | P2 | Chore | 29 overlays bake their own backing — move it to the plate |
 | [SO-0034](#so-0034) | P2 | Bug | `terminal` golden fails cross-machine on text antialiasing (font loading fixed) |
 | [SO-0035](#so-0035) | P3 | Chore | Gallery Mode button does nothing in Live — relabel or hide |
 | [SO-0027](#so-0027) | P2 | Chore | Ensure integration test coverage is sufficient across the repo |
@@ -86,6 +85,10 @@ are in the docs.*
 
 | ID | Title | Closed |
 |---|---|---|
+| SO-0003 | **Configure → URL generator**, realising [ADR 0001](../decisions/0001-config-in-the-url.md) (config in the URL, never in storage). Closed a gap open since the renderer was written: `overlay.html` had always accepted a plate it paints itself (`?bg=&bga=&radius=`), and **nothing in the product could produce those params** — while the gallery's BACKDROP control, which looked like it configured exactly that, was a preview-only contrast test that never reached OBS. So a setting that appeared to change your stream silently didn't. Resolved by making them **one setting**: BACKDROP became **Plate**, the gallery-wide default that drives both the preview *and* the copied link, with a **per-overlay override** (colour, opacity, radius) behind a `▾` on each card. It lives in its own box, separate from the filter/demo rows above it — those steer the gallery, this changes what the overlays *are*, and mixing them is what let the old control read as another preview toggle. **Save as default** persists the global plate to `localStorage` so the gallery opens with it, and **Reset** returns to that saved default (or to no plate when none is saved); the stored value is a *gallery preference*, not overlay config, so [ADR 0001](../decisions/0001-config-in-the-url.md) still holds — the copied link carries every value explicitly. Radius is **hidden, not disabled**, when opacity is 0: it has nothing to round, and a greyed control invites clicking while explaining nothing. Default is **None/transparent** — an opaque default would have baked a plate into every link copied without touching a control — so an untouched card emits the same minimal `?style=…&scale=…` it always did. Plate params are omitted entirely at alpha 0, matching `overlay.html`'s own rule that it paints nothing below that. **Scale was deliberately not made a lever** (export stays 2×, revisit if it bites) and **padding is deferred to [SO-0037](#so-0037)**. The preview draws checker → plate → overlay into the canvas rather than styling it: that puts the plate at the overlay's exact rectangle, makes the transparency checker mean one thing only (the surround is flat matting, since checkering it too made the same pattern mean opposite things in one picture), and is immune to browser extensions that force canvas backgrounds transparent — which was observed on the dev machine and would otherwise have desynced preview from URL. 115 node + 227 pytest green; verified in-browser that global changes and per-card overrides move the pixels and the link together. | 2026-07-28 |
+| SO-0006 | **Shifter / gear live calibration + input** — the last v0 input-binding requirement, closed on real hardware. `gamepad.js` + `calibration.js` extended to capture gear buttons; a Shifter box on the setup page calibrates an **H-shifter** (one button per position) and **paddles / sequential** (an up/down pair) as **independent sources** ([ADR 0007](../decisions/0007-gear-sources-are-independent.md)) — each calibrated and cleared without touching the other, old single-source maps migrated on read. G923 + Driving Force Shifter mapped: **R,1–6 → buttons 11–17**, **paddles → 4 (up) / 5 (down)**. Driving it found four things no headless test could: both controls couldn't coexist (fixed by the split); every shift logged twice (a real H-pattern crosses neutral, so 2→N→3 counted a phantom down- then upshift — a shift is now a transition between two *engaged* gears); the knob replayed finished shifts (`prevGear` is now the previous *position*, and a leg starts when movement is observed); and the demo couldn't have caught any of it (its lap stepped gear-to-gear with no neutral — it now crosses neutral, and both paths run one shared `engine/gear-motion.js`). `stepSequentialGear` **deleted**: paddles report direction only, and `state.gear` is `null` rather than `0` without an H-shifter, because `0` claims "in neutral". **Hardware round-trip confirmed 2026-07-28** — a 60 Hz trace over 1–6 up, 6–1 down, R and neutral showed every engagement lighting its gate cell and tracking the readout, neutral genuinely present between every pair of gears, and the paddles returning to N rather than inventing a position. | 2026-07-28 |
+| SO-0024 | **Dev/debug input inspector page** (`pages/debug.html`, localhost-only) — the diagnostic for the hardware seam: live raw **axes** + **buttons** (indices + values), the loaded calibration map, and the resolved channel state. Made wheel/shifter issues visible instead of guessed, and was the tool that de-risked SO-0006's central unknown (how the G923 shifter actually reports gears) and carried the PC-side hardware handoff. | 2026-07-28 |
+| SO-0023 | **Overlay capability requirements** — `gear` split into **`gear:absolute`** (which gear you're in — needs an H-shifter) and **`gear:direction`** (shift events — paddles suffice), the distinction [ADR 0007](../decisions/0007-gear-sources-are-independent.md) makes load-bearing. Overlays declare what they consume via `uses`; the **8** whose subject *is* gear position carry `requires` in `catalogue.json`, and the gallery stands them down in Live mode with the reason shown and a link to calibrate (`gallery.html`, `calibration-math.js`) rather than letting someone pick an overlay that can't run for them. *Surfacing the same fit on the configure page folds into SO-0003, which owns that surface.* | 2026-07-28 |
 | SO-0029 | **Setup surface v2** — the calibration surface split from one monolithic panel into **per-component boxes** (Pedals · Wheel · Shifter · Telemetry, each its own card). `createCalibration` became a multi-mount engine (`mounts:{pedals,wheel,shifter,status}`) with the shared axis state machine unchanged — only the DOM re-homed, routed to the active box. Functional grouping (steering→Wheel, H-shifter+paddles→Shifter). Each box embeds its **real overlay as a live preview** (Pedals→pedal-blocks, Wheel→wheel, Shifter→its H-gate), driven by the same state the engine updates — resting at zero until a channel is calibrated + a wheel is connected. Live application decoupled per-channel (meters/previews react as soon as their own channel binds, not on all-pedals). Verified in-browser; 95 node tests green. Per-capability needed/optional tracked in SO-0023; sequential-shifter grouping in SO-0030. **Update (2026-07-24): the live overlay previews were shelved for go-live** — the minimal per-box calibration UI (rows/meters) is enough for now, and the double-duty visuals added noise. The box split + multi-mount engine + per-channel live meters all stayed; only the embedded overlay canvases were removed from `setup.html`. Full implementation preserved on branch `shelf/so-0029-live-overlay-setup`; re-introduction tracked as SO-0031. | 2026-07-24 |
 | SO-0022 | **Overlay & setup polish** — new `pedal-blocks` pedals overlay (the cockpit pedals broken out: diegetic light-up depressing blocks); `gate-with-trail` upgraded to carry gate-map's gear numbers + NEUTRAL/GEAR callout on top of its knob trail (stale golden retired); and the setup **calibration panel** restyled from a bolted-on widget into one cohesive, host-themed component (transparent, full-width, tokenised, live meters in-row). | 2026-07-23 |
 | SO-0021 | **Data-driven hero + curation/admin tooling** — the landing hero is curated in data, not code: a `hero` flag on catalogue entries, toggled in admin via a **★ Hero** control (capped at 4, enforced by a pytest), auto-arranged onto the grid's diagonals; index reads the flag. Admin also gains **Save to file** (File System Access API — writes catalogue.json directly, re-baselines dirty state), and gallery/admin cards gain **Copy OBS link** + **Copy name**. A **local-only Admin link** shows in the nav on localhost. 79 node + 225 pytest green. | 2026-07-23 |
@@ -101,11 +104,6 @@ are in the docs.*
 
 ## Details
 
-### SO-0003 — Configure page → URL generator {#so-0003}
-**P2 · Feature · configure**
-
-Pick style/scale/colours and emit the `?style=…&scale=…&bg=…` URL to paste into OBS. Realises [ADR 0001](../decisions/0001-config-in-the-url.md); no storage. **This is *not* input binding** (that's the setup page, SO-0017) — it only builds the URL. May share a surface with setup.
-
 ### SO-0004 — OBS gamepad fallback flow {#so-0004}
 **P2 · Feature · setup**
 
@@ -117,32 +115,6 @@ The guided ladder from [ADR 0003](../decisions/0003-obs-gamepad-fallback.md): de
 **P3 · Chore · catalogue**
 
 The 3 `Wheel` variants and the `bars`/`history` clusters. Family metadata exists to support this.
-
-### SO-0006 — Shifter / gear live calibration + input {#so-0006}
-**P1 · Feature · input · v0**
-
-The engine calibrates pedals + steering only; it does **not** capture the H-shifter (gear/lever). This is **direct HID input, not telemetry**, so it's part of the **v0 input-binding requirement** — the shifter overlays can't run live without it. Extend `gamepad.js` (read the shifter's gear buttons) + `calibration.js` (a "shift into each gear, capture the button" step) and add that step to the setup page (SO-0017). The pedals+steering flow is known-good (ported from the actively-used version); the shifter capture is new and **needs a real-G923 round-trip to verify** — build the framework, confirm button mapping on hardware.
-
-**Update (2026-07-27/28) — hardware round-trip done on the PC; branch `feature/so-0006-split-gear-sources`.**
-The G923 + Driving Force Shifter map captured off real hardware: **R,1–6 → buttons 11,12,13,14,15,16,17**
-(contiguous), **paddles → buttons 4 (up) / 5 (down)**. Calibration reads back and persists correctly. Driving
-it found four things no headless test could:
-
-1. **Both controls could not coexist** — one calibration destroyed the other, and either Clear wiped both.
-   Fixed by splitting the map; the paddles-can't-report-position principle became
-   [ADR 0007](../decisions/0007-gear-sources-are-independent.md), which also deleted `stepSequentialGear`.
-2. **Every shift logged twice** — a real H-pattern crosses neutral, so 2 → N → 3 counted a phantom downshift
-   then a phantom upshift. Visibly jittery. A shift is now a transition between two *engaged* gears.
-3. **The knob replayed finished shifts** — engaging a gear reset the throw timer, so `knobXY` interpolated
-   from the *last engaged* gear, snapping back to the old gate before walking to the new one ("1st, N, back to
-   1st, finally 2nd"). `prevGear` is now the previous *position* and a leg starts when movement is observed.
-4. **The demo could not have caught any of it** — the scripted lap stepped gear-to-gear with no neutral, so it
-   never exercised the crossing path. The lap now crosses neutral and both paths run one shared
-   `engine/gear-motion.js`.
-
-**Still owed:** watching the live round-trip end to end on the rig — gate cells lighting the engaged gear, the
-readout tracking, and gear-driven overlays responding in the gallery's Live mode. Everything above is verified
-by tests and by reading back stored calibration, but the moving picture has not been confirmed by eye.
 
 ### SO-0007 — Telemetry data source (rpm / spd / gear-from-sim) {#so-0007}
 **P2 · Feature · telemetry · deferred (far-off)**
@@ -219,20 +191,6 @@ Then fix the render bugs triage surfaced: `split-panel` / `lower-third` read rpm
 The current `demo-lap.js` reads robotic. The visible tells: a hard 30-second **seam** (it snaps from the last corner back to the full-throttle start), and **dead-centre steering on straights** so every steering / wheel overlay sits frozen at 0° in previews. Make the loop clean (state at t=30s flows into t=0) and give steering a touch of low-frequency noise so it's never perfectly dead — but keep it *simple*. Full throttle on straights is correct (the fast line), not a bug.
 
 Deliberately minimal placeholder work: this data is superseded by real rig recordings ([SO-0014](#so-0014)), so it isn't worth a physics simulator. (A research pass explored quasi-steady-state lap synthesis — parked as overkill for interim needs.)
-
-### SO-0023 — Overlay capability requirements + setup-fit checks {#so-0023}
-**P2 · Feature · catalogue/setup**
-
-Some overlays need input the viewer may not have wired, and nothing checks it — the gallery filters by set/stage only. The sharpest case (from [SO-0006](#so-0006)): an **absolute-gear** overlay (draws *which* gear you're in) needs an **H-shifter**; **paddles** only yield up/down *events*, not an absolute position, so paddle-only users can run shift-direction overlays but not absolute-gear ones.
-
-Model it on data already present: each entry has `uses` (`thr/brk/clu/str/gear/rpm/spd`) + `telemetry`. Extend that into a **capability requirement** the setup can test against what's calibrated — e.g. split `gear` into "absolute gear (needs H-shifter)" vs "shift events (paddles OK)" — then surface fit ("needs an H-shifter", badged/greyed) in the gallery + configure page rather than letting someone pick an overlay that can't run for them. Pairs with SO-0006 (defines the shifter capabilities), feeds [SO-0003](#so-0003) (configure) and SO-0018 (gallery Live).
-
-**Also redefine "needed" vs "optional" (which today is a crude global rule).** The calibration engine flips `state.real` — "we have live input" — only when all **three pedals** are calibrated, and labels steering "optional." That baseline is arbitrary: a wheel overlay needs steering and not the clutch; a throttle-only overlay needs neither brake nor clutch. Nothing is *globally* required. Under this model "needed" becomes **contextual** — a channel is needed only for the overlays the viewer wants to run — and the setup marks channels needed/optional against that, instead of the hardcoded "3 pedals = real" gate in `live-input.js`/`calibration.js`.
-
-### SO-0024 — Dev/debug input inspector page (localhost-only) {#so-0024}
-**P2 · Chore · tooling**
-
-A local-only diagnostic page for the hardware seam: live raw **axes** + **buttons** (indices + values), the loaded calibration map, and the resolved channel state (thr/brk/clu/str + gear/lever/shiftProg). Makes wheel/shifter issues *visible* instead of guessed — directly de-risks the SO-0006 unknown (how the G923 shifter actually reports gears) and is the tool for the **hardware handoff** (a PC-side agent working live issues). Gate visibility on `localhost`, like the admin link; not shipped to end users.
 
 ### SO-0025 — Site style kit — encode design tokens, point every page at it {#so-0025}
 **P2 · Chore · site**
@@ -359,6 +317,88 @@ what you calibrated, which leaves a control that in Live mode changes nothing ex
 It sits in a `.grp.demo-only` group so it dims, but dimmed-yet-does-something-to-one-overlay is a worse story
 than either honest option: **relabel it** ("Demo shift feel") or **hide it outright in Live**. Small, but it
 is the kind of thing that makes a UI feel untrustworthy.
+
+### SO-0036 — Calibration import/export {#so-0036}
+**P3 · Idea · setup · obs**
+
+Consider adding import/export of calibration. Determine whether an export taken in a normal browser can be
+**imported into OBS's Web View**, so setup can be *almost* fully done in one place instead of calibrated twice.
+
+Today calibration is per-browser-context by design ([ADR 0001](../decisions/0001-config-in-the-url.md) keeps
+*config* in the URL precisely because `localStorage` doesn't cross contexts) — and the setup page's "Using it
+in OBS" card tells people to redo it there. That's the friction this would remove: the rig is the same physical
+hardware either way, so recalibrating it in a second browser is busywork, not a real second measurement.
+
+Open questions, in the order they'd sink it:
+1. **Can OBS's Web View receive an import at all?** It has no visible file picker in the Interact window, so a
+   file-based `<input type=file>` may be unreachable. Paste-a-blob into a textarea is the fallback that most
+   likely works, and would set the format (a small JSON payload, hand-pasteable).
+2. **Does the button map even transfer?** Gamepad indices are per-browser-context. If OBS's Chromium enumerates
+   the G923's axes/buttons identically to desktop Chrome, the map is portable; if the indices shift, an import
+   is worse than useless because it would look calibrated while reading the wrong buttons. **Verify on hardware
+   before building anything** — this is the load-bearing unknown, and it is cheap to test with the debug page
+   (`pages/debug.html`, SO-0024) open in both contexts.
+3. Only then: the UI, and whether export is also useful for backup / moving to a new PC (probably yes,
+   independent of whether the OBS path works).
+
+Pairs with [SO-0004](#so-0004) (the OBS fallback ladder) and [SO-0033](#so-0033) (bulk overlay import) — all
+three are "make the OBS side less manual". Sequence after those only if the index question in (2) comes back
+favourable.
+
+### SO-0038 — 29 overlays bake their own backing {#so-0038}
+**P2 · Chore · overlays · design**
+
+**29 of 69** overlays paint a full-canvas backing inside their own `draw()`, at recurring alpha tiers
+(8%, 33%, 58%, plus a few rounded ones whose corners read 0%). Measured by rendering each module to a bare
+canvas against the demo lap, so this is the drawing itself, not a preview artefact:
+
+- **pedals (6)** — `filled-trace`, `pedal-blocks`, `pedal-box`, `rolling-trace`, `terminal`, `waterfall`
+- **wheel (1)** — `steering-trace`
+- **shifter (10)** — `gate-heatmap`, `gate-map`, `gate-with-trail`, `gear-ladder`, `gear-timeline`,
+  `lever-position`, `sequential-column`, `shift-point-scatter`, `shift-rhythm`, `throw-timer`
+- **combo (12)** — `broadcast-tower`, `case-column`, `clutch-and-gate`, `cockpit`, `corner-card`,
+  `dash-cluster`, `engineer-view`, `gate-strip`, `input-cluster`, `lower-third`, `split-panel`, `unified-trace`
+
+**The problem.** They are *translucent*, so they do not replace the plate from [SO-0003](#so-0003) — they stack
+on it. Set a plate and those 29 come out darker than the other 40, and no setting can make them genuinely
+transparent over a scene. This long predates the plate work; the plate only made it visible.
+
+**The fix is not "delete the backings".** Those overlays were designed to read against a stream and mostly
+need *something*. Strip the fill from `draw()` and move it to a **suggested plate** on the catalogue entry
+(colour + opacity + radius), which the gallery seeds a card with. The overlay then looks as designed out of
+the box, through the one mechanism the user can see, change, turn off, and export — instead of a background
+baked where nothing can reach it. A per-entry `plate` field pairs with the admin editor (SO-0015) for tuning.
+
+**The cost, and why it is not a quick fix:** changing what these overlays draw invalidates their `qa/` goldens
+— 29 of them, the harness that proves the migration was pixel-faithful to the prototype. Retiring a golden on
+deliberate redesign has precedent (`gate-with-trail`, `pedal-blocks` already have none, per SO-0022), and
+[goldens cannot be recaptured from an arbitrary machine](#so-0034) — `capture-golden.mjs` needs the prototype
+`catalogue.html`, deliberately absent from the repo. So this wants doing on a machine that can re-baseline, in
+one deliberate pass. Natural home is [SO-0019](#so-0019), the overlay quality pass, rather than a change made
+on the way to hosting.
+
+### SO-0037 — Plate padding {#so-0037}
+**P3 · Feature · configure**
+
+Several overlays sit tight against the plate's edge and want breathing room. Add a **padding** lever
+alongside the plate's colour / opacity / radius from SO-0003 (done) — bounded, not free-form.
+
+Deferred from SO-0003 because, unlike radius, **this is not just a lever the renderer already supports**.
+`url-config.js` has no `padding`, so it needs a new param, a new default, and `overlay.html` has to inset the
+drawing within a larger stage. The consequence is the part to think about rather than the CSS:
+
+- **It moves the size contract.** The plate grows by `2 × padding`, so the Browser Source dimensions change.
+  The gallery card's advertised size, its `title`, and the copy confirmation all derive from
+  `size × scale` and would each need to account for it — the exact drift the size badge was written to
+  prevent. Someone who already placed a source in OBS would need to resize it.
+- **Bound it.** An unbounded padding is a way to make a 5000px source by accident; a small capped range
+  (say 0–40px, mirroring radius) keeps it a finishing touch rather than a layout tool.
+- Decide whether it is **global-only** (like radius) or **per-overlay** (like colour/opacity). Per-overlay is
+  the more useful answer — padding need is a property of the individual drawing, not of the set — but it is
+  also the one that makes the size badge vary per card.
+
+Worth doing after [SO-0008](#so-0008); it is polish, and it touches the renderer's public URL contract, which
+is a thing to change deliberately rather than late in a session.
 
 ## Conventions
 

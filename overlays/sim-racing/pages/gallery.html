@@ -40,6 +40,16 @@ a:hover{text-decoration:underline}
   border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:18px;
   display:flex;flex-direction:column;gap:9px}
 .bar .row{display:flex;flex-wrap:wrap;gap:9px 16px;align-items:center}
+/* Appearance box — visually a sibling of the filter bar, but not sticky: it is
+   a thing you set, not a thing you steer the page with. */
+.bar.editor{position:static;margin-top:-8px;background:var(--panel)}
+.editor-hd{font-size:11.5px;color:var(--mute);line-height:1.5}
+.editor-hd b{color:var(--ink);font-weight:600}
+.editor-acts{margin-left:auto;gap:7px}
+.editor-acts .btn{font-size:11.5px;padding:5px 10px}
+.editor-acts .btn[disabled]{opacity:.4;cursor:default}
+.editor-acts .btn[disabled]:hover{color:var(--mute);border-color:var(--line);background:var(--panel-2)}
+#bdRadiusGrp.hide{display:none}
 .grp{display:flex;align-items:center;gap:6px;flex:0 0 auto}
 .grp.grow{flex:1 1 190px;min-width:150px}
 .lbl{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);
@@ -98,19 +108,19 @@ h2 .c{color:var(--mute);font-size:12px;font-weight:400;font-family:"IBM Plex Mon
 .needsrc{display:none;font-size:11px;color:var(--mute);margin:6px 0 0;
   border-left:2px solid var(--gear);padding-left:7px}
 .needsrc a{color:var(--clu)}
-/* Contrast-test backdrop behind each preview — a neutral scene, not scenery, so
-   you can judge how an overlay reads against different OBS scene colours. A
-   transparency checker is the permanent substrate; the chosen scene colour +
-   opacity (--scene-bg) composites over it, so opacity 0 = pure checker and any
-   tint shows the transparency through it. Driven by the Backdrop builder. */
+/* Everything that represents the overlay is drawn *into the canvas* by the
+   render loop: the transparency checker, then the plate (?bg=&bga=&radius=),
+   then the overlay itself. So the canvas rectangle is exactly the exported
+   rectangle, and the checker means one thing only — "transparent here, and
+   this pixel ships". The surround is deliberately flat panel colour: it is
+   preview matting, not part of the overlay, and checkering it too would make
+   the same pattern mean two opposite things in one picture.
+   (Drawing rather than styling is also immune to extensions that force
+   canvas backgrounds transparent, which would silently desync preview
+   from URL.) */
 .stage-plate{position:relative;border:1px solid var(--line);border-radius:8px;
   display:flex;align-items:center;justify-content:center;padding:10px;min-height:112px;overflow:hidden;
-  background-color:#2a2d33;
-  background-image:
-    linear-gradient(45deg,#3a3e46 25%,transparent 25%,transparent 75%,#3a3e46 75%),
-    linear-gradient(45deg,#3a3e46 25%,transparent 25%,transparent 75%,#3a3e46 75%);
-  background-size:20px 20px;background-position:0 0,10px 10px}
-.stage-plate .scene{position:absolute;inset:0;background:var(--scene-bg,#33373e);transition:background .12s}
+  background:#26292f}
 .stage-plate canvas{position:relative;z-index:1}
 canvas{display:block;max-width:100%;height:auto}
 /* backdrop builder controls */
@@ -128,6 +138,34 @@ input[type=color]::-webkit-color-swatch-wrapper{padding:0}
 .foot .use.ghost:hover{color:var(--ink);border-color:var(--line-2);background:#2a2e37}
 .foot .use.ok{color:var(--live);border-color:var(--live);background:rgba(52,217,122,.13)}
 .foot .demo-only{font-size:10px;color:var(--mute);opacity:.85}
+
+/* Per-overlay plate override. Same setting as the global Backdrop, scoped to
+   one overlay — so the controls are deliberately identical, and a card that has
+   not been touched shows the global value and inherits any later change to it. */
+.foot .use.disc{padding:4px 7px}
+.foot .use.disc.open{color:var(--ink);border-color:var(--line-2);background:#2a2e37}
+.foot .use.disc.set{color:var(--clu);border-color:var(--clu)}
+.cfg{display:none;margin-top:9px;padding:10px 11px;border:1px solid var(--line);
+  border-radius:7px;background:var(--panel-2)}
+.cfg.open{display:block}
+.cfg-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+/* Radius has nothing to round without a plate, so it goes away rather than
+   sitting there greyed out — a disabled control invites clicking and explains
+   nothing about why it won't respond. */
+.cfg-row.hide{display:none}
+.cfg-row .lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);
+  width:38px;flex:none}
+.cfg-row input[type=range]{flex:1;min-width:0;accent-color:var(--str)}
+.cfg-row .val{font-size:11px;color:var(--ink);width:38px;text-align:right;flex:none;
+  font-variant-numeric:tabular-nums}
+.cfg-url{font-size:10.5px;line-height:1.5;color:var(--mute);word-break:break-all;
+  border-top:1px solid var(--line);padding-top:8px;margin-top:9px}
+.cfg-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+.cfg-src{font-size:10px;color:var(--mute)}
+.cfg-foot .reset{font-family:inherit;font-size:10.5px;color:var(--mute);background:none;
+  border:none;padding:0;cursor:pointer;text-decoration:underline}
+.cfg-foot .reset:hover{color:var(--ink)}
+.cfg-foot .reset[disabled]{opacity:.35;cursor:default;text-decoration:none}
 .empty{color:var(--mute);padding:40px 0;text-align:center}
 #err{color:var(--brk);background:rgba(242,69,61,.08);border:1px solid rgba(242,69,61,.4);
   border-radius:8px;padding:10px 12px;margin-bottom:16px;display:none}
@@ -191,10 +229,26 @@ input[type=color]::-webkit-color-swatch-wrapper{padding:0}
       <div class="grp"><button id="resetAccum" class="btn" title="Clear the accumulated history the cumulative overlays draw from — gate dwell, shift log, traces, shift count">Reset history</button></div>
       <div class="tally"><b id="visN">0</b> shown</div>
     </div>
+  </div>
+
+  <!-- Appearance is its own box: the rows above filter and drive the gallery,
+       these change what the overlays actually look like and what their links
+       export. Keeping them apart is what stops the plate reading as another
+       preview toggle. -->
+  <div class="bar editor">
+    <div class="editor-hd">
+      <b>Plate</b> — the background every overlay paints itself and carries into OBS.
+      Sets the default for all of them; any card can override it.
+    </div>
     <div class="row">
-      <div class="grp"><span class="lbl">Backdrop</span><span id="bdPresets" class="segmented"></span></div>
-      <div class="grp"><span class="lbl">Colour</span><input id="bdColor" type="color" value="#33373e" title="scene colour"></div>
-      <div class="grp"><span class="lbl">Opacity</span><input id="bdAlpha" type="range" min="0" max="100" step="1" value="100"><span id="bdAlphaV" class="lbl">100%</span></div>
+      <div class="grp"><span class="lbl">Preset</span><span id="bdPresets" class="segmented"></span></div>
+      <div class="grp"><span class="lbl">Colour</span><input id="bdColor" type="color" value="#000000" title="plate colour — exported as &amp;bg="></div>
+      <div class="grp"><span class="lbl">Opacity</span><input id="bdAlpha" type="range" min="0" max="100" step="1" value="0" title="plate opacity — exported as &amp;bga=; 0 means a transparent overlay"><span id="bdAlphaV" class="lbl">0%</span></div>
+      <div class="grp" id="bdRadiusGrp"><span class="lbl">Radius</span><input id="bdRadius" type="range" min="0" max="40" step="1" value="8" title="plate corner radius — exported as &amp;radius="><span id="bdRadiusV" class="lbl">8px</span></div>
+      <div class="grp editor-acts">
+        <button id="bdSave" class="btn" title="Remember this plate so the gallery opens with it">Save as default</button>
+        <button id="bdReset" class="btn" title="Back to the saved default, or to no plate at all">Reset</button>
+      </div>
     </div>
   </div>
 
@@ -207,7 +261,7 @@ import { setMode, MODES, pushHistory, tel, hist, gateUse, shiftLog, shiftTimes, 
 import { createDemoDriver } from "../engine/demo-driver.js";
 import { createState } from "../engine/state.js";
 import { createInputReader } from "../engine/live-input.js";
-import { readParams } from "../engine/url-config.js";
+import { readParams, hexToRgba } from "../engine/url-config.js";
 import { getPad } from "../engine/gamepad.js";
 
 const errEl = document.getElementById("err");
@@ -234,6 +288,83 @@ const SET_ORDER = ["pedals", "wheel", "shifter", "combo"];
    the copied URL so the two can never drift apart. */
 const OBS_SCALE = readParams("").scale;
 const obsSize = e => ({ w: Math.round(e.size.w * OBS_SCALE), h: Math.round(e.size.h * OBS_SCALE) });
+
+/* SO-0003 — the URL generator ([ADR 0001](config lives in the URL, never in
+   storage)). The plate is one setting with two scopes: the Backdrop builder
+   sets the gallery-wide default, and a card may override it for itself. Both
+   feed the same two places — what the preview draws and what the copied link
+   carries — so nothing here can change the picture without changing the URL,
+   or the reverse.
+
+   Defaults come from url-config rather than being restated, and only
+   *departures* from them are emitted: a clean link is readable at a glance
+   before it gets pasted into OBS, and an omitted param can never contradict a
+   later change to a default. `scale` is the exception — it stays pinned even
+   at its default, because the card advertises a Browser Source size derived
+   from it and the two must not drift (see the note above). */
+const DEF = readParams("");
+const plateOf = (hex, a, r) => ({ bgHex: hex, bgA: a, radius: r });
+const SHIPPED = plateOf(DEF.bgHex, DEF.bgA, DEF.radius);
+// Normalise the "#" away: url-config's default is bare ("000000") while an
+// <input type=color> always reports it prefixed, and comparing them raw makes
+// an untouched gallery look modified.
+const bareHex = h => String(h).replace("#", "").toLowerCase();
+const samePlate = (a, b) => bareHex(a.bgHex) === bareHex(b.bgHex) &&
+  a.bgA === b.bgA && a.radius === b.radius;
+
+/* The user's saved default, if they have one. This is a *gallery* preference,
+   not overlay config — ADR 0001 keeps the latter in the URL because it has to
+   survive the trip to OBS, and nothing here changes that: the copied link still
+   carries every value explicitly. */
+const PLATE_KEY = "gallery.plate.default.v1";
+function loadDefault() {
+  try {
+    const s = JSON.parse(localStorage.getItem(PLATE_KEY) || "null");
+    if (s && typeof s.bgHex === "string" && Number.isFinite(s.bgA) && Number.isFinite(s.radius)) {
+      return plateOf(s.bgHex, s.bgA, s.radius);
+    }
+  } catch { /* corrupt or unavailable storage just means "no saved default" */ }
+  return null;
+}
+let savedDefault = loadDefault();
+// Transparent unless the user saved otherwise: an opaque default would bake a
+// plate into every link copied without touching a control.
+let globalPlate = savedDefault || SHIPPED;
+const cardPlates = new Map();          // id -> plate, only for overridden cards
+const effPlate = id => cardPlates.get(id) || globalPlate;
+
+function obsLink(id) {
+  const p = effPlate(id);
+  const q = ["style=" + id, "scale=" + OBS_SCALE];
+  // overlay.html paints no plate at alpha 0, so colour, opacity and radius would
+  // all be dead weight in the URL — and would imply a background that never renders.
+  if (p.bgA > 0) {
+    q.push("bg=" + p.bgHex.replace("#", ""));
+    q.push("bga=" + Math.round(p.bgA * 100) / 100);
+    if (p.radius !== DEF.radius) q.push("radius=" + p.radius);
+  }
+  return new URL("overlay.html?" + q.join("&"), location.href).href;
+}
+
+/* Transparency checker, drawn as the canvas's own substrate so it appears only
+   within the exported rectangle. Built once and reused as a pattern — 69 live
+   canvases can't afford to redraw a gradient each frame. */
+const CHECKER = (() => {
+  const c = document.createElement("canvas");
+  c.width = c.height = 20;
+  const x = c.getContext("2d");
+  x.fillStyle = "#2a2d33"; x.fillRect(0, 0, 20, 20);
+  x.fillStyle = "#3a3e46"; x.fillRect(0, 0, 10, 10); x.fillRect(10, 10, 10, 10);
+  return x.createPattern(c, "repeat");
+})();
+
+/* The plate's rounded rectangle — the same shape overlay.html gets from
+   border-radius, so the preview shows the corners you will actually ship. */
+function platePath(ctx, w, h, r) {
+  const rad = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.roundRect(0, 0, w, h, rad);
+}
 
 const CHAN_ORDER = ["clu", "brk", "thr", "str", "gear:absolute", "gear:direction", "rpm", "spd"];
 // Chip label + CSS-safe class for each channel (":" can't ride in a class name).
@@ -282,22 +413,30 @@ document.getElementById("resetAccum").onclick = resetAccumulators;
 
 
 /* copy-to-clipboard with a transient "Copied!" on the button itself */
+/* `text` and `confirm` may be functions, resolved at click time: since SO-0003
+   the OBS link and the size it reports both depend on the card's current
+   scale, so neither can be baked in when the card is built. */
 function wireCopy(btn, text, label, confirm) {
   if (!btn) return;
   btn.addEventListener("click", async () => {
     // The confirmation carries the Browser Source size, because this is the
     // moment before it gets pasted into OBS — the one place it has to be right.
-    try { await navigator.clipboard.writeText(text); btn.textContent = confirm || "Copied!"; btn.classList.add("ok"); }
+    const payload = typeof text === "function" ? text() : text;
+    const done = typeof confirm === "function" ? confirm() : confirm;
+    try { await navigator.clipboard.writeText(payload); btn.textContent = done || "Copied!"; btn.classList.add("ok"); }
     catch { btn.textContent = "Press ⌘C"; }
     clearTimeout(btn._t);
     // Longer when it carries the size — there is something to actually read.
-    btn._t = setTimeout(() => { btn.textContent = label; btn.classList.remove("ok"); }, confirm ? 2600 : 1100);
+    btn._t = setTimeout(() => { btn.textContent = label; btn.classList.remove("ok"); }, done ? 2600 : 1100);
   });
 }
 
 /* ---- build cards ---- */
 const groups = document.getElementById("groups");
 const tiles = [];
+// One re-sync per card, so a Backdrop change can refresh every card's preview,
+// controls and link in place (cards are built once; refresh() only filters).
+const cardSyncs = [];
 const dpr = window.devicePixelRatio || 1;
 
 for (const set of SET_ORDER) {
@@ -334,16 +473,32 @@ for (const set of SET_ORDER) {
         (tel ? '<span class="tag tel">tel: ' + e.telemetry.join(",") + "</span>" : "") +
       "</div>" +
       '<div class="chans">' + chans + "</div>" +
-      '<div class="stage-plate"><div class="scene"></div></div>' +
+      '<div class="stage-plate"></div>' +
       '<p class="needsrc">Needs an <b>H-shifter</b> — this reads gear <i>position</i>, ' +
         'which paddles can\'t report. <a href="setup.html">Calibrate one →</a></p>' +
       '<p class="note">' + (e.note || "") + "</p>" +
       '<div class="foot">' +
         '<div class="acts">' +
           '<button class="use" data-act="obs">Copy OBS link</button>' +
+          '<button class="use disc" data-act="cfg" title="Plate for this overlay" ' +
+            'aria-expanded="false" aria-label="Plate for this overlay">▾</button>' +
           '<button class="use ghost" data-act="name">Copy name</button>' +
         "</div>" +
         (tel ? '<span class="demo-only" title="renders from demo data; live needs a sim telemetry feed">demo only</span>' : "") +
+      "</div>" +
+      '<div class="cfg">' +
+        '<div class="cfg-row"><span class="lbl">Plate</span>' +
+          '<input type="color" data-cfg="bgHex">' +
+          '<input type="range" data-cfg="bgA" min="0" max="100" step="1">' +
+          '<span class="val" data-val="bgA"></span></div>' +
+        '<div class="cfg-row" data-radius-row><span class="lbl">Radius</span>' +
+          '<input type="range" data-cfg="radius" min="0" max="40" step="1">' +
+          '<span class="val" data-val="radius"></span></div>' +
+        '<div class="cfg-url" data-cfg-url></div>' +
+        '<div class="cfg-foot">' +
+          '<span class="cfg-src" data-cfg-src></span>' +
+          '<button class="reset" data-act="reset">Use global</button>' +
+        "</div>" +
       "</div>";
 
     const cv = document.createElement("canvas");
@@ -358,10 +513,56 @@ for (const set of SET_ORDER) {
     // Copy actions: the OBS link is the *absolute* overlay URL to paste into a
     // Browser Source (resolves to whatever origin is serving this page).
     // Pin the scale explicitly: self-documenting, and immune to the default moving.
-    const obsUrl = new URL("overlay.html?style=" + e.id + "&scale=" + OBS_SCALE, location.href).href;
-    wireCopy(card.querySelector('[data-act="obs"]'), obsUrl, "Copy OBS link",
+    const urlOut = card.querySelector("[data-cfg-url]");
+    const srcOut = card.querySelector("[data-cfg-src]");
+    const resetBtn = card.querySelector('[data-act="reset"]');
+    const hexIn = card.querySelector('[data-cfg="bgHex"]');
+    const alphaIn = card.querySelector('[data-cfg="bgA"]');
+    const radiusIn = card.querySelector('[data-cfg="radius"]');
+    const radiusRow = card.querySelector("[data-radius-row]");
+    const disc = card.querySelector('[data-act="cfg"]');
+
+    /* One draw of the truth: the effective plate paints the preview, fills the
+       controls, and builds the link — so the picture and the URL cannot disagree. */
+    function syncCard() {
+      const p = effPlate(e.id);
+      const own = cardPlates.has(e.id);
+      // The preview itself needs no work here: the render loop reads effPlate()
+      // every frame, so a card follows the global until it overrides it.
+      hexIn.value = p.bgHex.startsWith("#") ? p.bgHex : "#" + p.bgHex;
+      alphaIn.value = Math.round(p.bgA * 100);
+      radiusIn.value = p.radius;
+      card.querySelector('[data-val="bgA"]').textContent = Math.round(p.bgA * 100) + "%";
+      card.querySelector('[data-val="radius"]').textContent = p.radius + "px";
+      radiusRow.classList.toggle("hide", p.bgA === 0);
+      urlOut.textContent = obsLink(e.id).replace(location.origin, "");
+      srcOut.textContent = own ? "overriding the global plate" : "following the global plate";
+      resetBtn.disabled = !own;
+      disc.classList.toggle("set", own);
+    }
+    cardSyncs.push(syncCard);
+
+    const takeOver = () => {
+      cardPlates.set(e.id, plateOf(hexIn.value, +alphaIn.value / 100, +radiusIn.value));
+      syncCard();
+    };
+    hexIn.addEventListener("input", takeOver);
+    alphaIn.addEventListener("input", takeOver);
+    radiusIn.addEventListener("input", takeOver);
+    resetBtn.addEventListener("click", () => { cardPlates.delete(e.id); syncCard(); });
+
+    const panel = card.querySelector(".cfg");
+    disc.addEventListener("click", () => {
+      const open = panel.classList.toggle("open");
+      disc.classList.toggle("open", open);
+      disc.textContent = open ? "▴" : "▾";
+      disc.setAttribute("aria-expanded", String(open));
+    });
+
+    wireCopy(card.querySelector('[data-act="obs"]'), () => obsLink(e.id), "Copy OBS link",
       "Copied — size " + obsSize(e).w + "×" + obsSize(e).h);
     wireCopy(card.querySelector('[data-act="name"]'), e.name, "Copy name");
+    syncCard();
 
     grid.appendChild(card);
     tiles.push({ e, card, ctx, mem: {}, visible: true, logged: false });
@@ -406,14 +607,32 @@ function loop(now) {
       continue;
     }
     if (!mod) continue;                       // still loading (null) or failed (false)
-    t.ctx.clearRect(0, 0, t.e.size.w, t.e.size.h);
+    const { w, h } = t.e.size;
+    t.ctx.clearRect(0, 0, w, h);
+    // Checker first (it stands for transparency, so anything painted over it
+    // hides it), then the plate, then the overlay — the same order OBS
+    // composites: scene, then the overlay's own background, then its drawing.
+    t.ctx.fillStyle = CHECKER;
+    t.ctx.fillRect(0, 0, w, h);
+    const plate = effPlate(t.e.id);
+    const rounded = plate.bgA > 0;
+    if (rounded) {
+      t.ctx.save();
+      platePath(t.ctx, w, h, plate.radius);
+      t.ctx.fillStyle = hexToRgba(plate.bgHex, plate.bgA);
+      t.ctx.fill();
+      // overlay.html rounds the canvas too when a plate is on, so the drawing
+      // is clipped to the same corners — match it rather than flatter it.
+      t.ctx.clip();
+    }
     try {
-      mod.draw(t.ctx, t.e.size.w, t.e.size.h, state, t.mem);
+      mod.draw(t.ctx, w, h, state, t.mem);
     } catch (err) {
       t.ctx.fillStyle = "#f2453d"; t.ctx.font = "11px monospace";
       t.ctx.fillText("draw error: " + err.message, 8, 18);
       if (!t.logged) { console.error(t.e.id, err); t.logged = true; }
     }
+    if (rounded) t.ctx.restore();   // drop the clip before the next tile/frame
   }
   requestAnimationFrame(loop);
 }
@@ -520,42 +739,81 @@ window.addEventListener("focus", () => {
   if (source === "live") { liveInput.reload(); lastLiveKey = ""; applySourceGating(); }
 });
 
-/* Backdrop builder: the contrast-test scene behind every preview is a colour +
-   opacity composited over a permanent transparency checker. Presets are just
-   shortcuts (Checker = opacity 0, Black/White the extremes, Dark/Light the soft
-   pair); the colour picker + opacity slider dial anything in between. */
+/* Backdrop builder: the gallery-wide default plate — the background each
+   overlay paints itself and carries into OBS, not a simulated scene. It is a
+   colour + opacity over a permanent transparency checker, so "None" (opacity 0)
+   means a genuinely transparent overlay and emits no params at all. Presets are
+   shortcuts: None the default, Black/White the extremes, Dark/Light the soft
+   pair; the picker + slider dial anything between. Cards that have set their own
+   plate keep it — the global is the default, not an override. */
 const bdColor = document.getElementById("bdColor");
 const bdAlpha = document.getElementById("bdAlpha");
 const bdAlphaV = document.getElementById("bdAlphaV");
+const bdRadius = document.getElementById("bdRadius");
+const bdRadiusV = document.getElementById("bdRadiusV");
+const bdRadiusGrp = document.getElementById("bdRadiusGrp");
+const bdReset = document.getElementById("bdReset");
+const bdSave = document.getElementById("bdSave");
 const PRESETS = [
-  { label: "Black",   hex: "#000000", a: 100 },
-  { label: "Dark",    hex: "#33373e", a: 100 },
-  { label: "Light",   hex: "#c8ccd2", a: 100 },
-  { label: "White",   hex: "#ffffff", a: 100 },
-  { label: "Checker", hex: "#33373e", a: 0 }
+  { label: "None",  hex: "#000000", a: 0 },
+  { label: "Black", hex: "#000000", a: 100 },
+  { label: "Dark",  hex: "#33373e", a: 100 },
+  { label: "Light", hex: "#c8ccd2", a: 100 },
+  { label: "White", hex: "#ffffff", a: 100 }
 ];
-const toRgba = (hex, a) => {
-  const n = parseInt(hex.slice(1), 16);
-  return "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + (a / 100) + ")";
-};
 const presetBtns = [];
 const bdHost = document.getElementById("bdPresets");
-PRESETS.forEach((p, i) => {
+PRESETS.forEach(p => {
   const b = document.createElement("button");
   b.className = "btn"; b.textContent = p.label; b.dataset.hex = p.hex; b.dataset.a = p.a;
   b.onclick = () => { bdColor.value = p.hex; bdAlpha.value = p.a; applyBackdrop(); };
   bdHost.appendChild(b); presetBtns.push(b);
 });
+/* Read the controls into globalPlate, then redraw everything that depends on
+   it. Called on every input and after any programmatic change, so the controls,
+   the previews and the links are never derived from anything but this. */
 function applyBackdrop() {
   const hex = bdColor.value, a = +bdAlpha.value;
-  document.body.style.setProperty("--scene-bg", toRgba(hex, a));
+  globalPlate = plateOf(hex, a / 100, +bdRadius.value);
   bdAlphaV.textContent = a + "%";
+  bdRadiusV.textContent = globalPlate.radius + "px";
+  // Radius has nothing to round without a plate, so it is hidden rather than
+  // disabled — see the .cfg-row.hide note.
+  bdRadiusGrp.classList.toggle("hide", a === 0);
   // light up a preset only when the current colour+opacity exactly matches it
   presetBtns.forEach(b => b.classList.toggle("on", b.dataset.hex.toLowerCase() === hex.toLowerCase() && +b.dataset.a === a));
+  const target = savedDefault || SHIPPED;
+  bdReset.disabled = samePlate(globalPlate, target);
+  bdReset.title = savedDefault ? "Back to your saved default" : "Back to no plate";
+  bdSave.disabled = !!savedDefault && samePlate(globalPlate, savedDefault);
+  // Every card that follows the global needs its preview and link redrawn.
+  cardSyncs.forEach(fn => fn());
 }
+
+// Push a plate *into* the controls, then let applyBackdrop read it back out.
+function setControls(p) {
+  bdColor.value = p.bgHex.startsWith("#") ? p.bgHex : "#" + p.bgHex;
+  bdAlpha.value = Math.round(p.bgA * 100);
+  bdRadius.value = p.radius;
+  applyBackdrop();
+}
+
 bdColor.oninput = applyBackdrop;
 bdAlpha.oninput = applyBackdrop;
-applyBackdrop();   // default: Dark (the picker/slider's initial values)
+bdRadius.oninput = applyBackdrop;
+
+bdReset.onclick = () => setControls(savedDefault || SHIPPED);
+bdSave.onclick = () => {
+  savedDefault = plateOf(globalPlate.bgHex, globalPlate.bgA, globalPlate.radius);
+  try { localStorage.setItem(PLATE_KEY, JSON.stringify(savedDefault)); }
+  catch { /* private mode or full storage — the setting still applies this session */ }
+  bdSave.textContent = "Saved";
+  clearTimeout(bdSave._t);
+  bdSave._t = setTimeout(() => { bdSave.textContent = "Save as default"; applyBackdrop(); }, 1400);
+  applyBackdrop();
+};
+
+setControls(globalPlate);   // shipped default, or whatever the user saved
 
 refresh();
 </script>
