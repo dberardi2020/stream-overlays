@@ -41,7 +41,7 @@ let chromium;
 try { ({ chromium } = await import("playwright")); }
 catch { console.log("SKIP: playwright not installed (dev-only). `npm i` to enable the acceptance layer."); process.exit(0); }
 
-const MIME = { ".html": "text/html", ".js": "text/javascript", ".json": "application/json", ".css": "text/css" };
+const MIME = { ".html": "text/html", ".js": "text/javascript", ".json": "application/json", ".css": "text/css", ".woff2": "font/woff2" };
 const server = createServer(async (req, res) => {
   try {
     const path = decodeURIComponent(req.url.split("?")[0]);

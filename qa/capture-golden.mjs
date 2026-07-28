@@ -44,7 +44,7 @@ if (instrumented === proto) { console.error("could not find the instrumentation 
 writeFileSync(join(HERE, "_prototype.html"), instrumented);
 
 // 2. Serve so fonts + the page load like normal.
-const MIME = { ".html": "text/html", ".js": "text/javascript", ".json": "application/json", ".css": "text/css" };
+const MIME = { ".html": "text/html", ".js": "text/javascript", ".json": "application/json", ".css": "text/css", ".woff2": "font/woff2" };
 const server = createServer(async (req, res) => {
   try {
     const p = decodeURIComponent(req.url.split("?")[0]);
@@ -88,7 +88,18 @@ writeFileSync(join(HERE, "fixture.json"), JSON.stringify(fixture, null, 1));
 
 // 4. Render each overlay through the prototype engine at that state -> PNG data URLs.
 const shots = await page.evaluate(async ({ SCALE }) => {
+  /* Same trap as qa/render.html: `fonts.ready` resolves instantly when nothing
+     has requested the faces yet, so the capture painted in a fallback and baked
+     the capturing machine's mono into the baseline (SO-0034). Ask by name, then
+     verify — capturing a wrong-font golden is worse than failing to capture. */
+  const FACES = [
+    "400 16px 'IBM Plex Mono'", "500 16px 'IBM Plex Mono'", "600 16px 'IBM Plex Mono'",
+    "400 16px Oxanium",         "600 16px Oxanium",         "800 16px Oxanium"
+  ];
+  await Promise.all(FACES.map(f => document.fonts.load(f)));
   await document.fonts.ready;
+  const missing = FACES.filter(f => !document.fonts.check(f));
+  if (missing.length) throw new Error("fonts did not load: " + missing.join(", "));
   const q = window.__qa;
   const out = {};
   for (const r of q.REG) {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>QA render</title>
-<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="./fonts/fonts.css" rel="stylesheet">
 <style>html,body{margin:0;padding:0;background:transparent}canvas{display:block}</style>
 </head>
 <body>
@@ -54,7 +54,25 @@ cv.style.width = entry.size.w * SCALE + "px";
 cv.style.height = entry.size.h * SCALE + "px";
 ctx.scale(SCALE, SCALE);
 
-await document.fonts.ready;               // render with the real font, not a fallback
+/* Load the faces the draw code uses, then VERIFY.
+   `await document.fonts.ready` alone was a no-op here and silently corrupted
+   every golden: nothing had requested these families yet, so there were zero
+   pending loads, it resolved instantly, and canvas painted with the OS fallback —
+   baking whichever mono the capturing machine happened to have into the baseline
+   (SO-0034). Webfonts load lazily; they must be asked for by name.
+
+   The check is the important half. A golden captured in the wrong font still
+   looks fine — it just fails on someone else's machine, months later. Failing
+   here makes that impossible. */
+const FACES = [
+  "400 16px 'IBM Plex Mono'", "500 16px 'IBM Plex Mono'", "600 16px 'IBM Plex Mono'",
+  "400 16px Oxanium",         "600 16px Oxanium",         "800 16px Oxanium"
+];
+await Promise.all(FACES.map(f => document.fonts.load(f)));
+await document.fonts.ready;
+const missing = FACES.filter(f => !document.fonts.check(f));
+if (missing.length) fail("fonts did not load: " + missing.join(", ") +
+  " — goldens must never be captured in a fallback (see qa/fonts/README.md)");
 ctx.clearRect(0, 0, entry.size.w, entry.size.h);
 mod.draw(ctx, entry.size.w, entry.size.h, state, {});
 document.documentElement.dataset.rendered = "1";
