@@ -43,6 +43,7 @@ Pre-public candidates not yet committed to the On-deck sequence.
 | ID | Pri | Type | Title |
 |---|---|---|---|
 | [SO-0004](#so-0004) | P2 | Feature | OBS gamepad fallback — interactive ladder (guidance already shipped) |
+| [SO-0033](#so-0033) | P3 | Feature | Bulk overlay import — merge into an existing OBS scene collection |
 | [SO-0025](#so-0025) | P2 | Chore | Site style kit — encode design tokens, point every page at it |
 | [SO-0028](#so-0028) | P3 | Idea | Light vs dark mode support |
 
@@ -51,6 +52,8 @@ Pre-public candidates not yet committed to the On-deck sequence.
 | ID | Pri | Type | Title |
 |---|---|---|---|
 | [SO-0007](#so-0007) | P2 | Feature | Telemetry data source (rpm / spd / gear-from-sim) — deferred |
+| [SO-0034](#so-0034) | P2 | Bug | QA goldens captured with fallback fonts — not portable across machines |
+| [SO-0035](#so-0035) | P3 | Chore | Gallery Mode button does nothing in Live — relabel or hide |
 | [SO-0027](#so-0027) | P2 | Chore | Ensure integration test coverage is sufficient across the repo |
 | [SO-0026](#so-0026) | P2 | Chore | Integration + browser test coverage for the live input path |
 | [SO-0030](#so-0030) | P3 | Chore | Sequential shifter input — confirm HID model + where it groups |
@@ -244,6 +247,70 @@ SO-0029 embedded each calibration box's real overlay as a live preview (Pedals�
 **P3 · Feature · engine/overlays**
 
 Rigs vary — 6, 7, or 8 forward gears; the model hardcodes six. The fix is **not** "add a 7th" but a **dynamic gear count** (a rig has N forward gears, default 6, up to 8) threaded from calibration into the draw path, with overlays rendering to the actual max rather than a constant. That's an overhaul: `calibration-math.js` `GEAR_LABELS` is `["R","1".."6"]`; the calibration gate UI lays out a fixed 3×2 + R (7–8 need an extra column / re-flowed gate); and **~8 overlays loop `g<=6` with layout math baked to six** — `gate-heatmap`, `gate-map`, `gate-with-trail`, `gear-donut`, `gear-ladder`, `gear-timeline`, `sequential-column`, plus `engineer-view`'s `v/6` gear normalization (which becomes `v/max`). Also re-baselines the `qa/` golden pixel diffs for every gear overlay touched. The read side (`resolveShifterGear`, the button map) is already gear-count-agnostic — it captures whatever you bind — so the work is UI/layout + rendering, not input logic. Sequence after the SO-0006 hardware round-trip so a real 7-/8-speed can verify it.
+
+### SO-0033 — Bulk overlay import: merge into an existing scene collection {#so-0033}
+**P3 · Feature · OBS onboarding**
+
+Adding overlays to OBS is one-at-a-time: Copy OBS link → new Browser Source → paste → set the size. Fine for
+two, tedious for ten. A generator that emitted a whole scene collection was **built and then pulled** (see the
+history around `2ced888`), because the delivery model was wrong: **OBS cannot copy or paste sources or scenes
+between scene collections.** It is a long-requested missing feature, so "switch to the StreamOverlays
+collection and copy what you want into yours" cannot work at all. The generator itself was sound — correct
+render sizes, `shutdown: true`, hidden-and-centred so nothing loaded until unhidden, and it imported cleanly.
+
+The delivery has to invert: **merge into the user's own collection** rather than ship a separate one. They
+export theirs (Scene Collection → Export), drop the `.json` on the gallery, the page injects the overlay
+sources plus a scene per set into *their* collection, and they re-import. Everything then lives in one
+collection, where normal copy/paste works. Fully client-side, so it stays static-first (ADR 0002) and the URLs
+keep pointing at whatever origin serves the page.
+
+Needs handling: source/scene **name collisions** with whatever they already have (suffix, don't clobber);
+preserving their `current_scene`, `scene_order` and collection `name`; fresh UUIDs; and a clear "this rewrites
+your collection, keep the original" warning, since the input is the user's real setup.
+
+**Alternative worth noting:** the [Source Copy](https://obsproject.com/forum/resources/source-copy.1261/)
+plugin by Exeldro *does* copy scenes between collections. If a user has it, the pulled standalone-collection
+approach works as originally intended — so this could ship as "install Source Copy, then import our
+collection" instead of, or alongside, the merge. That trades a plugin dependency for much less code.
+
+Reference: the setup-only collection that survives (`engine/obs-collection.js`) is the working example of the
+format — the source/scene/item builders there are directly reusable.
+
+### SO-0034 — QA goldens are captured with fallback fonts, so they aren't portable {#so-0034}
+**P2 · Bug · qa**
+
+`qa/render.html` does `await document.fonts.ready` before drawing, commented *"render with the real font, not
+a fallback"*. It does the opposite. Nothing on the page has requested IBM Plex Mono at that point, so there
+are zero pending font loads, `ready` resolves immediately, and the canvas paints with the OS fallback.
+Measured at draw time: `document.fonts.check("600 16px 'IBM Plex Mono'")` is `false`, and text through the
+declared stack measures identically to the pure fallback (52.78px); after an explicit `document.fonts.load()`
+the same string measures 57.60px — **9.1% wider**.
+
+So every golden encodes whichever mono the *capturing machine* falls back to — Menlo on the Mac, Consolas on
+Windows. The visible symptom is `terminal` (the glyph-densest overlay) failing at **1.47%** against a 0.6%
+tolerance on the PC while passing on the Mac, with bar geometry shifting ~13px because it is derived from
+measured text width. The harness already half-knows: `acceptance.mjs` comments that glyph-dense overlays
+"legitimately differ ~0.5%".
+
+Fix is `document.fonts.load(...)` per family/weight before the draw — but that changes all 69 renders and
+needs a **full golden recapture**, agreed across both machines, and it makes QA depend on reaching Google
+Fonts (silently re-falling-back offline and in CI). Vendoring the fonts into `qa/` would close that hole and
+is probably the right shape. Not urgent — it is a QA-fidelity bug, not a product one — but the goldens are
+currently only meaningful on the machine that captured them, which quietly halves their value.
+
+### SO-0035 — The gallery's Mode button does nothing in Live {#so-0035}
+**P3 · Chore · gallery**
+
+`Mode: H / SEQ / PADDLE` sets a draw-kit global controlling shift *animation* only — throw duration and the
+synthetic clutch dip (`MODES`, `draw-kit.js`). It is demo storytelling: `demo-driver.js` reads it, and exactly
+one overlay (`throw-timer`) reads it directly. The live path deliberately ignores it, deriving H vs paddle
+timing from the actual calibration instead (`live-input.js`), so live can never clobber the demo control.
+
+After [ADR 0007](../decisions/0007-gear-sources-are-independent.md) the live shift mode is fully derived from
+what you calibrated, which leaves a control that in Live mode changes nothing except `throw-timer`'s display.
+It sits in a `.grp.demo-only` group so it dims, but dimmed-yet-does-something-to-one-overlay is a worse story
+than either honest option: **relabel it** ("Demo shift feel") or **hide it outright in Live**. Small, but it
+is the kind of thing that makes a UI feel untrustworthy.
 
 ## Conventions
 

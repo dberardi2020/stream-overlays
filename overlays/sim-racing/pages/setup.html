@@ -177,6 +177,17 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.28em 0;color:var(--mute);font
     </div>
 
     <h3 class="steph">Calibrate inside OBS — once</h3>
+    <p class="hint"><b>Easiest:</b> download a ready-made scene collection with the source already set up —
+      right URL, right size, and <i>Shutdown when not visible</i> already off — then in OBS use
+      <b>Scene Collection → Import</b> and switch to it.</p>
+    <div class="resetrow">
+      <button id="dlSetupCollection" class="mini">Download setup scene collection</button>
+      <span id="dlSetupMsg" class="hint"></span>
+    </div>
+    <p class="hint" style="margin-top:9px">Then just <b>right-click the source → Interact</b>, click once on
+      the page, and press a wheel button. Skip to step 4 below.</p>
+
+    <h3 class="steph">Or set it up by hand</h3>
     <ol>
       <li>Add a <b>Browser Source</b> with this URL, sized about <b>900 × 1000</b>:
         <div class="urlrow"><code id="obsSetupUrl">…</code><button id="copyObsSetup" class="mini">Copy</button></div>
@@ -186,22 +197,20 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.28em 0;color:var(--mute);font
       <li>Right-click the source → <b>Interact</b>. A separate window opens.</li>
       <li><b>Click once on the page</b>, then press any wheel button. The device line goes green — the Gamepad
         API only reports to a focused document, and Interact is what gives it focus.</li>
-      <li>Calibrate pedals, wheel and shifter there, then <b>delete the source</b>. Every overlay in OBS now
-        reads that calibration.</li>
+      <li>Calibrate pedals, wheel and shifter there, then <b>delete the source</b> (or switch back to your own
+        scene collection). Every overlay in that OBS browser now reads the calibration.</li>
     </ol>
 
     <h3 class="steph">Then add the overlays</h3>
-    <p class="hint"><b>The quick way:</b> in the <a href="gallery.html">gallery</a>, hit
-      <b>Download OBS collection</b>, then in OBS use <b>Scene Collection → Import</b>. That gives you every
-      overlay as a correctly-sized Browser Source, grouped into a scene per set, plus the setup scene above.
-      Switch to it, copy the overlays you want, and paste them into your own scenes.</p>
-    <p class="hint">The scenes will look <b>empty</b> — that is deliberate. Every overlay imports
-      <b>hidden</b>, so OBS doesn't start a browser for each one and the collection stays fast to load. They
-      are all there in the <b>Sources</b> list, ready to copy. Click the eye on any one to preview it; it
-      loads on the spot, centred in frame.</p>
-    <p class="hint"><b>Or one at a time:</b> hit <b>Copy OBS link</b> on any card and add it as a Browser Source
-      at the <b>size shown on that card</b> — that is the real render size, not the design size, so don't let
-      OBS stretch it.</p>
+    <ol>
+      <li>In the <a href="gallery.html">gallery</a>, hit <b>Copy OBS link</b> on any overlay.</li>
+      <li>Add it as a Browser Source at the <b>size shown on its card</b> — that is the real render size, not
+        the design size, so don't let OBS stretch it.</li>
+    </ol>
+    <p class="hint">One at a time is the only way for now. A collection containing every overlay sounds
+      better, but OBS <b>cannot copy or paste sources between scene collections</b> — a long-standing missing
+      feature — so a separate collection can't be a library you take things out of. Bulk import has to merge
+      into your <i>existing</i> collection instead; that's SO-0033.</p>
 
     <p class="hint"><b>Still no device after Interact?</b> Some setups never expose the gamepad to OBS's browser
       at all. Fall back to running the overlay in a real Chrome window and capturing it with OBS
@@ -223,6 +232,22 @@ copyBtn.onclick = async () => {
   try { await navigator.clipboard.writeText(obsSetupUrl); copyBtn.textContent = "Copied!"; copyBtn.classList.add("ok"); }
   catch { copyBtn.textContent = "Select it"; }
   setTimeout(() => { copyBtn.textContent = "Copy"; copyBtn.classList.remove("ok"); }, 1400);
+};
+
+/* Generated here rather than shipped as a file so the URL inside it points at
+   wherever this page is actually served from — port, host, or a future deploy. */
+const dlBtn = document.getElementById("dlSetupCollection");
+const dlMsg = document.getElementById("dlSetupMsg");
+dlBtn.onclick = async () => {
+  const { buildSetupCollection } = await import("../engine/obs-collection.js");
+  const blob = new Blob([JSON.stringify(buildSetupCollection(new URL("./", location.href).href), null, 2)],
+    { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "StreamOverlays-RigSetup.json";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  dlMsg.textContent = "Downloaded — now: Scene Collection → Import";
 };
 
 const state = createState();
