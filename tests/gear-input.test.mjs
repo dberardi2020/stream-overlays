@@ -133,7 +133,7 @@ test("readPaddleEdges fires once per pull, not once per frame held", () => {
 
 /* ---------- live-input applyGear bookkeeping (mirrors demo-driver) ---------- */
 
-test("applyGear logs a shift and sets the throw on gear change (H-pattern)", () => {
+test("applyGear logs the shift and places the lever immediately (H-pattern)", () => {
   resetSingletons();
   const gearMap = { shifter: { buttons: { 1: 6 } } };
   const s = createState();                 // gear 0, shiftCount 0, shiftAge 99
@@ -144,28 +144,54 @@ test("applyGear logs a shift and sets the throw on gear change (H-pattern)", () 
   assert.equal(s.prevGear, 0);
   assert.equal(s.shiftDir, 1);
   assert.equal(s.shiftCount, 1);
-  near(s.shiftAge, 0, "shiftAge resets on change");
-  near(s.shiftProg, 0, "throw starts at 0");
-  assert.equal(s.lever, 0, "lever is mid-throw (neutral) in H-pattern until the throw completes");
+  near(s.shiftAge, 0, "shiftAge resets on change — the flash overlays key off it");
+  assert.equal(s.lever, 1, "the lever IS the measured gear; there is no throw to wait out");
+  near(s.shiftProg, 1, "pinned settled, so knobXY plots the true position and never interpolates");
   assert.equal(shiftLog.length, 1);
   assert.equal(shiftLog[0].dir, 1);
   assert.equal(shiftTimes.length, 1);
 });
 
-test("applyGear ages the throw and settles the lever while the gear is held", () => {
+test("a live H-shifter never replays the transit it already made", () => {
+  /* The bug this pins: on engaging the new gear, shiftAge reset, shiftProg fell to
+     0, and knobXY interpolated from prevGear — so the knob jumped BACK to the old
+     gear and walked to the new one again, with the readout reading N throughout.
+     Seen on the rig as "1st, N, back to 1st, finally 2nd" on a completed shift.
+     Position is measured every frame, so there is nothing to animate. */
+  resetSingletons();
+  const gearMap = { shifter: { buttons: { 1: 6, 2: 7 } } };
+  const s = createState();
+  s.gear = null;
+  const mem = { up: false, down: false, engaged: null };
+
+  applyGear(s, gearMap, padWith([6]), 1 / 60, mem);   // found in 1st
+  assert.equal(s.lever, 1);
+
+  applyGear(s, gearMap, padWith([]), 1 / 60, mem);    // 1 -> N, physically between gears
+  assert.equal(s.lever, 0, "neutral is reported, because that is where the lever is");
+
+  applyGear(s, gearMap, padWith([7]), 1 / 60, mem);   // N -> 2nd, shift completes
+  assert.equal(s.gear, 2);
+  assert.equal(s.lever, 2, "lands on 2nd — never back on 1st, and never a mid-throw neutral");
+  near(s.shiftProg, 1, "settled, so the knob is drawn at gate 2 rather than animated from gate 1");
+
+  applyGear(s, gearMap, padWith([7]), 1 / 60, mem);   // next frame, still in 2nd
+  assert.equal(s.lever, 2, "and it stays there");
+});
+
+test("gate dwell accrues while a gear is held, and shiftAge keeps timing", () => {
   resetSingletons();
   const gearMap = { shifter: { buttons: { 1: 6 } } };
   const s = createState();
   const mem = { up: false, down: false };
 
   applyGear(s, gearMap, padWith([6]), 1 / 60, mem);   // -> 1st, shiftAge 0
-  applyGear(s, gearMap, padWith([6]), 0.4, mem);      // hold; 0.4s > H throw (0.34)
+  applyGear(s, gearMap, padWith([6]), 0.4, mem);      // hold
 
   assert.equal(s.shiftCount, 1, "no new shift while held");
-  near(s.shiftAge, 0.4, "shiftAge accumulates dt");
-  near(s.shiftProg, 1, "throw completes");
-  assert.equal(s.lever, 1, "lever settles onto the gear once the throw finishes");
-  near(gateUse[1], 0.4, "gate dwell accrues for the settled lever");
+  near(s.shiftAge, 0.4, "shiftAge accumulates dt — a real elapsed time, not a throw");
+  assert.equal(s.lever, 1);
+  near(gateUse[1], 0.4 + 1 / 60, "gate dwell accrues from the moment the gear is engaged");
 });
 
 test("applyGear (paddles) reports direction and NEVER invents a gear", () => {

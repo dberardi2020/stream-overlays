@@ -38,13 +38,11 @@ export const CALIBRATION_KEY = "g923.calibration.v2";
 const FRAME_DT = 1 / 60;   // fallback when a caller doesn't pass a real delta
 const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
 
-/* The shift-behaviour params (throw duration, absolute vs. sequential) for a
-   calibrated shifter type. Read LOCALLY here rather than via draw-kit's global
+/* The paddle throw duration, read LOCALLY rather than via draw-kit's global
    `mode()`/`setMode()`: that global belongs to the gallery's (demo-only) Mode
-   control and is read by throw-timer, so the live path must not mutate it — live
-   and demo derive their shift animation independently. H-shifter → the absolute
-   H-pattern throw; paddles → the sequential paddle throw. */
-const H_MODE      = MODES.find(m => m.id === "H");
+   control and is read by throw-timer, so the live path must not mutate it.
+   Only the PADDLE mode is needed — a live H-shifter has no synthesised throw at
+   all, because its position is measured (see applyGear). */
 const PADDLE_MODE = MODES.find(m => m.id === "PADDLE");
 
 /* Gear map shape (see ADR 0007):
@@ -170,12 +168,28 @@ export function applyGear(state, gearMap, pad, dt, mem) {
 
   if (!shifted) state.shiftAge += dt;
 
-  const m = absolute ? H_MODE : PADDLE_MODE;
-  state.shiftProg = clamp01(m.throw ? state.shiftAge / m.throw : 1);
   if (absolute) {
-    state.lever = state.shiftProg < 1 ? 0 : state.gear;
+    /* A real H-shifter reports POSITION every frame, so nothing here is animated.
+       The throw animation exists for the demo driver, whose scripted gear jumps
+       1 -> 2 with no intermediate: the transit has to be invented there. Yours is
+       measured — you physically moved 1 -> N -> 2 and each step was reported as it
+       happened.
+
+       Re-deriving `lever` from a throw timer replays that journey a second time:
+       on engaging 2nd, shiftAge resets, shiftProg drops to 0, and `knobXY`
+       interpolates from prevGear — drawing the knob back at 1st before walking it
+       to 2nd, with the readout showing N throughout. Hence "1, N, back to 1, then
+       2" on a shift that had already finished.
+
+       So the lever IS the gear, and shiftProg is pinned at 1 (settled) which makes
+       knobXY take its early return and plot the true position. `shiftAge` keeps
+       counting for the shift-flash overlays, which is a real elapsed time. */
+    state.shiftProg = 1;
+    state.lever = state.gear;
     if (state.lever > 0) gateUse[state.lever] += dt;   // reverse (-1) never accrues gate dwell
   } else {
+    // Paddles report an event, not a position — here the animation is all there is.
+    state.shiftProg = clamp01(PADDLE_MODE.throw ? state.shiftAge / PADDLE_MODE.throw : 1);
     // No position source. Clear the gear outright rather than leaving whatever
     // it last held (createState seeds 0, and a stale 0 reads as "in neutral").
     state.gear = null; state.prevGear = null; state.lever = null;
