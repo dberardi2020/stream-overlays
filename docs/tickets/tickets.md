@@ -115,23 +115,27 @@ are in the docs.*
 Run the house repo standard and the go-public runbook in full, then flip. Going public
 is a one-way door — every check happens *before* the flip. Audited 2026-07-28; findings below.
 
-**Blockers — history rewrite required (do this first, it invalidates everything downstream)**
+**Blockers — history. DONE 2026-07-28.**
 
-1. **Personal email in 21 of 72 commits.** `git log --format='%an %ae %cn %ce' | sort -u` returns two
-   identities: the GitHub noreply on the oldest 51, and a personal Gmail on the newest 21 (author *and*
-   committer). Cause: `user.email` was only ever set globally on this machine, never `--local` in this clone,
-   so commits made here inherited it. The standard requires the noreply set *before the first commit*.
-2. **Commit messages name private paths.** `fa8e7c2` and `8b02f6d` name a local private working directory in
-   their bodies, and both name it in their *subjects*; `2bc32f9` refers to a private knowledge base. The runbook
-   is explicit that commit messages are public surface and that naming a private path is itself a leak.
-3. **The working tree named one too** — the SO-0012 row in this file referenced the same private directory.
-   Already reworded. Keep this file clean of such references, *including in this ticket*: the first draft of
-   it named the paths it was warning about, which is exactly the failure mode.
+1. ~~**Personal email in 21 of 72 commits**~~ — the GitHub noreply on the oldest 51, a personal Gmail on the
+   newest 21, as *both* author and committer. Cause: `user.email` was only ever set globally on this machine,
+   never `--local` in this clone, so commits made here inherited it. **Fixed** by `git filter-repo --mailmap`,
+   preserving all 73 commits rather than squashing — the build record is worth keeping. `--local` identity is
+   now set in this clone so it cannot recur.
+2. ~~**Commit messages name private paths**~~ — five, not the three found on the first pass. **Fixed** by
+   `--replace-message`. The two stragglers used the bare directory name while the first sweep searched for the
+   longer path, and one of them was *this ticket's own commit message*, which named the path in the sentence
+   about removing it. Worth remembering: scan the whole history for the shortest form of the term, not the
+   spots you think you touched.
+3. ~~**The working tree named one too**~~ — the SO-0012 row in this file. **Fixed.** Keep this file clean of
+   such references, *including in this ticket*: its first draft named the paths it was warning about.
 
-Fix all three in one operation: set `git config --local user.email` to the noreply, then either
-`git filter-repo` (mailmap + message callback) or — simpler for a solo repo — squash to a fresh orphan root.
-Then force-push. **Nothing else on this list matters until this is done**, because the rewrite changes every
-SHA after it.
+Verified after the rewrite: one identity across all 73 commits, no private path or out-of-scope framing in
+any message, content byte-identical (210 tracked files), 115 node + 227 pytest green, `qa` passing. `main`
+force-pushed; the three merged branches (`so-0006`, `so-0038`, `wip/demo-honest-gear`) deleted from the
+remote because they still pointed at pre-rewrite commits and would have kept the old history reachable.
+Deleting the branch is not a hard GC — GitHub can serve those commits by direct SHA for a while. Accepted:
+what leaked was an email address, not a credential.
 
 **Clean — verified, no action**
 
