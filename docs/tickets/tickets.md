@@ -2,13 +2,18 @@
 
 The backlog. Board-first: a lightweight tracker until a real one is warranted. IDs are `SO-NNNN`, uppercase, never reused.
 
-**What is *not* here:** the steps to *take the repo public* — secrets scan, private-content sweep, the flip. Those are a **pre-flight checklist run once when the project is ready**, kept as a separate release runbook, not backlog. This board tracks *building the product*.
+**Going public** was previously kept off this board as a separate release runbook. It is now on it, as
+[SO-0039](#so-0039), because it stopped being a one-shot checklist: the repo needs real work to meet the
+standards, and that work wants tracking like anything else. The *mechanical* pre-flight (final secrets scan,
+the flip itself) still runs once, at the end, and lives inside that ticket.
 
 Rows are pointers; anything needing more than a sentence has a block in **Details**, below the board.
 
 ## In progress
 
-*(none)*
+| ID | Pri | Type | Title |
+|---|---|---|---|
+| [SO-0039](#so-0039) | P1 | Chore | Take the repo public — standards pass, sweep, and the flip |
 
 **Input binding is done.** **SO-0006** closed on hardware (2026-07-28), which was the last
 v0 input-binding requirement — pedals, wheel, H-shifter and paddles all bind live off a real G923.
@@ -97,12 +102,76 @@ are in the docs.*
 | SO-0013 | **Overlay page → pure renderer** ([ADR 0006](../decisions/0006-setup-surface-pure-overlay.md)) — `pages/overlay.html` stripped of all setup chrome: it reads calibration from `localStorage` via the new DOM-free `engine/live-input.js` + live input, draws, and rests at zero uncalibrated. No panel, no "press c", no error UI on a live scene — the structural fix for the mid-stream-chrome risk. Config-time-only messages (bad `?style=`, `file://`) remain. Verified headless: pure (no `#setup`/`#calmount`), transparent, paints, unit-tested mapping. | 2026-07-23 |
 | SO-0017 | **Dedicated setup page (`pages/setup.html`)** ([ADR 0006](../decisions/0006-setup-surface-pure-overlay.md)) — the calibration surface extracted from the overlay: mounts the (unchanged, known-good) `calibration.js` panel, adds a live thr/brk/clu/steering readout, the [ADR 0003](../decisions/0003-obs-gamepad-fallback.md) OBS fallback guidance, the per-browser-context flow, and design slots for the deferred shifter (SO-0006) + telemetry (SO-0007). Writes the same `localStorage` key the overlay/gallery read. *(Shifter wiring itself is SO-0006.)* | 2026-07-23 |
 | SO-0015 | **Admin view (`pages/admin.html`)** — the write/curate view over `catalogue.json`, rebuilt on the repo's module architecture (the gallery's live-preview engine + an edit layer) rather than porting the prototype's duplicate engine. Per-overlay stage (live/draft/experimental/excluded), hidden toggle, and editable note; edits persist in localStorage and **Export** downloads a new `catalogue.json` to commit (static-first — no backend). Shows all 72 entries incl. the 4 module-less ones (as "no module"). Verified headless: 68/68 previews paint, edit→dirty→export→revert all correct, valid JSON out. Supersedes the prototype's `catalogue.html`. | 2026-07-23 |
-| SO-0012 | **Bring the design-principles doc + parked prototype into the repo** — `overlays/sim-racing/design-principles.md` (+ HTML pair; renderer-contract section reconciled to ADR 0005), the parked correlation-demo prototype under `overlays/sim-racing/prototypes/`, and the early catalogue drafts under `overlays/sim-racing/archive/`, each with a framing README. Part of emptying `Home/`. | 2026-07-23 |
+| SO-0012 | **Bring the design-principles doc + parked prototype into the repo** — `overlays/sim-racing/design-principles.md` (+ HTML pair; renderer-contract section reconciled to ADR 0005), the parked correlation-demo prototype under `overlays/sim-racing/prototypes/`, and the early catalogue drafts under `overlays/sim-racing/archive/`, each with a framing README. Part of consolidating the scattered design material into the repo. | 2026-07-23 |
 | SO-0002 | **Gallery page over demo data** (`pages/gallery.html`) — browse all 68 non-excluded overlays animated live over a shared demo driver, filter by set/stage, search, pause/speed/shift-mode. Required extracting the missing animated demo engine: `engine/demo-lap.js` rebuilt as the richer 30s lap (gears + rpm/spd), and a new Layer-2 `engine/demo-driver.js` (`tick(dt)`) ported byte-faithfully from the prototype's `catalogue.html` — it **reproduces `qa/fixture.json` exactly**. Verified: all 68 tiles paint live, no errors (headless). **Supersedes the prototype's `catalogue.html` + `Live/gallery.html`** (a delete-gate condition). | 2026-07-23 |
 | SO-0001 | **Migrate all 68 non-excluded overlays to modules** — full engine port (helpers + shifter/telemetry state + settable-global-ctx), draw bodies byte-for-byte. Verified: unit blank-tile guard, manifest coherence (`REQUIRE_FULL_COVERAGE` on), and **68/68 pixel-faithful to the reference render** (qa golden-diff). The golden faithfulness harness (`qa/`) was built alongside. | 2026-07-23 |
 | SO-0000 | Scaffold the repo: layered engine extracted from the prototype, manifest quality-gate, pytest + `node --test` suites, ADRs. | 2026-07-23 |
 
 ## Details
+
+### SO-0039 — Take the repo public {#so-0039}
+**P1 · Chore · release**
+
+Run the house repo standard and the go-public runbook in full, then flip. Going public
+is a one-way door — every check happens *before* the flip. Audited 2026-07-28; findings below.
+
+**Blockers — history rewrite required (do this first, it invalidates everything downstream)**
+
+1. **Personal email in 21 of 72 commits.** `git log --format='%an %ae %cn %ce' | sort -u` returns two
+   identities: the GitHub noreply on the oldest 51, and a personal Gmail on the newest 21 (author *and*
+   committer). Cause: `user.email` was only ever set globally on this machine, never `--local` in this clone,
+   so commits made here inherited it. The standard requires the noreply set *before the first commit*.
+2. **Commit messages name private paths.** `fa8e7c2` and `8b02f6d` name a local private working directory in
+   their bodies, and both name it in their *subjects*; `2bc32f9` refers to a private knowledge base. The runbook
+   is explicit that commit messages are public surface and that naming a private path is itself a leak.
+3. **The working tree named one too** — the SO-0012 row in this file referenced the same private directory.
+   Already reworded. Keep this file clean of such references, *including in this ticket*: the first draft of
+   it named the paths it was warning about, which is exactly the failure mode.
+
+Fix all three in one operation: set `git config --local user.email` to the noreply, then either
+`git filter-repo` (mailmap + message callback) or — simpler for a solo repo — squash to a fresh orphan root.
+Then force-push. **Nothing else on this list matters until this is done**, because the rewrite changes every
+SHA after it.
+
+**Clean — verified, no action**
+
+- No secrets in tree or history: no `.env`, `*.pem`, `*.key`, `id_rsa`, `.netrc`, `.npmrc`, `.pypirc`,
+  `credentials`, `.p12` ever committed; zero `AKIA` / `BEGIN … PRIVATE KEY` / `ghp_` / `sk-` matches across
+  `git log -p --all`. (`gitleaks`/`trufflehog` are not installed — this is the runbook's documented floor,
+  and running one of the real scanners before the flip is still worth doing.)
+- No hardcoded local paths (`C:\Users\…`, `/Users/…`, `/home/…`) anywhere in the tree.
+- LICENSE present and MIT, `© Dimitri Berardi`. Repo already kebab-case. CI exists and is green.
+  `qa/acceptance.mjs` is standalone and passes; `qa/product-map.md` present. All four `docs/` folders
+  scaffolded with landing files, `docs/README.md` declares the MD+HTML pairing.
+
+**Structural gaps**
+
+4. **GitHub description is empty.** The standard says one sentence, names the tech, ends with a period, and
+   "Do not skip this." Homepage URL and topics are also unset.
+5. **README has no visual.** Item 4 of the required spine is a visual with real alt text — this is a
+   *visual* product with 69 overlays and the README shows none of them. The most valuable single fix for a
+   stranger landing cold.
+6. **`llms.txt` is materially stale** — it still says "three overlays are migrated, the rest of the
+   72-overlay catalogue is pending". All 69 non-excluded overlays have been migrated since SO-0001. This is
+   the file pointed at coding agents, so it is wrong in the worst possible place.
+7. **Stale counts elsewhere**: `docs/technical/testing.md` and `tickets.md` say "72 entries";
+   `index.html` says "68 overlays". Current is 73 catalogue entries / 69 non-excluded.
+8. **`.pytest_cache/` is not in `.gitignore`** (`__pycache__/` is). Untracked today, so it is hygiene rather
+   than a leak.
+
+**Judgement calls to make before flipping**
+
+9. **Does `docs/tickets/` go public?** The standard reserves `tickets/tickets.md`, so it is sanctioned — but
+   this board carries frank internal narrative ("where I was wrong", superseded diagnoses, shelved-branch
+   names). Decide whether that reads as admirable engineering transparency or as debris. Leaning: keep it,
+   it is genuinely good, but reread the Done column as a stranger first.
+10. **QA coverage regressed by design.** SO-0038 retired 27 goldens; the harness now checks 40 of 69. The
+    README's `## Testing` claims should not overstate that, and recapturing on a machine with the prototype
+    would be better done before strangers read it.
+11. **Debris sweep** (runbook step 5): `TODO`/`FIXME`, dead files, the dead-end branch `3178ed9`, and the
+    merged `wip/demo-honest-gear` branch — tidying was deferred earlier and this is the moment.
+12. **Post-flip**: update this repo's row in the cross-repo manifest (it still reads private), then load the
+    public URL logged out and confirm README, badges and links render for a stranger.
 
 ### SO-0004 — OBS gamepad fallback flow {#so-0004}
 **P2 · Feature · setup**
