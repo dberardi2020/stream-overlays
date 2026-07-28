@@ -26,9 +26,9 @@ For what a harness can't assert — interactions, and whether it *looks right* l
 
 ## Coverage
 
-- **68 / 68** non-excluded overlays: unit blank-tile guard ✔, manifest coherence ✔, acceptance non-blank ✔, **pixel-faithful to golden ✔**. The 4 `excluded` overlays are archived-in-manifest and intentionally module-less.
+- **69 / 69** non-excluded overlays: unit blank-tile guard ✔, manifest coherence ✔, acceptance non-blank ✔. **Pixel-faithful to golden on 40 of 69** — SO-0038 deliberately redesigned 29 overlays (their baked backing moved to the plate), retiring goldens whose purpose was fidelity to the prototype; they want recapturing on a machine that can re-baseline. The 4 `excluded` overlays are archived-in-manifest and intentionally module-less.
 - Pure calibration maths: unit-tested across rest/full/clamp and off-centre-rest cases.
-- Manifest: every invariant above, on all 72 entries.
+- Manifest: every invariant above, on all 73 entries.
 
 ## Gaps (tracked)
 

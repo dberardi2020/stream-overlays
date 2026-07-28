@@ -3,15 +3,19 @@
 > Browser overlays for streamers: read your hardware in the browser via the Gamepad API,
 > draw it to a transparent canvas, and composite over your scene in OBS. Static files only,
 > configuration in the URL — no install, no accounts, no server. The first vertical is sim
-> racing: live throttle/brake/clutch/steering from a Logitech G923, as a catalogue of small
-> canvas overlays. Currently a pilot: the engine and module architecture are built and
-> tested; three overlays are migrated, the rest of the 72-overlay catalogue is pending.
+> racing: live throttle, brake, clutch, steering and gears from a Logitech G923, as a
+> catalogue of small canvas overlays. All 69 non-excluded overlays (of 73 catalogue entries)
+> are migrated to modules and tested; pedals, wheel, H-shifter and paddles are bound and
+> verified against real hardware. Telemetry (rpm/speed) is deferred — those overlays run on
+> demo data until a sim feed exists.
 
 ## What it is
 
 - **Static-first.** Overlays are plain HTML/JS served over HTTP; the browser reads the wheel
   client-side, so nothing leaves the user's machine and there is nothing to host but files.
-- **Config in the URL.** `?style=<id>&scale=<n>` — portable, shareable, bookmarkable. No storage.
+- **Config in the URL.** `?style=<id>&scale=<n>&bg=<hex>&bga=<0-1>&radius=<px>&edge=<0-1>` —
+  portable, shareable, bookmarkable. No storage: a streamer calibrates in one browser but OBS
+  composites in another, and `localStorage` does not cross that boundary.
 - **Layered architecture.** Pure logic (calibration maths, demo lap) with no DOM; a browser
   runtime (gamepad seam, calibration engine, draw kit, loop); one module per overlay exporting
   `id` + `draw(ctx,w,h,state,mem)`; thin pages that wire it together.
@@ -33,6 +37,7 @@
 - Overlay modules: https://github.com/dberardi2020/stream-overlays/tree/main/overlays/sim-racing/overlays
 - Live overlay page: https://github.com/dberardi2020/stream-overlays/blob/main/overlays/sim-racing/pages/overlay.html
 - Gallery page: https://github.com/dberardi2020/stream-overlays/blob/main/overlays/sim-racing/pages/gallery.html
+- Setup page (calibrate the wheel, per browser context): https://github.com/dberardi2020/stream-overlays/blob/main/overlays/sim-racing/pages/setup.html
 - Admin page (curate + export catalogue.json): https://github.com/dberardi2020/stream-overlays/blob/main/overlays/sim-racing/pages/admin.html
 - Overlay design principles: https://github.com/dberardi2020/stream-overlays/blob/main/overlays/sim-racing/design-principles.md
 - Tests: https://github.com/dberardi2020/stream-overlays/tree/main/tests
