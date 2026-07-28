@@ -57,10 +57,44 @@ test("the URL carries the same scale the size was computed from", () => {
   }
 });
 
-test("every source shuts down when not visible", () => {
-  // Without this, importing the collection spins up one CEF instance per overlay.
-  for (const s of browsers(build())) {
-    assert.equal(s.settings.shutdown, true, s.name + " would keep running off-scene");
+test("overlays import hidden — the whole point of the collection being cheap", () => {
+  // visible:false + shutdown:true is what stops OBS launching a CEF instance per
+  // overlay on scene load. If either flips, the scene goes laggy again.
+  const c = build();
+  for (const sc of scenes(c)) {
+    if (sc.name === "SO · Setup") continue;
+    for (const item of sc.settings.items) {
+      assert.equal(item.visible, false, sc.name + " / " + item.name + " would load on scene entry");
+    }
+  }
+  for (const s of browsers(c)) {
+    if (/Rig Setup/.test(s.name)) continue;
+    assert.equal(s.settings.shutdown, true, s.name + " would keep running while hidden");
+  }
+});
+
+test("the Rig Setup source is the deliberate exception: visible, and never shut down", () => {
+  // It has to hold the gamepad. A page OBS has shut down cannot.
+  const c = build();
+  const setup = browsers(c).find(s => /Rig Setup/.test(s.name));
+  assert.equal(setup.settings.shutdown, false);
+  const item = c.sources.find(s => s.name === "SO · Setup").settings.items[0];
+  assert.equal(item.visible, true);
+});
+
+test("overlays are stacked centred, so unhiding any one lands it in frame", () => {
+  const c = build();
+  const byUuid = new Map(c.sources.map(s => [s.uuid, s]));
+  for (const sc of scenes(c)) {
+    if (sc.name === "SO · Setup") continue;
+    for (const item of sc.settings.items) {
+      const s = byUuid.get(item.source_uuid);
+      const { width: w, height: h } = s.settings;
+      assert.equal(item.pos.x, Math.round((1920 - w) / 2), s.name + " x");
+      assert.equal(item.pos.y, Math.round((1080 - h) / 2), s.name + " y");
+      assert.ok(item.pos.x >= 0 && item.pos.y >= 0, s.name + " starts off-canvas");
+      assert.ok(item.pos.x + w <= 1920 && item.pos.y + h <= 1080, s.name + " overflows the canvas");
+    }
   }
 });
 
@@ -98,24 +132,27 @@ test("uuids are unique across the collection", () => {
   assert.equal(new Set(ids).size, ids.length);
 });
 
-test("tiled overlays in a scene never overlap", () => {
-  const many = Array.from({ length: 24 }, (_, i) => ({
+test("a scene of many overlays still fits the canvas — nothing runs off the edge", () => {
+  // The grid this replaced overflowed at ~20 overlays and clipped the rest.
+  const many = Array.from({ length: 40 }, (_, i) => ({
     id: "o" + i, name: "O" + i, set: "pedals", size: { w: 250, h: 100 }
   }));
   const c = buildCollection(many, BASE, 2);
   const byUuid = new Map(c.sources.map(s => [s.uuid, s]));
-  const items = c.sources.find(s => s.name === "SO · Pedals").settings.items
-    .map(it => {
-      const s = byUuid.get(it.source_uuid);
-      return { x: it.pos.x, y: it.pos.y, w: s.settings.width, h: s.settings.height };
-    });
-  for (let i = 0; i < items.length; i++) {
-    for (let j = i + 1; j < items.length; j++) {
-      const a = items[i], b = items[j];
-      const hit = a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-      assert.ok(!hit, `items ${i} and ${j} overlap`);
-    }
+  for (const it of c.sources.find(s => s.name === "SO · Pedals").settings.items) {
+    const s = byUuid.get(it.source_uuid);
+    assert.ok(it.pos.x + s.settings.width <= 1920 && it.pos.y + s.settings.height <= 1080,
+      s.name + " is off-canvas");
+    assert.equal(it.visible, false);
   }
+});
+
+test("an overlay too large for the canvas is not pushed to a negative position", () => {
+  const huge = [{ id: "huge", name: "Huge", set: "pedals", size: { w: 1400, h: 900 } }];
+  const c = buildCollection(huge, BASE, 2);   // 2800x1800 — larger than 1920x1080
+  const item = c.sources.find(s => s.name === "SO · Pedals").settings.items[0];
+  assert.ok(item.pos.x >= 0 && item.pos.y >= 0,
+    "centring an oversized source must clamp, not go negative");
 });
 
 test("collectionSummary counts what the button reports", () => {

@@ -8,12 +8,24 @@
  * have to point at wherever this page is actually served from, which only the
  * browser knows. Serve it on a different port and the collection follows.
  *
- * Two things drive the shape:
+ * Three things drive the shape:
  *
- *   - **Every source gets `shutdown: true`** ("Shutdown source when not visible").
- *     Each Browser Source is a full CEF instance; 69 of them live at once would
- *     flatten the machine. With shutdown set, only what is on the active scene
- *     runs a browser, which is what makes a whole-catalogue collection viable.
+ *   - **Overlays import HIDDEN, stacked, and centred.** This is a library to copy
+ *     out of, not a scene to look at — browsing happens on the web gallery. OBS
+ *     treats a source as visible only when an active scene item references it with
+ *     the eye on, so `visible: false` plus `shutdown: true` means the Browser
+ *     Source never starts a CEF instance; it spins up lazily if you unhide it.
+ *
+ *     The first cut tiled them in a grid, all visible. Only the active scene's
+ *     sources go live, so that was ~14-20 browsers rather than all 67 — but that
+ *     is still enough to make a scene noticeably laggy, and the cost was paid
+ *     again on every scene switch. It also overflowed: ~20 overlays do not fit in
+ *     1920x1080, so much of each scene sat off-canvas and rendered as clipped
+ *     junk. Stacked-and-centred means unhiding any one lands it fully in frame.
+ *
+ *   - **Every source gets `shutdown: true`** ("Shutdown source when not visible"),
+ *     which is what makes the above work. The Rig Setup source is the deliberate
+ *     exception — see below.
  *
  *   - **Sizes are the RENDER size, not the design size.** overlay.html draws at
  *     `scale` (default 2), so a 180x130 overlay needs a 360x260 source. Getting
@@ -33,8 +45,18 @@
  */
 
 const CANVAS = { w: 1920, h: 1080 };
-const PAD = 24;                    // gap between tiled overlays
+const PAD = 24;
 const SET_SCENES = ["pedals", "wheel", "shifter", "combo"];
+
+// Stacked and centred, so unhiding any one overlay puts it fully in frame
+// regardless of its size — see the header note on why this is not a grid.
+// Clamped at 0: an overlay wider than the canvas would otherwise centre to a
+// negative offset, hiding its left/top edge off-screen — the exact failure the
+// grid had, reintroduced from the other direction.
+const centred = (w, h) => ({
+  x: Math.max(0, Math.round((CANVAS.w - w) / 2)),
+  y: Math.max(0, Math.round((CANVAS.h - h) / 2))
+});
 
 const uuid = () => (globalThis.crypto && crypto.randomUUID)
   ? crypto.randomUUID()
@@ -45,15 +67,15 @@ const uuid = () => (globalThis.crypto && crypto.randomUUID)
 
 /* An OBS input. The audio/mixer fields are inert for a browser source but OBS
    writes them for every input, and older builds are happier seeing them. */
-function browserSource(name, url, w, h) {
+function browserSource(name, url, w, h, shutdown) {
   return {
     prev_ver: 503316549,
     name, uuid: uuid(),
     id: "browser_source", versioned_id: "browser_source",
     settings: {
       url, width: w, height: h,
-      shutdown: true,              // do not run a CEF instance for an off-scene overlay
-      restart_when_active: true,   // re-poll the gamepad when it comes back on screen
+      shutdown: shutdown !== false,  // no CEF instance for a hidden/off-scene overlay
+      restart_when_active: true,     // re-poll the gamepad when it comes back on screen
       reroute_audio: false, fps_custom: false, fps: 30, css: "",
       webpage_control_level: 1
     },
@@ -65,10 +87,10 @@ function browserSource(name, url, w, h) {
   };
 }
 
-function sceneItem(src, id, x, y) {
+function sceneItem(src, id, x, y, visible) {
   return {
     name: src.name, source_uuid: src.uuid,
-    visible: true, locked: false, rot: 0.0,
+    visible: visible !== false, locked: false, rot: 0.0,
     pos: { x, y }, scale: { x: 1.0, y: 1.0 },
     align: 5, bounds_type: 0, bounds_align: 0,
     bounds: { x: 0.0, y: 0.0 },
@@ -94,19 +116,6 @@ function scene(name, items) {
   };
 }
 
-/* Tile left-to-right, wrapping at the canvas edge. Rows advance by the tallest
-   overlay placed in the row, so nothing overlaps at mixed sizes. */
-function layout(entries, sizeOf) {
-  let x = PAD, y = PAD, rowH = 0;
-  return entries.map(e => {
-    const { w, h } = sizeOf(e);
-    if (x + w > CANVAS.w - PAD && x > PAD) { x = PAD; y += rowH + PAD; rowH = 0; }
-    const at = { x, y };
-    x += w + PAD; rowH = Math.max(rowH, h);
-    return { entry: e, ...at };
-  });
-}
-
 /* `manifest`  — catalogue entries (excluded/module-less ones filtered by caller)
    `baseUrl`   — absolute URL of the pages/ directory, e.g. http://host:8000/pages/
    `scale`     — the render scale to bake in (overlay.html's default is 2) */
@@ -115,25 +124,27 @@ export function buildCollection(manifest, baseUrl, scale, collectionName) {
   const sizeOf = e => ({ w: Math.round(e.size.w * scale), h: Math.round(e.size.h * scale) });
   const sources = [], scenes = [];
 
-  // A Setup scene first — calibration inside OBS is the step everyone misses,
-  // so the collection opens on it rather than making it something you go find.
+  /* A Setup scene first — calibrating inside OBS is the step everyone misses, so
+     the collection opens on it rather than making it something you go find. This
+     is the one source that imports VISIBLE, and the one with `shutdown: false`:
+     it has to keep holding the gamepad, and a page OBS has shut down cannot. */
   const setupSrc = browserSource(
     "SO · Rig Setup (calibrate, then delete)",
-    new URL("setup.html?obs=1", baseUrl).href, 900, 1000
+    new URL("setup.html?obs=1", baseUrl).href, 900, 1000, false
   );
   sources.push(setupSrc);
-  scenes.push(scene("SO · Setup", [sceneItem(setupSrc, 1, PAD, PAD)]));
+  scenes.push(scene("SO · Setup", [sceneItem(setupSrc, 1, PAD, PAD, true)]));
 
   for (const set of SET_SCENES) {
     const items = manifest.filter(e => e.set === set);
     if (!items.length) continue;
-    const placed = layout(items, sizeOf);
-    const sceneItems = placed.map((p, i) => {
-      const { w, h } = sizeOf(p.entry);
-      const url = new URL("overlay.html?style=" + p.entry.id + "&scale=" + scale, baseUrl).href;
-      const src = browserSource(p.entry.name + " (" + w + "×" + h + ")", url, w, h);
+    const sceneItems = items.map((e, i) => {
+      const { w, h } = sizeOf(e);
+      const url = new URL("overlay.html?style=" + e.id + "&scale=" + scale, baseUrl).href;
+      const src = browserSource(e.name + " (" + w + "×" + h + ")", url, w, h);
       sources.push(src);
-      return sceneItem(src, i + 1, p.x, p.y);
+      const at = centred(w, h);
+      return sceneItem(src, i + 1, at.x, at.y, false);   // hidden: costs nothing until unhidden
     });
     scenes.push(scene("SO · " + set[0].toUpperCase() + set.slice(1), sceneItems));
   }
