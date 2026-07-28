@@ -43,6 +43,43 @@ a:hover{text-decoration:underline}
 .tag.later{color:var(--clu);border-color:rgba(255,176,32,.5)}
 .hint{font-size:11.5px;color:var(--mute);line-height:1.55}
 .resetrow{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+/* The two things people get wrong before they ever reach step 1, so they lead. */
+.facts{border-left:3px solid var(--clu);background:var(--panel-2);border-radius:0 8px 8px 0;
+  padding:2px 14px;margin:10px 0 16px}
+.facts p{font-size:12.3px}
+.steph{font-family:Oxanium,monospace;font-weight:600;font-size:13px;color:var(--ink);
+  margin:16px 0 2px;letter-spacing:.01em}
+.card ol{color:var(--mute);font-size:12.3px;margin:.4em 0;padding-left:20px}
+.card ol li{margin:.42em 0}
+.urlrow{display:flex;align-items:center;gap:8px;margin:6px 0 3px;flex-wrap:wrap}
+.urlrow code{font-size:11.5px;word-break:break-all}
+button.mini{font:inherit;font-size:11px;padding:3px 9px;border-radius:5px;cursor:pointer;
+  background:var(--panel-2);color:var(--ink);border:1px solid var(--line-2)}
+button.mini:hover{border-color:var(--str)}
+button.mini.ok{color:var(--thr);border-color:var(--thr)}
+kbd{background:var(--panel-2);border:1px solid var(--line-2);border-bottom-width:2px;border-radius:4px;
+  padding:0 4px;font-size:11px;font-family:inherit}
+
+/* ---- ?obs=1 — the same page, sized for OBS's Interact window (ADR 0001: this
+   is configuration, so it rides the URL rather than forking a second copy of the
+   calibration surface). Interact opens roughly 940px wide and is the ONLY way to
+   reach this page in OBS, so: no site nav (nothing to navigate to), no OBS
+   how-to card (you are already there), and everything scaled up — it is read at
+   arm's length from a driving position, not from a desk chair. ---- */
+body.obs .sitenav,
+body.obs #obs,
+body.obs .card.soon{display:none}
+body.obs{font-size:16px}
+body.obs .wrap{max-width:900px;padding:22px 22px 60px}
+body.obs h1{font-size:31px}
+body.obs .lede,body.obs .devstatus{font-size:15px}
+body.obs .card{padding:19px 21px;margin-bottom:19px;border-radius:13px}
+body.obs .card h2{font-size:19px}
+body.obs .card p{font-size:14.5px}
+body.obs .hint{font-size:13.5px}
+body.obs button{font-size:14px !important;padding:8px 15px !important}
+body.obs .g923cal-gsub-name{font-size:15px}
+body.obs .gate-cell{width:38px;height:38px;font-size:15px}
 button.danger{font:inherit;font-size:12px;padding:5px 11px;border-radius:5px;cursor:pointer;
   background:transparent;color:var(--brk);border:1px solid var(--brk);opacity:.85}
 button.danger:hover{opacity:1}
@@ -57,6 +94,9 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
 </style>
 </head>
 <body>
+<!-- Inline and first: the page module is deferred, so setting this there would
+     let the site nav paint for a frame before being hidden. -->
+<script>if (new URLSearchParams(location.search).has("obs")) document.body.className = "obs";</script>
 <nav class="sitenav">
   <a class="sitenav-brand" href="/">Stream<span>Overlays</span></a>
   <div class="sitenav-links">
@@ -124,21 +164,43 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
 
   <div class="card" id="obs">
     <h2>Using it in OBS</h2>
-    <p class="hint"><b>The local server has to be running.</b> Overlay URLs are
-      <code>http://localhost:8000/…</code>, which only resolve while it is up — if it isn't when OBS loads
-      a Browser Source, the overlay is just blank, mid-stream. Start it with <code>npm run serve</code>, or
-      double-click <code>scripts/start-overlays.cmd</code>. To have it always up, put a shortcut to that file
-      in your Startup folder (<kbd>Win</kbd>+<kbd>R</kbd> → <code>shell:startup</code>).</p>
-    <p class="hint">Each overlay is its own page — you copy its URL into OBS. Because
-      calibration is per-browser, OBS's built-in browser needs its own one-time calibration:</p>
+
+    <div class="facts">
+      <p><b>OBS is a separate browser.</b> Calibrating here in Chrome does <b>not</b> carry over — OBS keeps
+        its own storage, so a rig calibrated on this page still reads <i>not set</i> over there. It needs its
+        own one-time calibration. That is the step everyone misses.</p>
+      <p><b>The local server must be running</b> whenever OBS loads a source. Overlay URLs are
+        <code>http://localhost:8000/…</code> and resolve only while it is up — if it isn't, the overlay is
+        silently blank, mid-stream. Double-click <code>scripts/start-overlays.cmd</code>, or put a shortcut to
+        it in your Startup folder (<kbd>Win</kbd>+<kbd>R</kbd> → <code>shell:startup</code>) so it is always up.</p>
+    </div>
+
+    <h3 class="steph">Calibrate inside OBS — once</h3>
     <ol>
-      <li>Add <b>this setup page</b> as a temporary OBS Browser Source.</li>
-      <li>Right-click it → <b>Interact</b>, press a wheel button, and calibrate here.</li>
-      <li>Remove the setup source. Every overlay in that OBS browser now reads the saved calibration.</li>
+      <li>Add a <b>Browser Source</b> with this URL, sized about <b>900 × 1000</b>:
+        <div class="urlrow"><code id="obsSetupUrl">…</code><button id="copyObsSetup" class="mini">Copy</button></div>
+        <span class="hint">The <code>?obs=1</code> drops the site nav and scales everything up for OBS's
+          cramped Interact window.</span></li>
+      <li>Untick <b>Shutdown source when not visible</b> — a backgrounded page can't hold the device.</li>
+      <li>Right-click the source → <b>Interact</b>. A separate window opens.</li>
+      <li><b>Click once on the page</b>, then press any wheel button. The device line goes green — the Gamepad
+        API only reports to a focused document, and Interact is what gives it focus.</li>
+      <li>Calibrate pedals, wheel and shifter there, then <b>delete the source</b>. Every overlay in OBS now
+        reads that calibration.</li>
     </ol>
-    <p class="hint"><b>No device showing?</b> The Gamepad API only wakes on a focused page — that's what the Interact
-      window gives you. If it still won't appear, run the overlay in a real Chrome window and use OBS <b>Window Capture</b>
-      instead.</p>
+
+    <h3 class="steph">Then add the overlays</h3>
+    <p class="hint"><b>The quick way:</b> in the <a href="gallery.html">gallery</a>, hit
+      <b>Download OBS collection</b>, then in OBS use <b>Scene Collection → Import</b>. That gives you every
+      overlay as a correctly-sized Browser Source, grouped into a scene per set, plus the setup scene above.
+      Switch to it, copy the overlays you want, and paste them into your own scenes.</p>
+    <p class="hint"><b>Or one at a time:</b> hit <b>Copy OBS link</b> on any card and add it as a Browser Source
+      at the <b>size shown on that card</b> — that is the real render size, not the design size, so don't let
+      OBS stretch it.</p>
+
+    <p class="hint"><b>Still no device after Interact?</b> Some setups never expose the gamepad to OBS's browser
+      at all. Fall back to running the overlay in a real Chrome window and capturing it with OBS
+      <b>Window Capture</b> — your Chrome calibration already works there.</p>
   </div>
 </div>
 
@@ -146,6 +208,17 @@ ol{padding-left:1.3em;margin:.5em 0} ol li{margin:.25em 0;color:var(--mute);font
 import { createState } from "../engine/state.js";
 import { createCalibration } from "../engine/calibration.js";
 import { CALIBRATION_KEY } from "../engine/live-input.js";
+
+/* Show the real URL for THIS deployment rather than a hardcoded localhost:8000 —
+   the port is configurable (PORT=), and this has to stay right if it is ever hosted. */
+const obsSetupUrl = new URL("setup.html?obs=1", location.href).href;
+document.getElementById("obsSetupUrl").textContent = obsSetupUrl;
+const copyBtn = document.getElementById("copyObsSetup");
+copyBtn.onclick = async () => {
+  try { await navigator.clipboard.writeText(obsSetupUrl); copyBtn.textContent = "Copied!"; copyBtn.classList.add("ok"); }
+  catch { copyBtn.textContent = "Select it"; }
+  setTimeout(() => { copyBtn.textContent = "Copy"; copyBtn.classList.remove("ok"); }, 1400);
+};
 
 const state = createState();
 const cal = createCalibration({

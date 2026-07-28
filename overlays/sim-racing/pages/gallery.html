@@ -189,6 +189,7 @@ input[type=color]::-webkit-color-swatch-wrapper{padding:0}
       <div class="grp demo-only"><span class="lbl">Speed</span><input id="speed" type="range" min="0.25" max="2" step="0.25" value="1"><span id="speedV" class="lbl">1×</span></div>
       <div class="grp demo-only"><span class="lbl">Shift</span><button id="mode" class="btn">Mode: H</button></div>
       <div class="grp"><button id="resetAccum" class="btn" title="Clear the accumulated history the cumulative overlays draw from — gate dwell, shift log, traces, shift count">Reset history</button></div>
+      <div class="grp"><button id="obsCollection" class="btn" title="Download an OBS scene collection containing every overlay as a correctly-sized Browser Source, plus a Setup scene. Import via Scene Collection → Import.">Download OBS collection</button></div>
       <div class="tally"><b id="visN">0</b> shown</div>
     </div>
     <div class="row">
@@ -279,6 +280,31 @@ function resetAccumulators() {
   for (const t of tiles) t.mem = {};        // per-overlay scratch (trails, peaks)
 }
 document.getElementById("resetAccum").onclick = resetAccumulators;
+
+/* Hand OBS the whole catalogue at once, correctly sized, rather than making
+   someone add 69 Browser Sources by hand. Only overlays that actually have a
+   module go in — an excluded/module-less entry would import as a dead source. */
+const obsBtn = document.getElementById("obsCollection");
+obsBtn.onclick = async () => {
+  const { buildCollection, collectionSummary } = await import("../engine/obs-collection.js");
+  const usable = entries.filter(e => e.stage !== "excluded" && !e.hidden);
+  const collection = buildCollection(usable, new URL("./", location.href).href, OBS_SCALE);
+  const sum = collectionSummary(collection);
+
+  const blob = new Blob([JSON.stringify(collection, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "StreamOverlays.json";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+
+  obsBtn.textContent = sum.sources + " sources · import in OBS";
+  obsBtn.classList.add("on");
+  clearTimeout(obsBtn._t);
+  obsBtn._t = setTimeout(() => {
+    obsBtn.textContent = "Download OBS collection"; obsBtn.classList.remove("on");
+  }, 4000);
+};
 
 /* copy-to-clipboard with a transient "Copied!" on the button itself */
 function wireCopy(btn, text, label, confirm) {
