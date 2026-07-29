@@ -46,13 +46,20 @@ subsets Google serves are dead weight.
 ## Licence
 
 Both are licensed under the **SIL Open Font License 1.1**, which permits
-redistribution and bundling:
+redistribution and bundling. OFL 1.1 requires the licence to travel *with* the
+font files, so each family's licence is vendored beside them — verbatim from
+upstream, one per family because each carries its own copyright notice:
 
-- **IBM Plex Mono** — © IBM Corp. <https://github.com/IBM/plex>
+- **IBM Plex Mono** — © IBM Corp., Reserved Font Name "Plex".
+  [`OFL-IBMPlexMono.txt`](OFL-IBMPlexMono.txt) · <https://github.com/IBM/plex>
 - **Oxanium** — © The Oxanium Project Authors.
-  <https://github.com/sevmeyer/oxanium>
+  [`OFL-Oxanium.txt`](OFL-Oxanium.txt) · <https://github.com/sevmeyer/oxanium>
 
-Full licence text: <https://openfontlicense.org/>
+The licence *body* is identical in both; only the copyright line differs. Note
+this is the one place the repo's own [MIT licence](../../LICENSE) does not
+apply — these six `.woff2` are third-party files under OFL. Nothing else is
+affected: the site itself links the two families from the Google Fonts CDN
+rather than serving them, and linking is not redistribution.
 
 ## Updating them
 

@@ -146,7 +146,9 @@ what leaked was an email address, not a credential.
 - No hardcoded local paths (`C:\Users\…`, `/Users/…`, `/home/…`) anywhere in the tree.
 - LICENSE present and MIT, `© Dimitri Berardi`. Repo already kebab-case. CI exists and is green.
   `qa/acceptance.mjs` is standalone and passes; `qa/product-map.md` present. All four `docs/` folders
-  scaffolded with landing files, `docs/README.md` declares the MD+HTML pairing.
+  scaffolded with landing files, `docs/README.md` declares the MD+HTML pairing. *(This check was true but
+  incomplete — it verified the repo's own licence and never asked whether every tracked file is covered by
+  it. Six are not: see 13.)*
 
 **Structural gaps**
 
@@ -178,6 +180,26 @@ what leaked was an email address, not a credential.
     the history rewrite.
 12. **Post-flip**: update this repo's row in the cross-repo manifest (it still reads private), then load the
     public URL logged out and confirm README, badges and links render for a stranger.
+
+**Found after the audit**
+
+13. ~~**The vendored fonts are not MIT, and shipped without their licence**~~ — **done 2026-07-28.** The six
+    `qa/fonts/*.woff2` vendored by SO-0034 are third-party files under the **SIL Open Font License 1.1**,
+    which requires the licence to travel *with* the font files. `qa/fonts/README.md` named both copyright
+    holders and linked the licence, but linking is a strained reading of "accompanied by" — so this was a
+    small real gap, not a flagrant one. **Fixed** by vendoring `OFL-IBMPlexMono.txt` and `OFL-Oxanium.txt`
+    verbatim from upstream, one per family because each carries its own copyright notice (IBM's also
+    asserts `"Plex"` as a Reserved Font Name). The licence *body* is byte-identical in both — the 4 KB of
+    duplication buys exactness over an edited merge of a legal document. The README now points at the
+    bundled files and states plainly that this is the one place the repo's MIT licence does not reach.
+    **Scope is only the QA fixture**: the site itself links both families from the Google Fonts CDN rather
+    than serving them, and linking is not redistribution.
+
+    *Why the audit missed it:* it checked that a LICENSE exists and is MIT, which is a question about the
+    repo. The question that catches this is about the *files* — is every tracked file covered by the repo's
+    licence? Vendored binaries are exactly where those two diverge, and the pre-flight had no step that
+    asked the second question. Worth carrying into the house standard: audit inbound licences, not just the
+    outbound one.
 
 ### SO-0004 — OBS gamepad fallback flow {#so-0004}
 **P2 · Feature · setup**
