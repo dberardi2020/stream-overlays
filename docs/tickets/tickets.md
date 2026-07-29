@@ -229,6 +229,14 @@ Get it live over HTTPS (which the Gamepad API requires) with a deploy from `main
 
 Route everything through the domain from the moment there is one — **never hard-code a `*.github.io` / `*.vercel.app` URL**, because the domain outlives the host choice. The OBS URL contract (`?style=<id>`) rides on top of whatever host is current: **a host migration must not change a single `?style=` URL** — which is *why* ids are immutable and host-independent. See [ADR 0002](../decisions/0002-static-first-hosting.md).
 
+**Progress 2026-07-28 — the deploy exists; the site is not enabled yet.**
+
+`.github/workflows/pages.yml` uploads **`overlays/sim-racing`** as the artifact — the site's document root, *not* the repo root, which is the whole reason the OBS paths survive the move: `scripts/dev-server.py` serves that same directory, so `/pages/overlay.html?style=bowtie` is byte-identical local and deployed. It is gated on the `tests` workflow via `workflow_run` rather than repeating its steps, so a red suite cannot publish and a Pages failure cannot redden the README's tests badge. It checks out `workflow_run.head_sha`, deploying the commit that actually passed rather than whatever `main` points at by then. No build step, per [ADR 0002](../decisions/0002-static-first-hosting.md) — there is nothing to compile, only a root to choose.
+
+Verified before landing, with the subtree served as root exactly as Pages will mount it: landing, gallery, setup and two overlay pages all load with **zero console errors**, and canvases paint (gallery tiles are viewport-lazy, so the count climbs as you scroll). Two structural risks were checked and are absent: **no `<iframe>` anywhere in the site**, so the Gamepad API runs top-level and never needs the `Permissions-Policy: gamepad=*` header that Pages cannot set — had the gallery embedded overlays in frames, Live mode would have been unfixable there; and **no absolute paths**, so the relative-link sweep holds.
+
+**Remaining, and deliberately not done here:** enabling Pages is a *publishing* action — a private repo's Pages site is reachable by default unless access control is configured — so it belongs to the SO-0039 flip, in this order: flip public → enable Pages (source: GitHub Actions) → confirm the deploy → **then** update the README's "works, not yet hosted" status and the repo homepage field. Not before: claiming a host that isn't live is exactly the stale-claim failure SO-0039 finding 7 cleaned up. Expect the `pages` run to fail until Pages is enabled — it has nowhere to deploy to.
+
 ### SO-0010 — Wishlist / feedback form {#so-0010}
 **P3 · Feature · site**
 

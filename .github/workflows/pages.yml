@@ -1,0 +1,57 @@
+# Deploy the site to GitHub Pages (SO-0008, ADR 0002).
+#
+# There is no build step — the site is static files with native ES modules, and
+# the browser resolves the imports. This workflow only picks the document root
+# and uploads it.
+#
+# That root is `overlays/sim-racing`, NOT the repo root. The dev server
+# (scripts/dev-server.py) serves the same directory, so a path that works
+# locally works deployed — which is what keeps the OBS URL contract intact:
+# `/pages/overlay.html?style=<id>` must not move when the host changes.
+#
+# Gated on the `tests` workflow rather than duplicating its steps, so a red
+# suite cannot publish and a Pages hiccup cannot redden the tests badge.
+
+name: pages
+
+on:
+  workflow_run:
+    workflows: [tests]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; let a newer commit supersede an in-flight one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    # workflow_dispatch has no triggering run to inspect, hence the second arm.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Deploy the commit that passed tests, not whatever main points at now.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: overlays/sim-racing
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
