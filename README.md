@@ -9,13 +9,17 @@ Browser **overlays for streamers** that read your hardware in the browser and co
 
 ![The Stream Overlays landing page: the headline "Your rig, live on your stream." beside four overlays — Needle Gauges with the clutch and throttle arcs live and the brake at rest; Gate with Trail and Lever Position both reading NEUTRAL with the knob on the centre rail; and Pedal Blocks, clutch and throttle lit, brake dark — above a three-step find, set up, use flow.](docs/assets/landing.png)
 
-### **[→ Open the gallery](https://dberardi2020.github.io/stream-overlays/pages/gallery.html)** · [calibrate your wheel](https://dberardi2020.github.io/stream-overlays/pages/setup.html)
+**[Open the gallery →](https://dberardi2020.github.io/stream-overlays/pages/gallery.html)**  ·  **[Calibrate your wheel →](https://dberardi2020.github.io/stream-overlays/pages/setup.html)**
 
-> **Status: live.** The catalogue holds **73 overlays** (`overlays/sim-racing/catalogue.json`, the source of truth); all **69** non-excluded ones are migrated to the one-file-per-overlay module architecture and pixel-checked against a golden render (see [Testing](#testing)). Pedals, wheel, H-shifter and paddles all bind to a real G923 and are verified on hardware. Every overlay animates over a built-in demo lap, so the gallery is worth opening with no wheel attached.
+**69 overlays, all animating over a built-in demo lap** — so the gallery is worth opening with no hardware attached. Pedals, wheel, H-shifter and paddles are bound and verified against a real G923.
 
-## Model, in five words
+## How it works
 
 ![Data flow: the browser reads the G923 wheel via the Gamepad API; the engine normalises it into channel values through per-wheel calibration; an overlay module draws those channels to a transparent canvas; OBS composites the canvas over the stream scene.](docs/assets/data-flow.svg)
+
+The **Gamepad API is client-side**, so the browser on your machine reads your wheel and hands the values straight to the page. There is no server in the path and no telemetry leaving your PC — which is also why the whole thing can be plain static files.
+
+## Model, in five words
 
 - **Overlay** — one canvas renderer, selected by its **immutable id**: `?style=bowtie`. Ids are never
   reused or renumbered, so a URL you pasted into OBS keeps working.
@@ -31,12 +35,11 @@ Browser **overlays for streamers** that read your hardware in the browser and co
 
 - **OBS** (or any browser) for display, and a **wheel** for live input. Without one, everything still
   runs on the built-in demo lap.
-- Nothing else. The site is hosted, and the Gamepad API is client-side — your browser reads your wheel
-  and hands the values straight to the page, so **device data never leaves your machine**.
+- Nothing else — no install, no account, no download. The site is hosted.
 
 ## Use it
 
-Nothing to install. In order:
+In order:
 
 1. Open **[setup](https://dberardi2020.github.io/stream-overlays/pages/setup.html)** and calibrate your wheel.
 2. Browse the **[gallery](https://dberardi2020.github.io/stream-overlays/pages/gallery.html)** and pick an overlay.
@@ -78,6 +81,8 @@ run `node --test tests/*.test.mjs` and pytest so the blank-tile and manifest gua
 
 Every overlay is a small canvas renderer selected by its immutable id: `?style=<id>`. The manifest owns the metadata; a module owns the drawing.
 
+`catalogue.json` holds **73 entries**; the **69** that are not `excluded` each have a module, and every one of them is pixel-checked against a golden render (see [Testing](#testing)).
+
 | id | Reads | What it shows |
 | --- | --- | --- |
 | `bowtie` | brake · throttle · clutch | Brake left, throttle right, from a shared centre line — overlap is obvious. |
@@ -85,7 +90,7 @@ Every overlay is a small canvas renderer selected by its immutable id: `?style=<
 | `wheel` | steering | A flat-bottomed GT rim with real spokes and a top-dead-centre marker. |
 | `gate-map` | gear | The H-pattern gate with the engaged gear lit — needs a real H-shifter. |
 | `dash-cluster` | all channels | The classic: rev arc + gear centre, pedals and wheel around it. |
-| *…64 more* | pedals · wheel · shifter · combos | Browse them all animated over a demo lap in `pages/gallery.html`. |
+| *…64 more* | pedals · wheel · shifter · combos | [Browse them all](https://dberardi2020.github.io/stream-overlays/pages/gallery.html), animated over a demo lap. |
 
 Overlays are grouped by **set**, and both `set` and the exact channels an overlay reads are **derived from its draw code** and verified against the manifest — see [`docs/technical`](docs/technical/README.md).
 
