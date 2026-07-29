@@ -24,6 +24,8 @@
 
 ## Install
 
+- **Live:** https://dberardi2020.github.io/stream-overlays/ — gallery at `/pages/gallery.html`,
+  calibration at `/pages/setup.html`. Nothing to install; deployed from `main` by GitHub Actions.
 - Requires only a static HTTP server (the Gamepad API and ES modules need an HTTP context).
 - Clone: https://github.com/dberardi2020/stream-overlays
 - Serve `overlays/sim-racing` and open `pages/gallery.html` to browse every overlay over a demo lap, or `pages/overlay.html?style=bowtie` for one live.

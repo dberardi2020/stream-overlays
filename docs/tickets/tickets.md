@@ -178,8 +178,13 @@ what leaked was an email address, not a credential.
 11. ~~**Debris sweep**~~ — **done.** No `TODO`/`FIXME`/`XXX`/`HACK` in tracked source, no stray debug
     prints, no unreferenced files, no untracked junk. The three merged branches were deleted as part of
     the history rewrite.
-12. **Post-flip**: update this repo's row in the cross-repo manifest (it still reads private), then load the
-    public URL logged out and confirm README, badges and links render for a stranger.
+12. ~~**Post-flip**~~ — **flipped public 2026-07-28.** The delete-and-recreate hedge (which would have made
+    the pre-rewrite commits unreachable by SHA rather than merely unreferenced) was **declined** — what was
+    exposed is an email address, not a credential, and the cost of losing the repo identity outweighed it.
+    Description and ten topics were already set; **homepage now points at the live site** (SO-0008).
+    Hosting shipped in the same pass, so the README's "not yet hosted" status never survived the flip.
+    *Still open:* update this repo's row in the cross-repo manifest — it reads private — and eyeball the
+    public README logged out to confirm the badges and the hero image render for a stranger.
 
 **Found after the audit**
 
@@ -235,7 +240,13 @@ Route everything through the domain from the moment there is one — **never har
 
 Verified before landing, with the subtree served as root exactly as Pages will mount it: landing, gallery, setup and two overlay pages all load with **zero console errors**, and canvases paint (gallery tiles are viewport-lazy, so the count climbs as you scroll). Two structural risks were checked and are absent: **no `<iframe>` anywhere in the site**, so the Gamepad API runs top-level and never needs the `Permissions-Policy: gamepad=*` header that Pages cannot set — had the gallery embedded overlays in frames, Live mode would have been unfixable there; and **no absolute paths**, so the relative-link sweep holds.
 
-**Remaining, and deliberately not done here:** enabling Pages is a *publishing* action — a private repo's Pages site is reachable by default unless access control is configured — so it belongs to the SO-0039 flip, in this order: flip public → enable Pages (source: GitHub Actions) → confirm the deploy → **then** update the README's "works, not yet hosted" status and the repo homepage field. Not before: claiming a host that isn't live is exactly the stale-claim failure SO-0039 finding 7 cleaned up. Expect the `pages` run to fail until Pages is enabled — it has nowhere to deploy to.
+**Live 2026-07-28 — <https://dberardi2020.github.io/stream-overlays/>.** Ran in the planned order: flip public → enable Pages (`build_type: workflow`) → deploy → *then* update the claims. The one `pages` failure before enablement was expected and is the wiring proof: it got as far as `configure-pages` and failed only on `Get Pages site failed`, so trigger, guard and checkout were all correct.
+
+Verified anonymously against the live URL: landing, gallery, setup, and two overlay pages load with **zero console errors**, HTTP 301s to HTTPS, and the gallery painted **69/69** tiles — more than the local run, which only reached 39 because network latency gave the viewport-lazy tiles more time to fill. `catalogue.json` and `engine/draw-kit.js` both serve, so the manifest fetch and module graph resolve over the CDN.
+
+The real result is that **Pages mounts the site at a subpath** (`/stream-overlays/`), not a domain root — which is precisely what the relative-link sweep bought, and it went untested until now. A single absolute `/pages/…` reference anywhere would have 404'd in a way no local test could catch, because the local root *is* `/`.
+
+**Not yet done:** step 3, a real domain. Until it exists, the `github.io` URL is hard-coded in exactly three places — `README.md`, `llms.txt`, and the repo's homepage field — all of them documentation, never product. Nothing in the overlay code, the manifest or a copied OBS link contains a host, so the domain move stays a three-file edit and no `?style=` URL moves.
 
 ### SO-0010 — Wishlist / feedback form {#so-0010}
 **P3 · Feature · site**

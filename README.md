@@ -9,7 +9,9 @@ Browser **overlays for streamers** that read your hardware in the browser and co
 
 ![The Stream Overlays landing page: the headline "Your rig, live on your stream." beside four overlays — Needle Gauges with the clutch and throttle arcs live and the brake at rest; Gate with Trail and Lever Position both reading NEUTRAL with the knob on the centre rail; and Pedal Blocks, clutch and throttle lit, brake dark — above a three-step find, set up, use flow.](docs/assets/landing.png)
 
-> **Status: works, not yet hosted.** The catalogue holds **73 overlays** (`overlays/sim-racing/catalogue.json`, the source of truth); all **69** non-excluded ones are migrated to the one-file-per-overlay module architecture and pixel-checked against a golden render (see [Testing](#testing)). Pedals, wheel, H-shifter and paddles all bind to a real G923 and are verified on hardware. What is missing is **hosting** — you run it from a local static server today, so the overlay URLs only work while that server is up.
+### **[→ Open the gallery](https://dberardi2020.github.io/stream-overlays/pages/gallery.html)** · [calibrate your wheel](https://dberardi2020.github.io/stream-overlays/pages/setup.html)
+
+> **Status: live.** The catalogue holds **73 overlays** (`overlays/sim-racing/catalogue.json`, the source of truth); all **69** non-excluded ones are migrated to the one-file-per-overlay module architecture and pixel-checked against a golden render (see [Testing](#testing)). Pedals, wheel, H-shifter and paddles all bind to a real G923 and are verified on hardware. Every overlay animates over a built-in demo lap, so the gallery is worth opening with no wheel attached.
 
 ## Model, in five words
 
@@ -27,14 +29,28 @@ Browser **overlays for streamers** that read your hardware in the browser and co
 
 ## Requirements
 
-- A **static HTTP server** — the Gamepad API and ES modules both need an HTTP context, so `file://`
-  will not work. Node or any Python 3 is enough; `npm run serve` finds whichever you have.
 - **OBS** (or any browser) for display, and a **wheel** for live input. Without one, everything still
   runs on the built-in demo lap.
+- Nothing else. The site is hosted, and the Gamepad API is client-side — your browser reads your wheel
+  and hands the values straight to the page, so **device data never leaves your machine**.
 
-## Install
+## Use it
 
-There is nothing to install — the overlays are static files. To run locally:
+Nothing to install. In order:
+
+1. Open **[setup](https://dberardi2020.github.io/stream-overlays/pages/setup.html)** and calibrate your wheel.
+2. Browse the **[gallery](https://dberardi2020.github.io/stream-overlays/pages/gallery.html)** and pick an overlay.
+3. Hit **Copy OBS link**.
+4. In **OBS**, add a **Browser Source** at that URL, at the size the card shows.
+
+Config lives entirely in the URL — `?style=<id>&scale=<n>` plus optional plate settings `&bg=&bga=&radius=&edge=` — so a configured overlay is just a link you paste, and nothing is stored server-side because there is no server. Overlay **ids are immutable**, so a link you paste into OBS keeps working; that is also why a future move off this host cannot change a single `?style=` URL ([ADR 0002](docs/decisions/0002-static-first-hosting.md)).
+
+**Calibration is per browser.** OBS ships its own browser with its own storage, so calibrating in Chrome does *not* carry over — do it once more inside OBS via right-click → **Interact**. The setup page walks through this.
+
+## Run it locally
+
+Only needed to develop — the Gamepad API and ES modules both need an HTTP context, so opening the files
+over `file://` will not work:
 
 ```sh
 git clone https://github.com/dberardi2020/stream-overlays.git
@@ -43,13 +59,10 @@ npm run serve   # finds python3 / py / python, whichever this machine has
 # then open http://localhost:8000/pages/gallery.html
 ```
 
-Then, in order: open **`pages/setup.html`** and calibrate your wheel; browse **`pages/gallery.html`** and pick an overlay; hit **Copy OBS link**; in **OBS** add a **Browser Source** at that URL and the size the card shows.
+The dev server's document root is `overlays/sim-racing/`, the same directory the deploy publishes, so
+every path is identical local and live.
 
-**Calibration is per browser.** OBS ships its own browser with its own storage, so calibrating in Chrome does *not* carry over — do it once more inside OBS via right-click → **Interact**. The setup page walks through this.
-
-Config lives entirely in the URL — `?style=<id>&scale=<n>` plus optional plate settings `&bg=&bga=&radius=&edge=` — so a configured overlay is just a link you paste, and nothing is stored server-side because there is no server.
-
-Those URLs are served by your local dev server, so **it has to be running whenever OBS loads the source** — otherwise the overlay is blank. On Windows, double-click `scripts/start-overlays.cmd`; drop a shortcut to it in `shell:startup` to have it always up. Hosting would make the links permanent — see [ADR 0002](docs/decisions/0002-static-first-hosting.md) — but nothing is deployed yet.
+If you point OBS at a `localhost` URL instead of the hosted one, that server has to be running whenever OBS loads the source — otherwise the overlay is blank. On Windows, `scripts/start-overlays.cmd` starts it; a shortcut in `shell:startup` keeps it up. The hosted links have no such requirement.
 
 ### Hand it to your coding agent
 
@@ -90,10 +103,10 @@ Goldens have two provenances and are not the same guarantee: 40 come from the or
 
 ## Roadmap
 
-The engine, overlay library, calibration, gallery and landing page are done and hardware-verified. What remains:
+The engine, overlay library, calibration, gallery and landing page are done and hardware-verified, and the site deploys to GitHub Pages from `main` (SO-0008). What remains:
 
 - An **overlay quality pass** — cull the half-baked, upgrade the rough (SO-0019).
-- **Hosting + deploy**, which turns local URLs into permanent ones (SO-0008).
+- A **real domain**, so the links outlive the host choice (SO-0008).
 - **Sim telemetry** (rpm, speed, gear-from-sim), deferred until there is a feed to read — those overlays run on demo data until then (SO-0007).
 - Longer-term, a **builder** that composes overlays from named sub-visuals — which the module architecture is shaped to enable (SO-0011).
 
