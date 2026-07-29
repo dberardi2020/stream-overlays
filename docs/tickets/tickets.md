@@ -11,25 +11,23 @@ Rows are pointers; anything needing more than a sentence has a block in **Detail
 
 ## In progress
 
-| ID | Pri | Type | Title |
-|---|---|---|---|
-| [SO-0039](#so-0039) | P1 | Chore | Take the repo public — standards pass, sweep, and the flip |
+*(none)*
 
-**Input binding is done.** **SO-0006** closed on hardware (2026-07-28), which was the last
-v0 input-binding requirement — pedals, wheel, H-shifter and paddles all bind live off a real G923.
+**It shipped.** The repo went **public 2026-07-28** ([SO-0039](#so-0039)) and the site is **live on
+GitHub Pages** ([SO-0008](#so-0008)) at <https://dberardi2020.github.io/stream-overlays/>, deploying
+from `main`. Input binding closed on hardware the same day (**SO-0006**) — pedals, wheel,
+H-shifter and paddles all bind live off a real G923. Everything below is now post-launch work.
 
 ## On deck
 
-The committed next few, in intended order: the quality pass, then hosting. The
-[ADR 0006](../decisions/0006-setup-surface-pure-overlay.md) binding overhaul and the URL generator
-(SO-0003) are both **complete**, so nothing functional stands between here and go-live —
-what remains is polish and deployment. **Telemetry (SO-0007) is explicitly deferred** — a far-off
-goal — but the setup page and overlay are designed to leave a slot for it.
+The committed next: the overlay quality pass. Hosting and the public flip are **done**, so nothing
+structural stands in front of it — what remains is making the catalogue worth browsing.
+**Telemetry (SO-0007) is explicitly deferred** — a far-off goal — but the setup page and overlay are
+designed to leave a slot for it.
 
 | ID | Pri | Type | Title |
 |---|---|---|---|
 | [SO-0019](#so-0019) | P1 | Chore | Overlay quality pass — cull half-baked, upgrade the rough |
-| [SO-0008](#so-0008) | P1 | Chore | Hosting + deploy pipeline |
 
 ## Blocked
 
@@ -37,18 +35,23 @@ goal — but the setup page and overlay are designed to leave a slot for it.
 
 ## Backlog
 
-### Road to a real hosted website
+### Site, hosting & release
 
-Pre-public candidates not yet committed to the On-deck sequence.
+The site itself and the machinery around it. *(Was two lanes — "Road to a real hosted website" and
+"After launch" — an axis that launch has now spent: everything is after launch. Merged rather than
+left as a distinction that no longer distinguishes.)*
 
 | ID | Pri | Type | Title |
 |---|---|---|---|
 | [SO-0004](#so-0004) | P2 | Feature | OBS gamepad fallback — interactive ladder (guidance already shipped) |
+| [SO-0025](#so-0025) | P2 | Chore | Site style kit — encode design tokens, point every page at it |
+| [SO-0040](#so-0040) | P2 | Chore | A real domain — so the links outlive the host choice |
+| [SO-0041](#so-0041) | P2 | Chore | Run a real secret scanner over the full history |
+| [SO-0010](#so-0010) | P3 | Feature | Wishlist / feedback form |
+| [SO-0028](#so-0028) | P3 | Idea | Light vs dark mode support |
 | [SO-0033](#so-0033) | P3 | Feature | Bulk overlay import — merge into an existing OBS scene collection |
 | [SO-0036](#so-0036) | P3 | Idea | Calibration import/export — can a browser export import into OBS's Web View? |
 | [SO-0037](#so-0037) | P3 | Feature | Plate padding — breathing room around an overlay, and the size contract it moves |
-| [SO-0025](#so-0025) | P2 | Chore | Site style kit — encode design tokens, point every page at it |
-| [SO-0028](#so-0028) | P3 | Idea | Light vs dark mode support |
 
 ### Engine & overlays
 
@@ -68,14 +71,6 @@ Pre-public candidates not yet committed to the On-deck sequence.
 | [SO-0020](#so-0020) | P3 | Chore | Interim believable-enough demo lap (clean loop; superseded by SO-0014) |
 | [SO-0016](#so-0016) | P3 | Idea | Racer view — reverse the data into a virtual driver |
 
-### After launch
-
-Post-public — not part of getting the site live.
-
-| ID | Pri | Type | Title |
-|---|---|---|---|
-| [SO-0010](#so-0010) | P3 | Feature | Wishlist / feedback form |
-
 ## Decisions to revisit (not tickets)
 
 - **`excluded` → `archived` naming** — `excluded` means archived-not-deleted, but the word reads as *discard*. Rename the stage value?
@@ -89,7 +84,9 @@ are in the docs.*
 
 | ID | Title | Closed |
 |---|---|---|
-| SO-0038 | **29 overlays baked their own backing — moved it to the plate.** Each drew a full-canvas `glass(.5,.5,w-1,h-1,r)` inside its own `draw()`, so it stacked on the [SO-0003](#so-0003) plate instead of replacing it: set a plate and those 29 came out darker than the other 40, and no setting could make them genuinely transparent over a scene. Long predated the plate work — the plate only made it visible. Found by rendering every module to a bare canvas against the demo lap and measuring coverage (29 of 69), then confirmed exactly against the source: 29 full-canvas `glass()` calls, and 5 others that are internal sub-panels and were left alone. Removed the 29 calls (and their now-unused imports) and moved each overlay's backing to a **`plate` field on its catalogue entry** — `{bg: "08090c", bga: 0.55, radius: <its own>, edge: 0.14}`, the exact values `glass()` used. `glass()` was a fill *and* a 1px `rgba(255,255,255,0.14)` rim, so the plate gained an **`edge` URL param** (default 0, applied as an *inset* ring so it cannot change the Browser Source box) — without it those 29 would have quietly lost their border. The gallery's global plate gained an **"As Designed"** default meaning *no global value*: each overlay uses its own. That is the default because no single value is right for all 69 — forcing one would either strip the 29 built with a backing or impose one on the 40 built without (`hairline` is deliberately the least intrusive thing on the page). Each card then names its plate's source explicitly — **As Designed / Global / Custom** — rather than having one inferred from whether a global happened to be set. The three are genuinely different answers: "As Designed" *survives* someone setting a global, which the inferred two-state version could not express. Default is Global, so the one control still reaches everything at once; and because the global itself defaults to "As Designed", an untouched gallery shows every overlay exactly as built. "As Designed" is disabled with a reason on the 40 overlays that have no designed plate, and entering Custom seeds from whatever is currently showing so the first drag never jumps. Verified end to end: `?bg=08090c&bga=0.55&radius=7&edge=0.14` renders `rgba(8,9,12,0.55)`, 7px corners and a 1px inset rim at the unchanged 500×240 — pixel-identical to what `glass()` drew. **27 goldens retired** (`gate-with-trail` and `pedal-blocks` already had none): deliberate redesign invalidates a golden whose purpose was fidelity to the prototype, per the SO-0022 precedent. 115 node + 227 pytest green; qa 69/69 painted, 40 pixel-faithful. | 2026-07-28 |
+| SO-0039 | **Took the repo public.** Ran the house standard and the go-public runbook, then flipped. The blockers were all in **history, not the tree**: a personal email on 21 of 73 commits (`user.email` was set globally on this machine and never `--local` in this clone) and private paths in five commit messages — fixed with `git filter-repo --mailmap` + `--replace-message`, preserving all 73 commits rather than squashing, because the build record was worth keeping. The straggler lesson: **scan history for the shortest form of a term**, not the spots you think you touched — two misses used the bare directory name, and one was this ticket's own commit message, which named the path in the sentence about removing it. The audit was wrong twice in the other direction too: finding 5 (README has no visual) missed an inline SVG because it grepped for Markdown `![`, and finding 10 assumed goldens should be recaptured from a prototype that (a) is not on this machine and (b) those 29 overlays had deliberately diverged from — re-baselined from the modules instead, which makes them a *regression* baseline, not a fidelity one. Decided **yes** on shipping `docs/tickets/` publicly, frank narrative included. Found late: the six vendored `qa/fonts/*.woff2` are **OFL, not MIT**, and shipped without their licence text — fixed by vendoring both `OFL-*.txt` verbatim. The audit had asked "does a LICENSE exist and is it MIT?", a question about the *repo*; the question that catches this is about the *files*. The delete-and-recreate hedge was **declined**: pre-rewrite commits stay reachable by SHA for a while, and what was exposed is an email, not a credential. | 2026-07-28 |
+| SO-0008 | **Hosting + deploy — live on GitHub Pages**, <https://dberardi2020.github.io/stream-overlays/>, deployed from `main` with no build step ([ADR 0002](../decisions/0002-static-first-hosting.md)). The load-bearing choice is that the artifact is **`overlays/sim-racing`, not the repo root** — the same document root `scripts/dev-server.py` serves, which is what keeps `/pages/overlay.html?style=bowtie` byte-identical local and live and honours the rule that **a host migration must not move a single `?style=` URL**. `pages.yml` is gated on the `tests` workflow via `workflow_run` rather than repeating its steps, so a red suite cannot publish and a Pages failure cannot redden the README's tests badge; it checks out `workflow_run.head_sha` so it deploys the commit that actually passed. Two structural risks were checked before landing and were absent: **no `<iframe>` anywhere**, so the Gamepad API runs top-level and never needs the `Permissions-Policy: gamepad=*` header Pages cannot set — had the gallery embedded overlays in frames, Live mode would have been unfixable there; and no absolute paths. The real proof came at deploy: **Pages mounts the site at a subpath** (`/stream-overlays/`), not a domain root, so a single absolute `/pages/…` reference would have 404'd in a way no local run could catch — the local root *is* `/`. Verified anonymously: five pages, zero console errors, 69/69 gallery tiles, HTTP 301 → HTTPS. Steps 2 (Vercel) and 3 (a real domain) split out — see [SO-0040](#so-0040). | 2026-07-28 |
+| SO-0038 | **29 overlays baked their own backing — moved it to the plate.** Each drew a full-canvas `glass(.5,.5,w-1,h-1,r)` inside its own `draw()`, so it stacked on the **SO-0003** plate instead of replacing it: set a plate and those 29 came out darker than the other 40, and no setting could make them genuinely transparent over a scene. Long predated the plate work — the plate only made it visible. Found by rendering every module to a bare canvas against the demo lap and measuring coverage (29 of 69), then confirmed exactly against the source: 29 full-canvas `glass()` calls, and 5 others that are internal sub-panels and were left alone. Removed the 29 calls (and their now-unused imports) and moved each overlay's backing to a **`plate` field on its catalogue entry** — `{bg: "08090c", bga: 0.55, radius: <its own>, edge: 0.14}`, the exact values `glass()` used. `glass()` was a fill *and* a 1px `rgba(255,255,255,0.14)` rim, so the plate gained an **`edge` URL param** (default 0, applied as an *inset* ring so it cannot change the Browser Source box) — without it those 29 would have quietly lost their border. The gallery's global plate gained an **"As Designed"** default meaning *no global value*: each overlay uses its own. That is the default because no single value is right for all 69 — forcing one would either strip the 29 built with a backing or impose one on the 40 built without (`hairline` is deliberately the least intrusive thing on the page). Each card then names its plate's source explicitly — **As Designed / Global / Custom** — rather than having one inferred from whether a global happened to be set. The three are genuinely different answers: "As Designed" *survives* someone setting a global, which the inferred two-state version could not express. Default is Global, so the one control still reaches everything at once; and because the global itself defaults to "As Designed", an untouched gallery shows every overlay exactly as built. "As Designed" is disabled with a reason on the 40 overlays that have no designed plate, and entering Custom seeds from whatever is currently showing so the first drag never jumps. Verified end to end: `?bg=08090c&bga=0.55&radius=7&edge=0.14` renders `rgba(8,9,12,0.55)`, 7px corners and a 1px inset rim at the unchanged 500×240 — pixel-identical to what `glass()` drew. **27 goldens retired** (`gate-with-trail` and `pedal-blocks` already had none): deliberate redesign invalidates a golden whose purpose was fidelity to the prototype, per the SO-0022 precedent. 115 node + 227 pytest green; qa 69/69 painted, 40 pixel-faithful. | 2026-07-28 |
 | SO-0003 | **Configure → URL generator**, realising [ADR 0001](../decisions/0001-config-in-the-url.md) (config in the URL, never in storage). Closed a gap open since the renderer was written: `overlay.html` had always accepted a plate it paints itself (`?bg=&bga=&radius=`), and **nothing in the product could produce those params** — while the gallery's BACKDROP control, which looked like it configured exactly that, was a preview-only contrast test that never reached OBS. So a setting that appeared to change your stream silently didn't. Resolved by making them **one setting**: BACKDROP became **Plate**, the gallery-wide default that drives both the preview *and* the copied link, with a **per-overlay override** (colour, opacity, radius) behind a `▾` on each card. It lives in its own box, separate from the filter/demo rows above it — those steer the gallery, this changes what the overlays *are*, and mixing them is what let the old control read as another preview toggle. **Save as default** persists the global plate to `localStorage` so the gallery opens with it, and **Reset** returns to that saved default (or to no plate when none is saved); the stored value is a *gallery preference*, not overlay config, so [ADR 0001](../decisions/0001-config-in-the-url.md) still holds — the copied link carries every value explicitly. Radius is **hidden, not disabled**, when opacity is 0: it has nothing to round, and a greyed control invites clicking while explaining nothing. Default is **None/transparent** — an opaque default would have baked a plate into every link copied without touching a control — so an untouched card emits the same minimal `?style=…&scale=…` it always did. Plate params are omitted entirely at alpha 0, matching `overlay.html`'s own rule that it paints nothing below that. **Scale was deliberately not made a lever** (export stays 2×, revisit if it bites) and **padding is deferred to [SO-0037](#so-0037)**. The preview draws checker → plate → overlay into the canvas rather than styling it: that puts the plate at the overlay's exact rectangle, makes the transparency checker mean one thing only (the surround is flat matting, since checkering it too made the same pattern mean opposite things in one picture), and is immune to browser extensions that force canvas backgrounds transparent — which was observed on the dev machine and would otherwise have desynced preview from URL. 115 node + 227 pytest green; verified in-browser that global changes and per-card overrides move the pixels and the link together. | 2026-07-28 |
 | SO-0006 | **Shifter / gear live calibration + input** — the last v0 input-binding requirement, closed on real hardware. `gamepad.js` + `calibration.js` extended to capture gear buttons; a Shifter box on the setup page calibrates an **H-shifter** (one button per position) and **paddles / sequential** (an up/down pair) as **independent sources** ([ADR 0007](../decisions/0007-gear-sources-are-independent.md)) — each calibrated and cleared without touching the other, old single-source maps migrated on read. G923 + Driving Force Shifter mapped: **R,1–6 → buttons 11–17**, **paddles → 4 (up) / 5 (down)**. Driving it found four things no headless test could: both controls couldn't coexist (fixed by the split); every shift logged twice (a real H-pattern crosses neutral, so 2→N→3 counted a phantom down- then upshift — a shift is now a transition between two *engaged* gears); the knob replayed finished shifts (`prevGear` is now the previous *position*, and a leg starts when movement is observed); and the demo couldn't have caught any of it (its lap stepped gear-to-gear with no neutral — it now crosses neutral, and both paths run one shared `engine/gear-motion.js`). `stepSequentialGear` **deleted**: paddles report direction only, and `state.gear` is `null` rather than `0` without an H-shifter, because `0` claims "in neutral". **Hardware round-trip confirmed 2026-07-28** — a 60 Hz trace over 1–6 up, 6–1 down, R and neutral showed every engagement lighting its gate cell and tracking the readout, neutral genuinely present between every pair of gears, and the paddles returning to N rather than inventing a position. | 2026-07-28 |
 | SO-0024 | **Dev/debug input inspector page** (`pages/debug.html`, localhost-only) — the diagnostic for the hardware seam: live raw **axes** + **buttons** (indices + values), the loaded calibration map, and the resolved channel state. Made wheel/shifter issues visible instead of guessed, and was the tool that de-risked SO-0006's central unknown (how the G923 shifter actually reports gears) and carried the PC-side hardware handoff. | 2026-07-28 |
@@ -110,7 +107,9 @@ are in the docs.*
 ## Details
 
 ### SO-0039 — Take the repo public {#so-0039}
-**P1 · Chore · release**
+**P1 · Chore · release** — **CLOSED 2026-07-28.** Public at
+<https://github.com/dberardi2020/stream-overlays>. One thread survives as its own ticket:
+[SO-0041](#so-0041), the real secret scanner the pre-flight flagged and shipped without.
 
 Run the house repo standard and the go-public runbook in full, then flip. Going public
 is a one-way door — every check happens *before* the flip. Audited 2026-07-28; findings below.
@@ -183,8 +182,9 @@ what leaked was an email address, not a credential.
     exposed is an email address, not a credential, and the cost of losing the repo identity outweighed it.
     Description and ten topics were already set; **homepage now points at the live site** (SO-0008).
     Hosting shipped in the same pass, so the README's "not yet hosted" status never survived the flip.
-    *Still open:* update this repo's row in the cross-repo manifest — it reads private — and eyeball the
-    public README logged out to confirm the badges and the hero image render for a stranger.
+    The cross-repo manifest row is updated (public, live on Pages, dated). Verified logged out with no
+    auth token: repo, tests badge reading *passing*, hero PNG, data-flow SVG, the new OFL file and the
+    live gallery all 200.
 
 **Found after the audit**
 
@@ -226,7 +226,9 @@ A G923 exposes no RPM/speed — those are **sim telemetry**, not wheel input. Ti
 **Bug to fix here:** `split-panel` reads `s.rpm`, but rpm rides on the telemetry object, not the input state — so its rev arc renders empty (faithfully preserved from the reference). Fix it to read telemetry when this lands.
 
 ### SO-0008 — Hosting + deploy pipeline {#so-0008}
-**P1 · Chore · hosting**
+**P1 · Chore · hosting** — **CLOSED 2026-07-28.** Live at
+<https://dberardi2020.github.io/stream-overlays/>. Steps 2 (Vercel) and 3 (a real domain) are
+**not** part of this ticket's close — they split out to [SO-0040](#so-0040).
 
 Get it live over HTTPS (which the Gamepad API requires) with a deploy from `main`.
 
@@ -246,7 +248,7 @@ Verified anonymously against the live URL: landing, gallery, setup, and two over
 
 The real result is that **Pages mounts the site at a subpath** (`/stream-overlays/`), not a domain root — which is precisely what the relative-link sweep bought, and it went untested until now. A single absolute `/pages/…` reference anywhere would have 404'd in a way no local test could catch, because the local root *is* `/`.
 
-**Not yet done:** step 3, a real domain. Until it exists, the `github.io` URL is hard-coded in exactly three places — `README.md`, `llms.txt`, and the repo's homepage field — all of them documentation, never product. Nothing in the overlay code, the manifest or a copied OBS link contains a host, so the domain move stays a three-file edit and no `?style=` URL moves.
+**Split out, not dropped:** step 3 (a real domain) and step 2 (Vercel, which was always behind a trigger) both move to [SO-0040](#so-0040). Until a domain exists, the `github.io` URL is hard-coded in exactly three places — `README.md`, `llms.txt`, and the repo's homepage field — all of them documentation, never product. Nothing in the overlay code, the manifest or a copied OBS link contains a host, so the domain move stays a three-file edit and no `?style=` URL moves.
 
 ### SO-0010 — Wishlist / feedback form {#so-0010}
 **P3 · Feature · site**
@@ -490,7 +492,47 @@ drawing within a larger stage. The consequence is the part to think about rather
 Worth doing after [SO-0008](#so-0008); it is polish, and it touches the renderer's public URL contract, which
 is a thing to change deliberately rather than late in a session.
 
-## Conventions
+### SO-0040 — A real domain {#so-0040}
+**P2 · Chore · hosting**
+
+Step 3 of the [SO-0008](#so-0008) hosting sequence, split out when steps 1–2 closed. Buy a domain and point
+it at whatever host is current — today GitHub Pages, via a `CNAME` and the DNS records Pages documents.
+
+**Why it is worth doing at all**, given the site already works: the domain is the thing that *outlives the
+host choice*. The whole point of the "never hard-code a `*.github.io` / `*.vercel.app` URL" rule is that a
+host migration must not move a single `?style=` URL — and an OBS Browser Source someone pasted six months ago
+is exactly the thing that breaks when it does.
+
+**The exposure is small and known.** The host name appears in **three places, all documentation, never
+product**: `README.md`, `llms.txt`, and the GitHub repo homepage field. Nothing in the overlay code, the
+manifest, or a copied OBS link contains a host — so this stays a three-file edit plus DNS. Verify that claim
+before moving rather than trusting this sentence; it was true on 2026-07-28.
+
+**Step 2 (Vercel) is deliberately not a ticket.** [SO-0008](#so-0008) put it behind a trigger — *only when
+server routes are actually needed*, e.g. a server-side `/configure` generator or a telemetry feed — and there
+is no such need today. The static export runs on both unchanged, so it is a move, not a rewrite. Filing it now
+would be a ticket whose only content is "wait", and route-through-the-domain means the migration would not
+touch overlay URLs anyway.
+
+### SO-0041 — Run a real secret scanner over the full history {#so-0041}
+**P2 · Chore · release**
+
+[SO-0039](#so-0039)'s pre-flight noted this and shipped without it: `gitleaks` and `trufflehog` were not
+installed, so the secrets check was **the runbook's documented floor, run by hand** — no `.env` / `*.pem` /
+`*.key` / `id_rsa` / `.netrc` / `.npmrc` / `.pypirc` / `credentials` / `.p12` ever committed, and zero
+`AKIA` / `BEGIN … PRIVATE KEY` / `ghp_` / `sk-` matches across `git log -p --all`. That floor found nothing,
+and the tree genuinely has no server, no accounts and no credentials to hold — which is why this is P2 and
+not P1.
+
+It is still worth doing, for the reason the pre-flight itself gave: **a pattern list only finds the shapes
+you thought of.** A real scanner carries hundreds of detectors and entropy heuristics, and the manual sweep's
+own track record on this repo is two misses on the *first* pass (the private paths in commit messages — see
+[SO-0039](#so-0039)), both found only on a second look.
+
+**Scan the whole history, not the tree** — `--all`, every ref, including the pre-rewrite commits that are
+still reachable by SHA on the remote. If it finds nothing, record that here and the item is closed for good.
+If it finds something, the response is **rotate first, then decide about history**: the repo is public now,
+so anything real should be assumed captured, and scrubbing a public commit does not un-publish it.
 
 The house standard for this board's shape — lanes, schema, detail tiers, archiving — is
 `.meta/ticket-board-standard.md` in the author's workspace. The essentials, so this file
